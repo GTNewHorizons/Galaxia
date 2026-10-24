@@ -55,6 +55,23 @@ final class OrbitalBodyZoomTest {
     }
 
     @Test
+    void systemOverviewKeepsTheOutermostOrbitInsideTheViewport() {
+        FakeWorld world = new FakeWorld();
+        world.children.put(ANCHOR_STAR, List.of(INNER_PLANET, OUTER_PLANET));
+        for (int[] size : List.of(new int[] { 1064, 720 }, new int[] { 384, 216 }, new int[] { 360, 640 })) {
+            TestStarmapView view = new TestStarmapView();
+            view.viewportWidth = size[0];
+            view.viewportHeight = size[1];
+            OrbitalBodyZoom bodyZoom = new OrbitalBodyZoom(GALAXY, world, view);
+            double radius = 900.0 * OrbitalZoom.scaleForZoomLevel(bodyZoom.overviewZoomFor(ANCHOR_STAR));
+
+            assertTrue(
+                radius + 8 < Math.min(size[0], size[1]) / 2.0,
+                "the outer orbit and its marker must fit inside " + size[0] + "x" + size[1]);
+        }
+    }
+
+    @Test
     void aFocusedBodyIsFramedAgainstItsSiblings() {
         FakeWorld world = new FakeWorld();
         world.parents.put(INNER_PLANET, ANCHOR_STAR);

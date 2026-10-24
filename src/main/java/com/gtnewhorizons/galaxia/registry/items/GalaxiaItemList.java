@@ -19,6 +19,7 @@ import com.gtnewhorizons.galaxia.registry.items.special.ItemGalacticMap;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketModule;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemStationCartridge;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemTeleporter;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -79,6 +80,11 @@ public enum GalaxiaItemList {
     RADIATION_PROTECTION("gear/protection_shield_radiation", () -> new ItemProtectionShield(0, 0, 10), 1),
     WITHER_PROTECTION("gear/wither_protection", ItemWitherProtection::new, 1),
     REACTION_CONTROL_SYSTEM_T1("gear/reaction_control_system", ItemReactionControlSystem::new, 1),
+
+    // Station
+    AIR_FILTER("station/air_filter", () -> new ItemStationCartridge("galaxia.tooltip.air_filter.desc"), 1),
+    WITHER_CARTRIDGE("station/wither_cartridge",
+        () -> new ItemStationCartridge("galaxia.tooltip.wither_cartridge.desc"), 1),
 
     ; // leave trailing semicolon
 
@@ -152,6 +158,11 @@ public enum GalaxiaItemList {
      *
      * @return Item instance
      */
+    /** Lang key of the item's name, known before the item is registered */
+    public String getNameKey() {
+        return "item." + UNLOCALIZED_PREFIX + registryName + ".name";
+    }
+
     public Item getItem() {
         return itemInstance;
     }

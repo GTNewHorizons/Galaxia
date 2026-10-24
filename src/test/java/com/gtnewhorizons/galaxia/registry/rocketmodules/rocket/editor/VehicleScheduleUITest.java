@@ -247,7 +247,9 @@ final class VehicleScheduleUITest {
             0,
             null,
             null,
-            mission);
+            mission,
+            null,
+            false);
     }
 
     @Test
@@ -379,7 +381,9 @@ final class VehicleScheduleUITest {
             0,
             null,
             warning,
-            null);
+            null,
+            null,
+            false);
     }
 
     @Test
@@ -408,7 +412,9 @@ final class VehicleScheduleUITest {
                 0,
                 null,
                 null,
-                null),
+                null,
+                null,
+                false),
             VehicleScheduleUI.Catalog.empty(),
             null,
             false);
@@ -445,7 +451,9 @@ final class VehicleScheduleUITest {
             0,
             null,
             null,
-            null);
+            null,
+            null,
+            false);
         session.receive(view, VehicleScheduleUI.Catalog.empty(), null, false);
 
         session.moveVisit(second.id(), -1);
@@ -490,7 +498,9 @@ final class VehicleScheduleUITest {
                 0,
                 null,
                 null,
-                null),
+                null,
+                null,
+                false),
             catalog,
             null,
             false);
@@ -521,7 +531,9 @@ final class VehicleScheduleUITest {
                 0,
                 null,
                 null,
-                null),
+                null,
+                null,
+                false),
             catalog,
             "galaxia.rocket.schedule.stale",
             true);
@@ -551,7 +563,9 @@ final class VehicleScheduleUITest {
                 0,
                 null,
                 null,
-                null),
+                null,
+                null,
+                false),
             catalog,
             null,
             true);
@@ -583,7 +597,9 @@ final class VehicleScheduleUITest {
                 0,
                 null,
                 null,
-                null),
+                null,
+                null,
+                false),
             VehicleScheduleUI.Catalog.empty(),
             null,
             false);

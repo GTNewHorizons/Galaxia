@@ -1,13 +1,19 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.FluidAttachmentInventory;
+import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.ItemAttachmentInventory;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.interfaces.IEnergyHandler;
@@ -92,6 +98,21 @@ public final class StationGraph {
         return maxPowerDraw - remaining;
     }
 
+    /** Hands energy to the attached stores, returns how much they took */
+    public long addEnergy(long amount) {
+        long remaining = amount;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            remaining -= addToAttachment(ra, remaining);
+            if (remaining <= 0) return amount;
+        }
+        return amount - remaining;
+    }
+
+    private <T> long addToAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
+        return StationAttachmentRegistry.asEnergyHandler(ra.handler())
+            .addEnergy(ra.attachment(), amount);
+    }
+
     private <T> long drawFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra, long amount) {
         IEnergyHandler<T> h = StationAttachmentRegistry.asEnergyHandler(ra.handler());
         return h.drawEnergy(ra.attachment(), amount);
@@ -110,6 +131,97 @@ public final class StationGraph {
             .getEnergyStored(ra.attachment());
     }
 
+    /** Energy all attached stores can hold */
+    public BigInteger getEnergyCapacity() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getEnergyAttachments()::iterator) {
+            total = total.add(energyCapacityFromAttachment(ra));
+        }
+        return total;
+    }
+
+    private <T> BigInteger energyCapacityFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asEnergyHandler(ra.handler())
+            .getEnergyCapacity(ra.attachment());
+    }
+
+    /** Fluid stored in all attached tanks, in L */
+    public BigInteger getFluidStored() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getFluidStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(fluidStoredFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long fluidStoredFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asFluidStorageHandler(ra.handler())
+            .getFluidStored(ra.attachment());
+    }
+
+    /** Fluid all attached tanks can hold, in L */
+    public BigInteger getFluidCapacity() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getFluidStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(fluidCapacityFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long fluidCapacityFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asFluidStorageHandler(ra.handler())
+            .getFluidCapacity(ra.attachment());
+    }
+
+    /** Items kept in all attached item stores */
+    public BigInteger getItemStored() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getItemStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(itemStoredFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long itemStoredFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asItemStorageHandler(ra.handler())
+            .getItemStored(ra.attachment());
+    }
+
+    /** Items all attached item stores can hold */
+    public BigInteger getItemCapacity() {
+        BigInteger total = BigInteger.ZERO;
+        for (StationAttachmentRegistry.ResolvedAttachment<?> ra : (Iterable<StationAttachmentRegistry.ResolvedAttachment<?>>) getItemStorageAttachments()::iterator) {
+            total = total.add(BigInteger.valueOf(itemCapacityFromAttachment(ra)));
+        }
+        return total;
+    }
+
+    private <T> long itemCapacityFromAttachment(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        return StationAttachmentRegistry.asItemStorageHandler(ra.handler())
+            .getItemCapacity(ra.attachment());
+    }
+
+    /** Every room of the station, the main controller's room included */
+    public Map<BlockPos, TileStationBase<?>> getPieces() {
+        return Collections.unmodifiableMap(pieces);
+    }
+
+    /**
+     * Rooms joined to a room by an airlock
+     *
+     * @param piece Controller position of the room
+     *
+     * @return Controller positions of the neighbouring rooms
+     */
+    public List<BlockPos> linksOf(BlockPos piece) {
+        ObjectArrayList<BlockPos> adj = adjacency.get(piece);
+        if (adj == null) return List.of();
+        return adj.stream()
+            .filter(pieces::containsKey)
+            .distinct()
+            .toList();
+    }
+
     public @Nonnull Stream<IDistributedInventory> connectedInventories() {
         return resolvedInventories.entrySet()
             .stream()
@@ -126,10 +238,25 @@ public final class StationGraph {
         attachments.put(pos, ra);
         if (ra.handler()
             .hasDistributedInventory()) {
-            resolvedInventories.put(ra, ra.distributedInventory());
+            IDistributedInventory inventory = resolveDistributedInventory(ra);
+            if (inventory != null) resolvedInventories.put(ra, inventory);
         }
         onAttached(ra, this);
         fireListeners(l -> l.onAttachmentConnected(pos, ra.attachment()));
+    }
+
+    private <T> IDistributedInventory resolveDistributedInventory(StationAttachmentRegistry.ResolvedAttachment<T> ra) {
+        if (StationAttachmentRegistry.isFluidStorageHandler(ra.handler())) {
+            return new FluidAttachmentInventory<>(
+                StationAttachmentRegistry.asFluidStorageHandler(ra.handler()),
+                ra.attachment());
+        } else if (StationAttachmentRegistry.isItemStorageHandler(ra.handler())) {
+            return new ItemAttachmentInventory<>(
+                StationAttachmentRegistry.asItemStorageHandler(ra.handler()),
+                ra.attachment());
+        }
+        Galaxia.LOG.warn("[StationGraph] Attachment at {} has an inventory of an unknown kind", ra.attachment());
+        return null;
     }
 
     public boolean hasAttachment(BlockPos pos) {
@@ -190,7 +317,7 @@ public final class StationGraph {
             for (BlockPos other : airlock.getStationControllers()) {
                 if (!pieces.containsKey(other) || other.equals(pos)) continue;
 
-                listeners.add(newPiece);
+                addListener(newPiece);
                 addAdjacency(pos, other);
                 addAdjacency(other, pos);
                 fireListeners(l -> l.onPieceConnected(pieces.get(other), newPiece, controller.here));
@@ -212,6 +339,7 @@ public final class StationGraph {
         }
 
         TileStationBase<?> piece = pieces.remove(pos);
+        if (piece != null) listeners.remove(piece);
         // Remove children attachments
         adj.stream()
             .filter(attachments::containsKey)
@@ -231,11 +359,8 @@ public final class StationGraph {
     public void rebuild() {
         var oldPieces = new Object2ObjectOpenHashMap<>(pieces);
 
-        // Detach all current attachments before clearing
-        attachments.forEach((pos, ra) -> {
-            onDetached(ra, this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
-        });
+        // Detach all current attachments before clearing. The rooms keep them and register them again once rebuilt
+        attachments.forEach((pos, ra) -> onDetached(ra, this));
 
         clearData();
         BlockPos start = controller.here;
@@ -257,7 +382,7 @@ public final class StationGraph {
                     if (other.equals(current) || !visited.add(other)) continue;
                     if (!(other.getTE(controller.getWorldObj()) instanceof TileStationBase<?>neighbor)) continue;
 
-                    listeners.add(neighbor);
+                    addListener(neighbor);
                     pieces.put(other, neighbor);
                     queue.add(other);
                     addAdjacency(current, other);
@@ -267,10 +392,11 @@ public final class StationGraph {
             }
         }
 
-        // Notify for pieces that were lost in rebuild
+        // Notify for pieces that were lost in rebuild, then stop listening to them
         oldPieces.forEach((pos, piece) -> {
             if (!pieces.containsKey(pos) && !pos.equals(start)) {
                 fireListeners(l -> l.onPieceDisconnected(piece, null));
+                listeners.remove(piece);
             }
         });
 
@@ -285,10 +411,8 @@ public final class StationGraph {
             .filter(p -> p != null && p != controller)
             .forEach(p -> fireListeners(l -> l.onPieceDisconnected(p, null)));
 
-        attachments.forEach((pos, ra) -> {
-            onDetached(ra, this);
-            fireListeners(l -> l.onAttachmentDisconnected(pos));
-        });
+        // The rooms keep their attachments for the graph that replaces this one
+        attachments.forEach((pos, ra) -> onDetached(ra, this));
 
         clearData();
         listeners.clear();
@@ -309,7 +433,8 @@ public final class StationGraph {
     }
 
     private void fireListeners(Consumer<IGraphListener> action) {
-        listeners.forEach(action);
+        // Listeners may join or leave the graph while being notified
+        new ArrayList<>(listeners).forEach(action);
     }
 
     public boolean isEmpty() {

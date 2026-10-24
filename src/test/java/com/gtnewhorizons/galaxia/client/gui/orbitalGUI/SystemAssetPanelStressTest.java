@@ -131,6 +131,7 @@ final class SystemAssetPanelStressTest {
             star,
             () -> star,
             () -> true,
+            () -> {},
             id -> {},
             ignored -> {
                 refreshes.incrementAndGet();

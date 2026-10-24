@@ -20,7 +20,7 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 public final class GalaxiaGuiStyle {
 
     public static final int TEXT = 0xFFD8DCEB;
-    public static final int TEXT_DIM = 0xFFB0B6C9;
+    public static final int TEXT_DIM = 0xFF8D93AE;
     public static final int TEXT_TITLE = 0xFFFFFFFF;
     public static final int GOOD = 0xFF6FD39A;
     public static final int WARN = 0xFFE8C65A;

@@ -1,8 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
-import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,24 +16,26 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Vec3;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
+import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.state.NbtReader;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
-
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 
 /** A physical node. The world Rocket manifest owns module custody, movement and route claims. */
 public class TileEntityGantry extends TileEntity {
 
     public static final double MOVEMENT_PER_TICK = 0.2;
+    public static final int PATH_WINDOW = 8;
+    public static final byte NO_MOVE = -1;
     private UUID nodeId = UUID.randomUUID();
+    private GantryNetwork network;
+    private boolean joinedNetwork;
     final List<TileEntityGantry> neighbours = new ArrayList<>();
     private final Map<UUID, Neighbour> savedNeighbours = new LinkedHashMap<>();
     public final List<Vec3> neighbourDirs = new ArrayList<>();
@@ -43,6 +44,7 @@ public class TileEntityGantry extends TileEntity {
     public int clientModuleId = -1;
     public float clientPrevProgress;
     public float clientProgress;
+    public byte[] clientPath = new byte[0];
 
     private record Neighbour(UUID id, int x, int y, int z) {}
 
@@ -61,29 +63,27 @@ public class TileEntityGantry extends TileEntity {
             clientPrevProgress = clientProgress;
             return;
         }
+        if (!joinedNetwork) {
+            joinedNetwork = true;
+            invalidateAround();
+        }
         GantryAPI.tickNode(
             Galaxia.proxy.serverRuntime()
                 .rockets(),
             this);
     }
 
-    /** Resolves only loaded, exact neighbor identities and retains unresolved links for later ticks. */
+    /** Physical connections use loaded face-adjacent rails. Unattached harness nodes use explicit links. */
     public List<TileEntityGantry> getNeighbours() {
         if (worldObj == null) return List.copyOf(neighbours);
-        for (Neighbour link : savedNeighbours.values()) {
-            if (!worldObj.blockExists(link.x(), link.y(), link.z())) continue;
-            TileEntity tile = worldObj.getTileEntity(link.x(), link.y(), link.z());
-            if (tile instanceof TileEntityGantry gantry && gantry.nodeId()
-                .equals(link.id()) && !neighbours.contains(gantry)) {
-                neighbours.add(gantry);
-            }
+        var result = new ArrayList<TileEntityGantry>(6);
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            TileEntityGantry next = getNeighbour(side);
+            if (next == null) continue;
+            result.add(next);
+            savedNeighbours.put(next.nodeId(), new Neighbour(next.nodeId(), next.xCoord, next.yCoord, next.zCoord));
         }
-        return neighbours.stream()
-            .filter(
-                next -> !next.isInvalid() && next.getWorldObj() == worldObj
-                    && worldObj.blockExists(next.xCoord, next.yCoord, next.zCoord)
-                    && worldObj.getTileEntity(next.xCoord, next.yCoord, next.zCoord) == next)
-            .toList();
+        return result;
     }
 
     public void connect(TileEntityGantry other) {
@@ -102,6 +102,8 @@ public class TileEntityGantry extends TileEntity {
         if (!other.neighbours.contains(this)) other.neighbours.add(this);
         savedNeighbours.put(other.nodeId(), new Neighbour(other.nodeId(), other.xCoord, other.yCoord, other.zCoord));
         other.savedNeighbours.put(nodeId, new Neighbour(nodeId, xCoord, yCoord, zCoord));
+        invalidateAround();
+        other.invalidateAround();
         updateNeighbourDirs();
         other.updateNeighbourDirs();
     }
@@ -111,6 +113,8 @@ public class TileEntityGantry extends TileEntity {
         other.neighbours.remove(this);
         savedNeighbours.remove(other.nodeId());
         other.savedNeighbours.remove(nodeId);
+        invalidateAround();
+        other.invalidateAround();
         updateNeighbourDirs();
         other.updateNeighbourDirs();
     }
@@ -127,6 +131,67 @@ public class TileEntityGantry extends TileEntity {
 
     public boolean checkValidGraph() {
         return worldObj != null && GantryAPI.terminatesWithTerminals(worldObj, xCoord, yCoord, zCoord);
+    }
+
+    public GantryNetwork getNetwork() {
+        if (network == null || !network.isValid()) network = GantryNetwork.build(this);
+        return network;
+    }
+
+    void bindNetwork(GantryNetwork network) {
+        this.network = network;
+    }
+
+    public void invalidateNetwork() {
+        if (network != null) network.invalidate();
+        network = null;
+    }
+
+    public void invalidateAround() {
+        invalidateNetwork();
+        for (TileEntityGantry next : getNeighbours()) next.invalidateNetwork();
+    }
+
+    @Override
+    public void invalidate() {
+        super.invalidate();
+        invalidateNetwork();
+    }
+
+    @Override
+    public void onChunkUnload() {
+        super.onChunkUnload();
+        invalidateNetwork();
+    }
+
+    public static boolean connects(IBlockAccess world, int x, int y, int z, ForgeDirection side) {
+        return world.getTileEntity(x + side.offsetX, y + side.offsetY, z + side.offsetZ) instanceof TileEntityGantry;
+    }
+
+    public static int connectionMask(IBlockAccess world, int x, int y, int z) {
+        int mask = 0;
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            if (connects(world, x, y, z, side)) mask |= 1 << side.ordinal();
+        }
+        return mask;
+    }
+
+    @Nullable
+    public TileEntityGantry getNeighbour(ForgeDirection side) {
+        if (worldObj == null || side == ForgeDirection.UNKNOWN) return null;
+        int x = xCoord + side.offsetX, y = yCoord + side.offsetY, z = zCoord + side.offsetZ;
+        if (!worldObj.blockExists(x, y, z)) return null;
+        return worldObj.getTileEntity(x, y, z) instanceof TileEntityGantry next && !next.isInvalid() ? next : null;
+    }
+
+    public static void onRailChanged(World world, int x, int y, int z) {
+        if (world.isRemote) return;
+        if (world.getTileEntity(x, y, z) instanceof TileEntityGantry node) node.invalidateNetwork();
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            int nx = x + side.offsetX, ny = y + side.offsetY, nz = z + side.offsetZ;
+            if (world.blockExists(nx, ny, nz) && world.getTileEntity(nx, ny, nz) instanceof TileEntityGantry next)
+                next.invalidateNetwork();
+        }
     }
 
     @Nullable
@@ -266,7 +331,47 @@ public class TileEntityGantry extends TileEntity {
             tag.setDouble("dirY", currentDirection.yCoord);
             tag.setDouble("dirZ", currentDirection.zCoord);
         }
+        if (module != null && module.gantryTransport() != null) tag.setByteArray("path", pathWindow(module));
         return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
+
+    /** Derives the hook curve from the same immutable route that owns this module's movement. */
+    private byte[] pathWindow(Rocket.Module module) {
+        byte[] path = new byte[PATH_WINDOW * 2 + 1];
+        Arrays.fill(path, NO_MOVE);
+        var trip = module.gantryTransport();
+        var route = trip.reservedRoute();
+        for (int i = -PATH_WINDOW; i <= PATH_WINDOW; i++) {
+            int index = trip.routeIndex() + i;
+            if (index < 0 || index >= route.size()) continue;
+            TileEntityGantry from = getNetwork().findNode(route.get(index));
+            if (from == null) continue;
+            Vec3 direction;
+            if (index + 1 < route.size()) {
+                TileEntityGantry to = getNetwork().findNode(route.get(index + 1));
+                if (to == null) continue;
+                direction = Vec3
+                    .createVectorHelper(to.xCoord - from.xCoord, to.yCoord - from.yCoord, to.zCoord - from.zCoord);
+            } else if (from instanceof TileEntityGantryTerminal terminal) {
+                int[] controller = terminal.getConsumerPosition();
+                if (controller == null) continue;
+                direction = Vec3.createVectorHelper(
+                    controller[0] - from.xCoord,
+                    controller[1] - from.yCoord,
+                    controller[2] - from.zCoord);
+            } else continue;
+            var side = toDirection(direction);
+            if (side != ForgeDirection.UNKNOWN) path[PATH_WINDOW + i] = (byte) side.ordinal();
+        }
+        return path;
+    }
+
+    private static ForgeDirection toDirection(Vec3 step) {
+        double ax = Math.abs(step.xCoord), ay = Math.abs(step.yCoord), az = Math.abs(step.zCoord);
+        if (ax == 0 && ay == 0 && az == 0) return ForgeDirection.UNKNOWN;
+        if (ay >= ax && ay >= az) return step.yCoord > 0 ? ForgeDirection.UP : ForgeDirection.DOWN;
+        if (ax >= az) return step.xCoord > 0 ? ForgeDirection.EAST : ForgeDirection.WEST;
+        return step.zCoord > 0 ? ForgeDirection.SOUTH : ForgeDirection.NORTH;
     }
 
     @Override
@@ -276,6 +381,7 @@ public class TileEntityGantry extends TileEntity {
         clientModuleId = tag.getInteger("moduleId");
         clientPrevProgress = clientProgress;
         clientProgress = tag.getFloat("progress");
+        clientPath = tag.getByteArray("path");
         currentDirection = tag.hasKey("dirX")
             ? Vec3.createVectorHelper(tag.getDouble("dirX"), tag.getDouble("dirY"), tag.getDouble("dirZ"))
             : null;
@@ -296,133 +402,6 @@ public class TileEntityGantry extends TileEntity {
     @Override
     public double getMaxRenderDistanceSquared() {
         return 512 * 512;
-    }
-
-    // I beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom straightModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation straightTexture;
-
-    // 45° angle up beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom diagonalModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation diagonalTexture;
-
-    // L beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom cornerModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation cornerTexture;
-
-    // T beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom tModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation tTexture;
-
-    // crossway beam
-    @SideOnly(Side.CLIENT)
-    private IModelCustom plusModel;
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation plusTexture;
-
-    @SideOnly(Side.CLIENT)
-    private ResourceLocation errorTexture;
-
-    // MODEL AND TEXTURE GETTERS
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getStraightTexture() {
-        if (straightTexture == null) {
-            straightTexture = LocationGalaxia("textures/model/gantry/straight.png");
-        }
-        return straightTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getStraightModel() {
-        if (straightModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/straight.obj");
-            straightModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return straightModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getDiagonalTexture() {
-        if (diagonalTexture == null) {
-            diagonalTexture = LocationGalaxia("textures/model/gantry/diagonal.png");
-        }
-        return diagonalTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getDiagonalModel() {
-        if (diagonalModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/diagonal.obj");
-            diagonalModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return diagonalModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getCornerTexture() {
-        if (cornerTexture == null) {
-            cornerTexture = LocationGalaxia("textures/model/gantry/corner.png");
-        }
-        return cornerTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getCornerModel() {
-        if (cornerModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/corner.obj");
-            cornerModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return cornerModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getSemiCrossTexture() {
-        if (tTexture == null) {
-            tTexture = LocationGalaxia("textures/model/gantry/semicross.png");
-        }
-        return tTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getSemiCrossModel() {
-        if (tModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/semicross.obj");
-            tModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return tModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getCrossTexture() {
-        if (plusTexture == null) {
-            plusTexture = LocationGalaxia("textures/model/gantry/cross.png");
-        }
-        return plusTexture;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public IModelCustom getCrossModel() {
-        if (plusModel == null) {
-            ResourceLocation loc = LocationGalaxia("textures/model/gantry/cross.obj");
-            plusModel = AdvancedModelLoader.loadModel(loc);
-        }
-        return plusModel;
-    }
-
-    @SideOnly(Side.CLIENT)
-    public ResourceLocation getErrorTexture() {
-        if (errorTexture == null) {
-            errorTexture = LocationGalaxia("textures/model/gantry/error.png");
-        }
-        return errorTexture;
     }
 
 }

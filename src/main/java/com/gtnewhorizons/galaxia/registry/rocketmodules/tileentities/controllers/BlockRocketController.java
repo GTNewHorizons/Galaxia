@@ -10,12 +10,12 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.IRocketControllerTE;
 
@@ -41,7 +41,9 @@ public abstract class BlockRocketController extends BlockUpdatable {
 
     protected BlockRocketController(String onIcon, String offIcon, Supplier<Block> material) {
         super(Material.rock);
-        this.setHardness(1.5F);
+        this.setHardness(5.0F);
+        this.setResistance(10.0F);
+        this.setHarvestLevel("pickaxe", 1);
         this.onLocationString = onIcon;
         this.offLocationString = offIcon;
         this.controllerMaterial = material;
@@ -66,12 +68,8 @@ public abstract class BlockRocketController extends BlockUpdatable {
     }
 
     public static void initializeController(World world, int x, int y, int z, EntityLivingBase placer) {
-        int f = MathHelper.floor_double((placer.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        ForgeDirection[] dirs = { ForgeDirection.NORTH, ForgeDirection.EAST, ForgeDirection.SOUTH,
-            ForgeDirection.WEST };
-        ForgeDirection dir = dirs[f];
         TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof IRocketControllerTE rte) rte.setPlacedFacing(dir);
+        if (te instanceof GalaxiaMultiblockBase<?>multiblock) multiblock.onPlacedBy(placer);
         if (!world.isRemote && placer instanceof EntityPlayer player && te instanceof IRocketControllerTE rte) {
             rte.machineIdentity()
                 .claim(GTTeamsCompat.getTeam(player));

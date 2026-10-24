@@ -78,6 +78,9 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
     private static final int CANCEL_LANDING = 7;
     private static final int OPEN_BODY_MAP = 8;
     private static final int RETURN_BODY_MAP = 9;
+    private static final int SAVE_DELIVERY = 10;
+    private static final int STOP_DELIVERY = 11;
+    private static final int CLEAR_DELIVERY = 12;
     private static final NavigationFactory NAVIGATION_FACTORY = new NavigationFactory();
     private static final int LANDING_RESULT = 103;
     private static final int STATE = 101;
@@ -107,6 +110,7 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
         bindVehicle();
         allowC2S();
         session.commands(this::save, this::start, this::review);
+        session.deliveryCommands(this::saveDelivery, this::stopDelivery, this::clearDelivery);
         session.manualCommands(this::searchLanding, this::acceptLanding, this::cancelLanding);
         session.bodyMap(this::openBodyMap);
     }
@@ -313,6 +317,44 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
         syncToServer(SELECT, buf -> PacketUtil.writeId(buf, vehicleId));
     }
 
+    private void saveDelivery(VehicleScheduleUI.Session draft) {
+        syncToServer(SAVE_DELIVERY, buf -> {
+            PacketUtil.writeId(
+                buf,
+                draft.view()
+                    .vehicleId());
+            buf.writeLong(draft.simpleBaseRevision());
+            ByteBufUtils.writeTag(
+                buf,
+                draft.simplePlan()
+                    .serializeNBT());
+        });
+    }
+
+    private void stopDelivery(VehicleScheduleUI.Session draft) {
+        syncToServer(STOP_DELIVERY, buf -> {
+            PacketUtil.writeId(
+                buf,
+                draft.view()
+                    .vehicleId());
+            buf.writeLong(
+                draft.view()
+                    .revision());
+        });
+    }
+
+    private void clearDelivery(VehicleScheduleUI.Session draft) {
+        syncToServer(CLEAR_DELIVERY, buf -> {
+            PacketUtil.writeId(
+                buf,
+                draft.view()
+                    .vehicleId());
+            buf.writeLong(
+                draft.view()
+                    .revision());
+        });
+    }
+
     private void start(VehicleScheduleUI.Session draft) {
         syncToServer(START, buf -> {
             PacketUtil.writeId(
@@ -438,7 +480,10 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
             && id != ACCEPT_LANDING
             && id != CANCEL_LANDING
             && id != OPEN_BODY_MAP
-            && id != RETURN_BODY_MAP) return;
+            && id != RETURN_BODY_MAP
+            && id != SAVE_DELIVERY
+            && id != STOP_DELIVERY
+            && id != CLEAR_DELIVERY) return;
         if (!(getSyncManager().getPlayer() instanceof EntityPlayerMP player)) return;
         PacketBuffer queued = new PacketBuffer(buf.copy());
         ServerTickTaskQueue.schedule(() -> {
@@ -473,7 +518,21 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
                     }
                     long revision = queued.readLong();
                     Rocket.CommandResult result;
-                    if (id == SEARCH_LANDING) {
+                    if (id == SAVE_DELIVERY) {
+                        var plan = Rocket.DeliveryPlan.deserializeNBT(ByteBufUtils.readTag(queued));
+                        var known = knownBodies(player, rocket);
+                        result = known.contains(
+                            plan.home()
+                                .body())
+                            && known.contains(
+                                plan.destination()
+                                    .body()) ? rocket.saveDelivery(GTTeamsCompat.getTeam(player), revision, plan)
+                                        : Rocket.CommandResult.FORBIDDEN;
+                    } else if (id == STOP_DELIVERY) {
+                        result = rocket.stopDelivery(GTTeamsCompat.getTeam(player), revision);
+                    } else if (id == CLEAR_DELIVERY) {
+                        result = rocket.clearDelivery(GTTeamsCompat.getTeam(player), revision);
+                    } else if (id == SEARCH_LANDING) {
                         landingSearch = null;
                         long query = queued.readLong();
                         var body = CelestialObjectKeyState.decode(ByteBufUtils.readTag(queued));
@@ -636,6 +695,17 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
                 visit -> known.add(
                     visit.place()
                         .body()));
+        var delivery = rocket.deliveryView();
+        if (delivery != null) {
+            known.add(
+                delivery.plan()
+                    .home()
+                    .body());
+            known.add(
+                delivery.plan()
+                    .destination()
+                    .body());
+        }
         var manual = rocket.scheduleView()
             .manualMission();
         if (manual != null) manual.visits()
@@ -688,7 +758,7 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
                 var context = asset.location == CelestialAsset.Location.ORBIT ? VehicleSchedule.Context.ORBIT
                     : VehicleSchedule.Context.SURFACE;
                 for (var endpoint : asset.endpoints()
-                    .values())
+                    .values()) {
                     endpoints.add(
                         new EndpointChoice(
                             entry.getKey(),
@@ -697,6 +767,19 @@ public final class RocketScheduleSyncHandler extends SyncHandler<RocketScheduleS
                             endpoint.kind(),
                             endpoint.routingName(),
                             asset.kind == CelestialAsset.Kind.STATION ? asset.assetId.id() : null));
+                    if (!(asset instanceof IDistributedInventory)) {
+                        var ref = CelestialAssetStore.findEndpoint(endpoint.id());
+                        var inventory = ref == null ? null : ref.resources();
+                        if (inventory != null) {
+                            resources.addAll(
+                                inventory.getItemAmounts()
+                                    .keySet());
+                            resources.addAll(
+                                inventory.getFluidAmounts()
+                                    .keySet());
+                        }
+                    }
+                }
                 if (asset instanceof IDistributedInventory inventory) {
                     resources.addAll(
                         inventory.getItemAmounts()

@@ -7,10 +7,9 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
-import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 
@@ -18,6 +17,9 @@ public class BlockHammerCannon extends BlockUpdatable implements ITileEntityProv
 
     public BlockHammerCannon() {
         super(Material.iron);
+        setHardness(5.0F);
+        setResistance(10.0F);
+        setHarvestLevel("pickaxe", 1);
     }
 
     @Override
@@ -31,15 +33,13 @@ public class BlockHammerCannon extends BlockUpdatable implements ITileEntityProv
         TileEntity te = world.getTileEntity(x, y, z);
         if (!(te instanceof TileHammerCannon cannon)) return;
 
-        ForgeDirection facing = PlacementHelper.placeOnlyCardinal(placer);
-
-        cannon.setPlacedFacing(facing);
-        cannon.setFacing(facing);
+        cannon.onPlacedBy(placer);
     }
 
     @Override
     public boolean onBlockActivated(World worldIn, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        if (GalaxiaMultiblockBase.handleWrench(worldIn, x, y, z, player, side, hitX, hitY, hitZ)) return true;
         if (worldIn.isRemote) return true;
         TileEntity te = worldIn.getTileEntity(x, y, z);
         if (!(te instanceof TileHammerCannon)) return false;

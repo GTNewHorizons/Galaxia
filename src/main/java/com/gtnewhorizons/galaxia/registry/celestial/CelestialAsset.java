@@ -231,7 +231,7 @@ public class CelestialAsset implements Buildable {
         if (planetaryAnchor == null)
             throw new IllegalStateException("Cannot resolve asset planetary anchor for " + celestialObjectKey);
         this.planetaryAnchorBodyKey = planetaryAnchor.key();
-        this.displayName = displayName(celestialObjectKey) + ":" + kind.getDisplayName();
+        this.displayName = defaultName(celestialObjectKey, kind);
         this.kind = kind;
         this.location = Location.ofKind(kind);
         this.requiredResources = defaultRequirements(kind);
@@ -241,6 +241,14 @@ public class CelestialAsset implements Buildable {
     protected CelestialAsset(ID assetId, CelestialObjectId celestialObjectId, Kind kind, Status status) {
 
         this(assetId, CelestialObjectKey.registered(celestialObjectId), kind, status);
+    }
+
+    /** The short name a new asset gets: the body it is at and what it is, like "Mars Outpost" */
+    public static String defaultName(CelestialObjectKey body, Kind kind) {
+        return StatCollector.translateToLocalFormatted(
+            "galaxia.asset.default_name." + kind.name()
+                .toLowerCase(java.util.Locale.ROOT),
+            displayName(body));
     }
 
     private static String displayName(CelestialObjectKey key) {

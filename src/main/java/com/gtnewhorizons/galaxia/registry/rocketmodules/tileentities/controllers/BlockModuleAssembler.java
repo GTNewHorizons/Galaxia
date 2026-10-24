@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler;
 
 /**
@@ -60,9 +61,11 @@ public class BlockModuleAssembler extends BlockRocketController implements ITile
 
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityModuleAssembler assembler && assembler.machineIdentity()
-            .canUse(player, TeamAction.MANAGE_INVENTORY))
+            .canUse(player, TeamAction.MANAGE_INVENTORY)) {
+            if (GalaxiaMultiblockBase.handleWrench(world, x, y, z, player, side, hitX, hitY, hitZ)) return true;
             GuiFactories.tileEntity()
                 .open(player, x, y, z);
+        }
         return true;
     }
 
@@ -80,8 +83,8 @@ public class BlockModuleAssembler extends BlockRocketController implements ITile
     public ForgeDirection getFacing(IBlockAccess world, int x, int y, int z) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntityModuleAssembler assembler) {
-            return assembler.isStructureValid() ? assembler.getCurrentFacing()
-                .getDirection() : assembler.getPlacedFacing();
+            return assembler.getCurrentFacing()
+                .getDirection();
         }
         return ForgeDirection.NORTH;
     }

@@ -71,6 +71,8 @@ public final class Rocket {
     private Projection projection;
     @Nullable
     private Execution execution;
+    @Nullable
+    private DeliveryJob delivery;
     private final Set<UUID> passengers = new HashSet<>();
     private double parkingAngleRadians;
     @Nullable
@@ -145,9 +147,10 @@ public final class Rocket {
         public boolean landingSiteReservedFor(UUID vehicleId, VehicleSchedule.Place place) {
             var rocket = find(vehicleId);
             return rocket != null && rocket.isRunning()
-                && rocket.execution.manualProgram != null
+                && rocket.execution.overrideProgram != null
+                && rocket.execution.origin == ProgramOrigin.MANUAL_LANDING
                 && place.equals(
-                    rocket.execution.manualProgram.visits()
+                    rocket.execution.overrideProgram.visits()
                         .getLast()
                         .place())
                 && landingSiteAvailable(vehicleId, place, true);
@@ -160,8 +163,10 @@ public final class Rocket {
                 .bounds(site.position());
             for (var other : vehicles.values()) {
                 if (other.status == Status.LOST) continue;
-                if (!other.id.equals(departingVehicle) && other.isRunning() && other.execution.manualProgram != null) {
-                    var pending = other.execution.manualProgram.visits()
+                if (!other.id.equals(departingVehicle) && other.isRunning()
+                    && other.execution.overrideProgram != null
+                    && other.execution.origin == ProgramOrigin.MANUAL_LANDING) {
+                    var pending = other.execution.overrideProgram.visits()
                         .getLast()
                         .place();
                     if (pending.body()
@@ -623,6 +628,8 @@ public final class Rocket {
     /** Accepts one landing occurrence. Its threshold is never evaluated again after admission. */
     public ServiceResult beginService(@Nonnull UUID occurrenceId, @Nonnull VehicleSchedule.Repair action,
         @Nonnull UUID padId, @Nonnull UUID returnSiloId) {
+        if (action.returnSiloId() != null && !action.returnSiloId()
+            .equals(returnSiloId)) return ServiceResult.CONFLICT;
         if (service != null && service.id.equals(occurrenceId)) {
             if (!service.actionId.equals(action.id()) || !service.padId.equals(padId)
                 || !service.returnSiloId.equals(returnSiloId)) return ServiceResult.CONFLICT;
@@ -644,7 +651,7 @@ public final class Rocket {
             if (action.qualifies(module.durabilityPercent)) repairs.put(module.id, UUID.randomUUID());
             returns.put(module.id, UUID.randomUUID());
         }
-        if (repairs.isEmpty()) return ServiceResult.SKIPPED;
+        if (repairs.isEmpty() && action.returnSiloId() == null) return ServiceResult.SKIPPED;
         var pad = new Holder(HolderKind.PAD_BUFFER, padId);
         for (Module module : modules.values()) {
             var disassembly = beginTransfer(module.id, occurrenceId, installed, pad);
@@ -868,6 +875,11 @@ public final class Rocket {
         return cargoContents().getOrDefault(resource, 0L);
     }
 
+    public static boolean acceptsItemCargo(@Nonnull ItemStack stack) {
+        FluidStack contained = GTUtility.getFluidForFilledItem(stack.copy(), true);
+        return contained == null || contained.amount <= 0;
+    }
+
     public long insertCargo(@Nonnull InventoryKey resource, long amount, boolean simulate) {
         return transferCargo(resource, amount, simulate, VehicleSchedule.Direction.LOAD);
     }
@@ -1012,12 +1024,305 @@ public final class Rocket {
         }
     }
 
+    /** A simple delivery order produces trips through the ordinary vehicle executor. */
+    public record DeliveryPlan(@Nonnull VehicleSchedule.Place home, @Nonnull VehicleSchedule.Place destination,
+        @Nonnull Map<InventoryKey, Long> requested) {
+
+        public DeliveryPlan {
+            requested = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(requested));
+            if (!isSilo(home) || !isSilo(destination)
+                || home.equals(destination)
+                || requested.isEmpty()
+                || requested.entrySet()
+                    .stream()
+                    .anyMatch(
+                        entry -> !(entry.getKey() instanceof ItemStackWrapper) || entry.getValue() == null
+                            || entry.getValue() <= 0))
+                throw new IllegalArgumentException("A delivery needs distinct silos and positive item quantities");
+        }
+
+        private static boolean isSilo(VehicleSchedule.Place place) {
+            return place.target() instanceof VehicleSchedule.Exact exact
+                && exact.kind() == CelestialAsset.Endpoint.Kind.SILO;
+        }
+
+        public NBTTagCompound serializeNBT() {
+            var out = new NBTTagCompound();
+            out.setTag("home", home.serializeNBT());
+            out.setTag("destination", destination.serializeNBT());
+            out.setTag("requested", InventoryKeyState.encodeAmounts(requested));
+            return out;
+        }
+
+        public static DeliveryPlan deserializeNBT(NBTTagCompound encoded) {
+            var in = new NbtReader(encoded, "deliveryPlan");
+            return new DeliveryPlan(
+                VehicleSchedule.Place.deserializeNBT(
+                    in.compound("home")
+                        .tag()),
+                VehicleSchedule.Place.deserializeNBT(
+                    in.compound("destination")
+                        .tag()),
+                InventoryKeyState.decodeAmounts(in, "requested"));
+        }
+    }
+
+    public record DeliveryView(@Nonnull DeliveryPlan plan, @Nonnull Map<InventoryKey, Long> delivered,
+        boolean enabled) {
+
+        public DeliveryView {
+            delivered = Map.copyOf(delivered);
+            if (!delivered.keySet()
+                .equals(
+                    plan.requested()
+                        .keySet())
+                || delivered.entrySet()
+                    .stream()
+                    .anyMatch(
+                        entry -> entry.getValue() < 0 || entry.getValue() > plan.requested()
+                            .get(entry.getKey())))
+                throw new IllegalArgumentException("Delivery receipts must fit their order");
+        }
+
+        public NBTTagCompound serializeNBT() {
+            var out = plan.serializeNBT();
+            out.setTag("delivered", InventoryKeyState.encodeAmounts(delivered));
+            out.setBoolean("enabled", enabled);
+            return out;
+        }
+
+        public static DeliveryView deserializeNBT(NBTTagCompound encoded) {
+            var in = new NbtReader(encoded, "deliveryView");
+            return new DeliveryView(
+                DeliveryPlan.deserializeNBT(encoded),
+                InventoryKeyState.decodeAmounts(in, "delivered"),
+                in.bool("enabled"));
+        }
+    }
+
+    private static final class DeliveryJob {
+
+        private final DeliveryPlan plan;
+        private final Map<InventoryKey, Long> delivered = new LinkedHashMap<>();
+        private boolean enabled;
+        @Nullable
+        private String waitingProblemKey;
+        private int retryTicks;
+
+        private DeliveryJob(DeliveryView view) {
+            plan = view.plan();
+            delivered.putAll(view.delivered());
+            enabled = view.enabled();
+        }
+
+        private boolean complete() {
+            return delivered.entrySet()
+                .stream()
+                .allMatch(
+                    entry -> entry.getValue()
+                        .equals(
+                            plan.requested()
+                                .get(entry.getKey())));
+        }
+
+        private NBTTagCompound serializeNBT() {
+            return new DeliveryView(plan, delivered, enabled).serializeNBT();
+        }
+
+        private static DeliveryJob deserializeNBT(NBTTagCompound encoded) {
+            return new DeliveryJob(DeliveryView.deserializeNBT(encoded));
+        }
+    }
+
+    @Nullable
+    public DeliveryView deliveryView() {
+        return delivery == null ? null : new DeliveryView(delivery.plan, delivery.delivered, delivery.enabled);
+    }
+
+    public CommandResult saveDelivery(UUID actorTeam, long expectedRevision, DeliveryPlan plan) {
+        if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
+        if (revision != expectedRevision) return CommandResult.STALE;
+        if (plan.requested()
+            .keySet()
+            .stream()
+            .anyMatch(key -> !acceptsItemCargo(((ItemStackWrapper) key).toStack(1)))) return CommandResult.BLOCKED;
+        if (status != Status.PHYSICAL || isRunning() || !matchesCurrentPlace(plan.home())) return CommandResult.BLOCKED;
+        for (var place : List.of(plan.home(), plan.destination())) {
+            var endpoint = CelestialAssetStore.findEndpoint(((VehicleSchedule.Exact) place.target()).endpointId());
+            if (endpoint == null || !matchesEndpoint(place, endpoint)
+                || !teamId.equals(CelestialAssetStore.getTeamId(endpoint.asset().assetId)))
+                return CommandResult.BLOCKED;
+        }
+        if (delivery == null || !delivery.plan.equals(plan)) {
+            var delivered = new LinkedHashMap<InventoryKey, Long>();
+            plan.requested()
+                .keySet()
+                .forEach(key -> delivered.put(key, 0L));
+            delivery = new DeliveryJob(new DeliveryView(plan, delivered, true));
+        } else delivery.enabled = true;
+        revision++;
+        return CommandResult.APPLIED;
+    }
+
+    /** Stops producing new trips. A trip already underway still brings the same vehicle home. */
+    public CommandResult stopDelivery(UUID actorTeam, long expectedRevision) {
+        if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
+        if (revision != expectedRevision) return CommandResult.STALE;
+        if (delivery == null) return CommandResult.BLOCKED;
+        delivery.enabled = false;
+        delivery.waitingProblemKey = null;
+        if (execution != null && execution.origin == ProgramOrigin.DELIVERY
+            && status == Status.PHYSICAL
+            && execution.journey == null
+            && matchesCurrentPlace(delivery.plan.home())) execution.completed = true;
+        revision++;
+        return CommandResult.APPLIED;
+    }
+
+    public CommandResult clearDelivery(UUID actorTeam, long expectedRevision) {
+        if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
+        if (revision != expectedRevision) return CommandResult.STALE;
+        if (delivery == null || delivery.enabled || isRunning()) return CommandResult.BLOCKED;
+        delivery = null;
+        if (execution != null && execution.origin == ProgramOrigin.DELIVERY) execution = null;
+        revision++;
+        return CommandResult.APPLIED;
+    }
+
+    private void beginDeliveryTrip() {
+        if (status != Status.PHYSICAL || !matchesCurrentPlace(delivery.plan.home())) return;
+        if (delivery.complete()) {
+            delivery.waitingProblemKey = null;
+            delivery.enabled = false;
+            revision++;
+            return;
+        }
+        if (delivery.retryTicks > 0) {
+            delivery.retryTicks--;
+            return;
+        }
+        delivery.retryTicks = 20;
+        var homePad = deliveryPadFor(delivery.plan.home());
+        if (homePad == null) {
+            delivery.waitingProblemKey = "galaxia.vehicle.simple.waiting_home_pad";
+            return;
+        }
+        var destinationPad = deliveryPadFor(delivery.plan.destination());
+        if (destinationPad == null) {
+            delivery.waitingProblemKey = "galaxia.vehicle.simple.waiting_destination_pad";
+            return;
+        }
+        delivery.waitingProblemKey = Problem.ACTION_RESOURCES.key;
+        var resources = currentResources();
+        if (resources == null) return;
+        var packing = new ArrayList<com.cleanroommc.modularui.utils.item.ItemStackHandler>();
+        for (var module : modules.values()) {
+            var copy = new com.cleanroommc.modularui.utils.item.ItemStackHandler(module.cargo.getSlots());
+            for (int slot = 0; slot < module.cargo.getSlots(); slot++) {
+                var stack = module.cargo.getStackInSlot(slot);
+                copy.setStackInSlot(slot, stack == null ? null : stack.copy());
+            }
+            packing.add(copy);
+        }
+        var loads = new ArrayList<VehicleSchedule.Action>();
+        var unloads = new ArrayList<VehicleSchedule.Action>();
+        for (var request : delivery.plan.requested()
+            .entrySet()) {
+            long remaining = request.getValue() - delivery.delivered.get(request.getKey());
+            if (remaining == 0) continue;
+            var item = (ItemStackWrapper) request.getKey();
+            long aboard = Math.min(remaining, cargoAmount(item));
+            long offered = Math.min(remaining - aboard, resources.updateContents(item, -(remaining - aboard), true));
+            offered = Math.min(Integer.MAX_VALUE, Math.min(offered, insertCargo(item, offered, true)));
+            var rest = offered == 0 ? null : item.toStack((int) Math.min(offered, Integer.MAX_VALUE));
+            for (var inventory : packing) {
+                for (int slot = 0; rest != null && slot < inventory.getSlots(); slot++)
+                    rest = inventory.insertItem(slot, rest, false);
+            }
+            long loaded = offered - (rest == null ? 0 : rest.stackSize);
+            if (loaded > 0) loads
+                .add(new VehicleSchedule.Transfer(UUID.randomUUID(), item, loaded, VehicleSchedule.Direction.LOAD));
+            if (loaded + aboard > 0) unloads.add(
+                new VehicleSchedule.Transfer(
+                    UUID.randomUUID(),
+                    item,
+                    loaded + aboard,
+                    VehicleSchedule.Direction.UNLOAD));
+        }
+        if (unloads.isEmpty()) return;
+        loads.add(VehicleSchedule.Refuel.full(UUID.randomUUID()));
+        var home = new VehicleSchedule.Visit(UUID.randomUUID(), delivery.plan.home(), loads);
+        double threshold = ConfigRocket.wear.automaticRepairThresholdPercent;
+        var serviceDestination = new VehicleSchedule.Visit(
+            UUID.randomUUID(),
+            destinationPad,
+            List.of(
+                new VehicleSchedule.Repair(
+                    UUID.randomUUID(),
+                    threshold,
+                    ((VehicleSchedule.Exact) delivery.plan.destination()
+                        .target()).endpointId())));
+        var destination = new VehicleSchedule.Visit(UUID.randomUUID(), delivery.plan.destination(), unloads);
+        var serviceHome = new VehicleSchedule.Visit(
+            UUID.randomUUID(),
+            homePad,
+            List.of(
+                new VehicleSchedule.Repair(
+                    UUID.randomUUID(),
+                    threshold,
+                    ((VehicleSchedule.Exact) delivery.plan.home()
+                        .target()).endpointId())));
+        var returned = new VehicleSchedule.Visit(UUID.randomUUID(), delivery.plan.home(), List.of());
+        var trip = new VehicleSchedule(
+            List.of(home, serviceDestination, destination, serviceHome, returned),
+            VehicleSchedule.Mode.RUN_ONCE).withSafeDurability(schedule.requireSafeDurability());
+        for (var leg : trip.routes()
+            .keySet())
+            trip = trip.withRouteSettings(
+                leg,
+                new VehicleSchedule.RouteSettings(0, OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV));
+        delivery.retryTicks = 0;
+        delivery.waitingProblemKey = null;
+        execution = new Execution();
+        execution.origin = ProgramOrigin.DELIVERY;
+        execution.overrideProgram = trip;
+        revision++;
+    }
+
+    @Nullable
+    private VehicleSchedule.Place deliveryPadFor(VehicleSchedule.Place silo) {
+        UUID siloId = ((VehicleSchedule.Exact) silo.target()).endpointId();
+        return CelestialAssetStore.getTeamAssets(teamId, silo.body())
+            .stream()
+            .filter(asset -> asset.status() == CelestialAsset.Status.OPERATIONAL)
+            .flatMap(
+                asset -> asset.endpoints()
+                    .values()
+                    .stream()
+                    .filter(
+                        endpoint -> endpoint.kind() == CelestialAsset.Endpoint.Kind.LANDING_PAD
+                            && endpoint.physical() != null
+                            && endpoint.serviceSlots() > 0
+                            && siloId.equals(endpoint.serviceSiloId()))
+                    .map(endpoint -> new CelestialAssetStore.EndpointRef(asset, endpoint)))
+            .filter(
+                endpoint -> VehicleSchedule.Place.at(endpoint)
+                    .context() == silo.context())
+            .sorted(
+                java.util.Comparator.comparing(
+                    endpoint -> endpoint.endpoint()
+                        .id()))
+            .findFirst()
+            .map(VehicleSchedule.Place::at)
+            .orElse(null);
+    }
+
     public VehicleSchedule schedule() {
         return schedule;
     }
 
     private VehicleSchedule program() {
-        return execution != null && execution.manualProgram != null ? execution.manualProgram : schedule;
+        return execution != null && execution.overrideProgram != null ? execution.overrideProgram : schedule;
     }
 
     public ScheduleView scheduleView() {
@@ -1040,8 +1345,9 @@ public final class Rocket {
                     .stream()
                     .map(VehicleSchedule.Visit::id)
                     .toList()),
-            execution != null && execution.problem != null ? execution.problem.key
-                : program().endsWithoutRecovery() ? "galaxia.rocket.schedule.no_recovery" : null,
+            delivery != null && delivery.waitingProblemKey != null ? delivery.waitingProblemKey
+                : execution != null && execution.problem != null ? execution.problem.key
+                    : program().endsWithoutRecovery() ? "galaxia.rocket.schedule.no_recovery" : null,
             engine == null ? null : engine.localVehicle(),
             propellantAmounts(),
             cargoContents(),
@@ -1052,7 +1358,10 @@ public final class Rocket {
             buildSlots.size(),
             service != null && !service.reassembled ? service.returnSiloId : null,
             execution == null ? null : execution.launchWarning,
-            execution == null || execution.completed ? null : execution.manualProgram);
+            execution == null || execution.completed || execution.origin != ProgramOrigin.MANUAL_LANDING ? null
+                : execution.overrideProgram,
+            deliveryView(),
+            isRunning());
     }
 
     private ModuleView moduleView(Module module) {
@@ -1073,7 +1382,7 @@ public final class Rocket {
     }
 
     private int lockedVisitCount() {
-        if (execution != null && execution.manualProgram != null) return 0;
+        if (execution != null && execution.overrideProgram != null) return 0;
         if (isRunning()) return Math
             .max(execution.visitIndex, execution.journey == null ? execution.visitIndex : execution.destinationIndex)
             + 1;
@@ -1101,6 +1410,7 @@ public final class Rocket {
         @Nonnull VehicleSchedule replacement) {
         if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
         if (revision != expectedRevision) return CommandResult.STALE;
+        if (delivery != null) return CommandResult.BLOCKED;
         if (!hasPreparedSurfaceDestinations(replacement) || !replacement.hasValidRefueling())
             return CommandResult.BLOCKED;
         if (!passengers.isEmpty() && replacement.endsWithoutRecovery()) return CommandResult.BLOCKED;
@@ -1128,8 +1438,8 @@ public final class Rocket {
                         .get(leg)))
                 return CommandResult.BLOCKED;
         }
-        if (execution != null && execution.manualProgram != null && execution.completed) execution = null;
-        if (execution != null && execution.manualProgram == null) {
+        if (execution != null && execution.overrideProgram != null && execution.completed) execution = null;
+        if (execution != null && execution.overrideProgram == null) {
             execution.acknowledgedRisks.removeIf(leg -> !sameLeg(schedule, replacement, leg));
             execution.launchWarning = null;
         }
@@ -1143,13 +1453,14 @@ public final class Rocket {
         VehicleSchedule.RouteSettings settings) {
         if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
         if (revision != expectedRevision) return CommandResult.STALE;
-        if (status != Status.PHYSICAL || destination.surfaceSite() == null
+        if (delivery != null || status != Status.PHYSICAL
+            || destination.surfaceSite() == null
             || settings.allowance()
                 .isEmpty()
             || !destination.surfaceSite()
                 .footprint()
                 .equals(footprint())
-            || (isRunning() && (execution.manualProgram == null || execution.journey != null)))
+            || (isRunning() && (execution.overrideProgram == null || execution.journey != null)))
             return CommandResult.BLOCKED;
         var source = new VehicleSchedule.Visit(UUID.randomUUID(), location, List.of());
         var target = new VehicleSchedule.Visit(UUID.randomUUID(), destination, List.of());
@@ -1157,7 +1468,7 @@ public final class Rocket {
             .withSafeDurability(schedule.requireSafeDurability())
             .withRouteSettings(new VehicleSchedule.Leg(source.id(), target.id()), settings);
         execution = new Execution();
-        execution.manualProgram = manual;
+        execution.overrideProgram = manual;
         revision++;
         return CommandResult.APPLIED;
     }
@@ -1165,7 +1476,8 @@ public final class Rocket {
     public CommandResult cancelManualLanding(UUID actorTeam, long expectedRevision) {
         if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
         if (revision != expectedRevision) return CommandResult.STALE;
-        if (execution == null || execution.manualProgram == null
+        if (execution == null || execution.origin != ProgramOrigin.MANUAL_LANDING
+            || execution.overrideProgram == null
             || execution.completed
             || execution.journey != null
             || status != Status.PHYSICAL) return CommandResult.BLOCKED;
@@ -1177,7 +1489,8 @@ public final class Rocket {
     /** Native terrain is rechecked at the composition boundary before any arrival maneuver progresses. */
     @Nullable
     public VehicleSchedule.Place pendingSurfaceLanding() {
-        if (execution == null || execution.manualProgram == null
+        if (execution == null || execution.origin != ProgramOrigin.MANUAL_LANDING
+            || execution.overrideProgram == null
             || execution.journey == null
             || status != Status.IN_FLIGHT) return null;
         if (execution.phaseIndex < execution.journey.obligations()
@@ -1188,7 +1501,7 @@ public final class Rocket {
             if (kind != OrbitalMechanics.ManeuverKind.CAPTURE && kind != OrbitalMechanics.ManeuverKind.LANDING)
                 return null;
         }
-        return execution.manualProgram.visits()
+        return execution.overrideProgram.visits()
             .getLast()
             .place();
     }
@@ -1201,6 +1514,7 @@ public final class Rocket {
     public CommandResult start(@Nonnull UUID actorTeam, long expectedRevision) {
         if (!teamId.equals(actorTeam)) return CommandResult.FORBIDDEN;
         if (revision != expectedRevision) return CommandResult.STALE;
+        if (delivery != null) return CommandResult.BLOCKED;
         if (execution != null && execution.reviewPaused && status == Status.PHYSICAL) {
             execution.reviewPaused = false;
             clearProblem();
@@ -1297,6 +1611,7 @@ public final class Rocket {
 
     /** Advances only active server ticks. Chosen geometry, paid phases and action receipts survive world saves. */
     public void tick(@Nonnull Registry registry, double orbitalEpoch) {
+        if (delivery != null && delivery.enabled && !isRunning()) beginDeliveryTrip();
         var schedule = program();
         if (!isRunning() || status == Status.LOST) return;
         if (execution.reviewPaused) return;
@@ -1343,6 +1658,17 @@ public final class Rocket {
                         throw new IllegalStateException("Rocket transfer admission changed within one server step");
                     resources.markDirty();
                     execution.progress.merge(action.id(), internal, Long::sum);
+                    if (!loading && delivery != null
+                        && execution.origin == ProgramOrigin.DELIVERY
+                        && visit.place()
+                            .equals(delivery.plan.destination())) {
+                        delivery.delivered.computeIfPresent(
+                            transfer.resource(),
+                            (key, count) -> count + Math.min(
+                                internal,
+                                delivery.plan.requested()
+                                    .get(key) - count));
+                    }
                 }
                 if (execution.progress.getOrDefault(action.id(), 0L) == transfer.amount())
                     execution.finished.add(action.id());
@@ -1390,9 +1716,10 @@ public final class Rocket {
                     execution.finished.add(action.id());
                     continue;
                 }
-                if ((service == null || !service.id.equals(execution.occurrenceId)) && modules.values()
-                    .stream()
-                    .noneMatch(module -> repair.qualifies(module.durabilityPercent))) {
+                if (repair.returnSiloId() == null && (service == null || !service.id.equals(execution.occurrenceId))
+                    && modules.values()
+                        .stream()
+                        .noneMatch(module -> repair.qualifies(module.durabilityPercent))) {
                     execution.finished.add(action.id());
                     continue;
                 }
@@ -1476,10 +1803,12 @@ public final class Rocket {
             waitFor(Problem.PROPULSION);
             return;
         }
-        double remaining = remainingAllowance();
-        if (!Double.isFinite(remaining) || engine.usableDeltaVMps() + 1e-7 < remaining) {
-            waitFor(Problem.FUEL_BUDGET);
-            return;
+        if (execution.origin != ProgramOrigin.DELIVERY) {
+            double remaining = remainingAllowance();
+            if (!Double.isFinite(remaining) || engine.usableDeltaVMps() + 1e-7 < remaining) {
+                waitFor(Problem.FUEL_BUDGET);
+                return;
+            }
         }
         var sourceBody = GalaxiaCelestialAPI.get(bodyKey())
             .orElse(null);
@@ -1505,7 +1834,12 @@ public final class Rocket {
             1,
             engine.localVehicle(),
             model);
-        var settings = schedule.routes()
+        if (execution.origin == ProgramOrigin.DELIVERY && !configureDeliveryRoute(next, plan, engine, model)) return;
+        if (execution.origin == ProgramOrigin.DELIVERY && engine.usableDeltaVMps() + 1e-7 < remainingAllowance()) {
+            waitFor(Problem.FUEL_BUDGET);
+            return;
+        }
+        var settings = program().routes()
             .get(
                 new VehicleSchedule.Leg(
                     schedule.visits()
@@ -1583,11 +1917,110 @@ public final class Rocket {
         revision++;
     }
 
+    /** Derives flight limits while treating service handoffs as ground transport. */
+    private boolean configureDeliveryRoute(int next, OrbitalTransferPlanner.PoweredPlan candidates, Propulsion engine,
+        OrbitalMechanics.CostModel model) {
+        if (next != 1 && next != 3) {
+            waitFor(Problem.SERVICE);
+            return false;
+        }
+        var selected = candidates.candidates()
+            .stream()
+            .filter(
+                candidate -> candidate.status() == OrbitalMechanics.LocalStatus.FEASIBLE
+                    && candidate.gameSeconds() <= ConfigRocket.flight.maximumTransferSeconds
+                    && billsFor(candidate) != null)
+            .min(java.util.Comparator.comparingDouble(PoweredCandidate::totalDvMps))
+            .orElse(null);
+        var trip = execution.overrideProgram;
+        var source = trip.visits()
+            .get(execution.visitIndex);
+        if (selected == null) {
+            if (next == 3 && location.canRefuel() && destinationHasPropellant(location, engine)) {
+                var full = VehicleSchedule.Refuel.full(UUID.randomUUID());
+                boolean missing = refuelTargets(full).entrySet()
+                    .stream()
+                    .anyMatch(target -> propellantAmounts().getOrDefault(target.getKey(), 0L) < target.getValue());
+                if (missing && source.actions()
+                    .stream()
+                    .noneMatch(VehicleSchedule.Refuel.class::isInstance)) {
+                    var actions = new ArrayList<>(source.actions());
+                    actions.add(full);
+                    execution.overrideProgram = trip
+                        .withVisit(new VehicleSchedule.Visit(source.id(), source.place(), actions));
+                    waitFor(Problem.ACTION_RESOURCES);
+                    return false;
+                }
+            }
+            waitFor(Problem.NO_ROUTE);
+            return false;
+        }
+        var destination = trip.visits()
+            .get(next);
+        trip = trip.withRouteSettings(
+            new VehicleSchedule.Leg(source.id(), destination.id()),
+            new VehicleSchedule.RouteSettings(
+                selected.totalDvMps(),
+                OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV));
+        if (next == 1) {
+            var reverse = returnAssessment(selected, destination.place(), engine, model);
+            boolean refueling = reverse.candidate() == null;
+            if (refueling && !destinationHasPropellant(delivery.plan.destination(), engine)) {
+                waitFor(Problem.FUEL_BUDGET);
+                return false;
+            }
+            var receiving = trip.visits()
+                .get(2);
+            var actions = new ArrayList<VehicleSchedule.Action>();
+            for (var action : receiving.actions()) if (!(action instanceof VehicleSchedule.Refuel)) actions.add(action);
+            if (refueling) actions.add(VehicleSchedule.Refuel.full(UUID.randomUUID()));
+            trip = trip.withVisit(new VehicleSchedule.Visit(receiving.id(), receiving.place(), actions));
+            var returnPad = trip.visits()
+                .get(3);
+            trip = trip.withRouteSettings(
+                new VehicleSchedule.Leg(receiving.id(), returnPad.id()),
+                new VehicleSchedule.RouteSettings(
+                    refueling ? engine.usableDeltaVMps()
+                        : reverse.candidate()
+                            .totalDvMps(),
+                    OrbitalTransferPlanner.RoutePriority.PRIORITIZE_DV));
+        }
+        execution.overrideProgram = trip;
+        return true;
+    }
+
+    private boolean destinationHasPropellant(VehicleSchedule.Place destination, Propulsion engine) {
+        var endpoint = CelestialAssetStore.findEndpoint(((VehicleSchedule.Exact) destination.target()).endpointId());
+        if (endpoint == null || !matchesEndpoint(destination, endpoint)
+            || !teamId.equals(CelestialAssetStore.getTeamId(endpoint.asset().assetId))) return false;
+        var resources = endpoint.resources();
+        return resources != null && engine.unitsPerKilogram()
+            .keySet()
+            .stream()
+            .allMatch(key -> resources.updateContents(key, -1, true) > 0);
+    }
+
+    private record ReturnAssessment(double remainingDeltaVMps, boolean dataAvailable,
+        @Nullable PoweredCandidate candidate) {}
+
     @Nullable
     private LaunchWarning returnRisk(PoweredCandidate outbound, VehicleSchedule.Place destination,
         VehicleSchedule.Leg leg, Propulsion engine, OrbitalMechanics.CostModel model) {
+        var assessment = returnAssessment(outbound, destination, engine, model);
+        return assessment.candidate() != null ? null
+            : new LaunchWarning(
+                leg,
+                location,
+                destination,
+                outbound.totalDvMps(),
+                assessment.remainingDeltaVMps(),
+                assessment.dataAvailable());
+    }
+
+    private ReturnAssessment returnAssessment(PoweredCandidate outbound, VehicleSchedule.Place destination,
+        Propulsion engine, OrbitalMechanics.CostModel model) {
         if (outbound.obligations()
-            .isEmpty()) return null;
+            .isEmpty()) return new ReturnAssessment(engine.usableDeltaVMps(), true, outbound);
         var remaining = new LinkedHashMap<>(propellantAmounts());
         for (var bill : billsFor(outbound))
             bill.forEach((key, amount) -> remaining.compute(key, (ignored, value) -> value - amount));
@@ -1608,8 +2041,7 @@ public final class Rocket {
                     .thrustNewtons())
             .sum();
         double remainingDv = engine.exhaustVelocityMps * Math.log1p(usableKg / engine.inertMassKg());
-        if (returnThrust <= 0)
-            return new LaunchWarning(leg, location, destination, outbound.totalDvMps(), remainingDv, true);
+        if (returnThrust <= 0) return new ReturnAssessment(remainingDv, true, null);
         var vehicle = new OrbitalMechanics.LocalVehicle(
             engine.inertMassKg(),
             usableKg,
@@ -1619,8 +2051,7 @@ public final class Rocket {
             .orElse(null);
         var target = GalaxiaCelestialAPI.get(location.body())
             .orElse(null);
-        if (source == null || target == null)
-            return new LaunchWarning(leg, location, destination, outbound.totalDvMps(), remainingDv, false);
+        if (source == null || target == null) return new ReturnAssessment(remainingDv, false, null);
         double epoch = outbound.obligations()
             .getLast()
             .endEpochOsu();
@@ -1635,16 +2066,17 @@ public final class Rocket {
             1,
             vehicle,
             model);
-        if (reverse.candidates()
+        var candidate = reverse.candidates()
             .stream()
-            .anyMatch(
-                candidate -> candidate.status() == OrbitalMechanics.LocalStatus.FEASIBLE
-                    && candidate.gameSeconds() <= ConfigRocket.flight.maximumTransferSeconds
-                    && billsFor(candidate, remaining) != null))
-            return null;
+            .filter(
+                route -> route.status() == OrbitalMechanics.LocalStatus.FEASIBLE
+                    && route.gameSeconds() <= ConfigRocket.flight.maximumTransferSeconds
+                    && billsFor(route, remaining) != null)
+            .min(java.util.Comparator.comparingDouble(PoweredCandidate::totalDvMps))
+            .orElse(null);
         boolean dataAvailable = reverse.status() != OrbitalMechanics.LocalStatus.UNAVAILABLE_DATA
             && reverse.status() != OrbitalMechanics.LocalStatus.NOT_FOUND;
-        return new LaunchWarning(leg, location, destination, outbound.totalDvMps(), remainingDv, dataAvailable);
+        return new ReturnAssessment(remainingDv, dataAvailable, candidate);
     }
 
     private double remainingAllowance() {
@@ -1934,6 +2366,13 @@ public final class Rocket {
                     && currentPlace.target()
                         .kind() == CelestialAsset.Endpoint.Kind.LANDING_PAD) {
                     awaitingService.removeIf(moduleId -> repair.qualifies(Math.max(0, maximumCondition.get(moduleId))));
+                    if (repair.returnSiloId() != null) {
+                        var receiving = CelestialAssetStore.findEndpoint(repair.returnSiloId());
+                        if (receiving == null || receiving.endpoint()
+                            .kind() != CelestialAsset.Endpoint.Kind.SILO
+                            || !teamId.equals(CelestialAssetStore.getTeamId(receiving.asset().assetId))) return false;
+                        currentPlace = VehicleSchedule.Place.at(receiving);
+                    }
                 }
             }
             if (awaitingService.isEmpty()) return true;
@@ -1947,6 +2386,10 @@ public final class Rocket {
             var nextPlace = schedule.visits()
                 .get(next)
                 .place();
+            if (currentPlace.equals(nextPlace)) {
+                current = next;
+                continue;
+            }
             var source = GalaxiaCelestialAPI.get(currentPlace.body())
                 .orElse(null);
             var destination = GalaxiaCelestialAPI.get(nextPlace.body())
@@ -2071,10 +2514,17 @@ public final class Rocket {
     }
 
     /** Vehicle-local execution state. It owns no copied modules, inventory or endpoint registry. */
+    private enum ProgramOrigin {
+        MANUAL_LANDING,
+        DELIVERY
+    }
+
     private static final class Execution {
 
+        private ProgramOrigin origin = ProgramOrigin.MANUAL_LANDING;
+
         @Nullable
-        private VehicleSchedule manualProgram;
+        private VehicleSchedule overrideProgram;
 
         private int visitIndex;
         private int destinationIndex;
@@ -2103,7 +2553,8 @@ public final class Rocket {
 
         private NBTTagCompound serializeNBT() {
             var out = new NBTTagCompound();
-            if (manualProgram != null) out.setTag("manualProgram", manualProgram.serializeNBT());
+            if (overrideProgram != null) out.setTag("manualProgram", overrideProgram.serializeNBT());
+            if (overrideProgram != null) out.setString("programOrigin", origin.name());
             out.setInteger("visit", visitIndex);
             out.setInteger("destination", destinationIndex);
             out.setString("occurrence", occurrenceId.toString());
@@ -2162,22 +2613,25 @@ public final class Rocket {
             var state = new Execution();
             if (in.tag()
                 .hasKey("manualProgram")) {
-                state.manualProgram = VehicleSchedule.deserializeNBT(
+                state.overrideProgram = VehicleSchedule.deserializeNBT(
                     in.compound("manualProgram")
                         .tag());
-                if (state.manualProgram.mode() != VehicleSchedule.Mode.RUN_ONCE || state.manualProgram.visits()
-                    .size() != 2
-                    || state.manualProgram.visits()
-                        .getLast()
-                        .place()
-                        .surfaceSite() == null
-                    || state.manualProgram.visits()
-                        .stream()
-                        .anyMatch(
-                            visit -> !visit.actions()
-                                .isEmpty()))
+                if (in.tag()
+                    .hasKey("programOrigin")) state.origin = in.enumValue(ProgramOrigin.class, "programOrigin");
+                if (state.origin == ProgramOrigin.MANUAL_LANDING
+                    && (state.overrideProgram.mode() != VehicleSchedule.Mode.RUN_ONCE || state.overrideProgram.visits()
+                        .size() != 2
+                        || state.overrideProgram.visits()
+                            .getLast()
+                            .place()
+                            .surfaceSite() == null
+                        || state.overrideProgram.visits()
+                            .stream()
+                            .anyMatch(
+                                visit -> !visit.actions()
+                                    .isEmpty())))
                     throw new IllegalStateException("Invalid accepted manual mission");
-                schedule = state.manualProgram;
+                schedule = state.overrideProgram;
             }
             state.visitIndex = in.integer(
                 "visit",
@@ -2507,6 +2961,7 @@ public final class Rocket {
         if (projection != null) out.setString("entity", projection.entityId.toString());
         if (service != null) out.setTag("service", service.serializeNBT());
         if (execution != null) out.setTag("execution", execution.serializeNBT());
+        if (delivery != null) out.setTag("delivery", delivery.serializeNBT());
         if (physicalPosition != null) out.setTag("physicalPosition", physicalPosition.serializeNBT());
         out.setDouble("parkingAngle", parkingAngleRadians);
         var crew = new NBTTagList();
@@ -2603,6 +3058,11 @@ public final class Rocket {
         if (in.tag()
             .hasKey("execution"))
             rocket.execution = Execution.deserializeNBT(in.compound("execution"), rocket.schedule);
+        if (in.tag()
+            .hasKey("delivery"))
+            rocket.delivery = DeliveryJob.deserializeNBT(
+                in.compound("delivery")
+                    .tag());
         rocket.projectionGeneration = in.longValue("projectionGeneration");
         if (rocket.projectionGeneration < 0) throw new IllegalStateException("Negative Rocket projection generation");
         if (in.tag()
@@ -2882,7 +3342,8 @@ public final class Rocket {
         @Nonnull Set<UUID> lockedVisitIds, @Nullable String problemKey,
         @Nullable OrbitalMechanics.LocalVehicle propulsion, @Nonnull Map<FluidKey, Long> propellant,
         @Nonnull Map<InventoryKey, Long> cargo, @Nonnull List<ModuleView> modules, int requiredModules,
-        @Nullable UUID returnSiloId, @Nullable LaunchWarning launchWarning, @Nullable VehicleSchedule manualMission) {
+        @Nullable UUID returnSiloId, @Nullable LaunchWarning launchWarning, @Nullable VehicleSchedule manualMission,
+        @Nullable DeliveryView delivery, boolean running) {
 
         public ScheduleView {
             lockedVisitIds = Set.copyOf(lockedVisitIds);
@@ -2928,6 +3389,8 @@ public final class Rocket {
             if (returnSiloId != null) out.setString("returnSilo", returnSiloId.toString());
             if (launchWarning != null) out.setTag("launchWarning", launchWarning.serializeNBT());
             if (manualMission != null) out.setTag("manualMission", manualMission.serializeNBT());
+            if (delivery != null) out.setTag("delivery", delivery.serializeNBT());
+            out.setBoolean("running", running);
             return out;
         }
 
@@ -2986,7 +3449,14 @@ public final class Rocket {
                         ? VehicleSchedule.deserializeNBT(
                             in.compound("manualMission")
                                 .tag())
-                        : null);
+                        : null,
+                in.tag()
+                    .hasKey("delivery")
+                        ? DeliveryView.deserializeNBT(
+                            in.compound("delivery")
+                                .tag())
+                        : null,
+                in.bool("running"));
         }
     }
 
@@ -3197,8 +3667,7 @@ public final class Rocket {
         public ItemStack insertCargo(@Nonnull ItemStack input, boolean simulate) {
             ItemStack remainder = input.copy();
             if (!storesAccessible()) return remainder;
-            FluidStack containedFluid = GTUtility.getFluidForFilledItem(remainder, true);
-            if (containedFluid != null && containedFluid.amount > 0) return remainder;
+            if (!acceptsItemCargo(remainder)) return remainder;
             for (int i = 0; i < cargo.getSlots() && remainder != null; i++) {
                 remainder = cargo.insertItem(i, remainder, simulate);
             }

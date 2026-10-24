@@ -372,8 +372,14 @@ public final class CelestialAssetStore {
     }
 
     public long satelliteBandwidth(UUID teamId, CelestialObjectKey bodyKey) {
-        return (long) (satelliteCount(teamId, bodyKey, SatelliteKind.COMMUNICATION)
-            * SatelliteKind.COMMUNICATION.effectPerSatellite());
+        validateSatelliteKey(teamId, bodyKey, SatelliteKind.COMMUNICATION);
+        long operational = getStateInternal(teamId, bodyKey).stream()
+            .filter(
+                asset -> asset instanceof Satellite satellite
+                    && satellite.satelliteKind() == SatelliteKind.COMMUNICATION
+                    && asset.status() == Buildable.Status.OPERATIONAL)
+            .count();
+        return (long) (operational * SatelliteKind.COMMUNICATION.effectPerSatellite());
     }
 
     public double satelliteMiningSpeedBonus(UUID teamId, CelestialObjectKey bodyKey) {

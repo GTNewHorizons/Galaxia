@@ -1408,6 +1408,388 @@ final class LandingPadServiceTest {
                 .toList());
     }
 
+    @Test
+    void simpleDeliveriesKeepTheSameRocketAndCreditOnlyCommittedUnloadsAcrossReload() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var rocket = fixture.builtRocket(cargo, 100);
+        var vehicleId = rocket.id();
+        var moduleIds = rocket.modules()
+            .stream()
+            .map(Rocket.Module::id)
+            .toList();
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        var target = fixture.deliveryDestination();
+        target.testPort = new TileEntityRocketLoadingPort();
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        var gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot));
+        assertEquals(150, fixture.silo.testPort.updateContents(iron, 150, false));
+        assertEquals(10000, fixture.silo.testPort.updateContents(FUEL, 10000, false));
+        assertEquals(20000, fixture.silo.testPort.updateContents(OXIDIZER, 20000, false));
+        assertEquals(576, target.testPort.updateContents(gold, 576, false));
+        var home = rocket.location();
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        var order = new Rocket.DeliveryPlan(home, destination, Map.of(iron, 150L));
+        var advanced = rocket.schedule();
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        assertEquals(Rocket.CommandResult.STALE, rocket.saveDelivery(TEAM, rocket.revision() - 1, order));
+        assertEquals(Rocket.CommandResult.FORBIDDEN, rocket.stopDelivery(UUID.randomUUID(), rocket.revision()));
+        for (int tick = 0; tick < 5000 && !target.machineIdentity()
+            .id()
+            .equals(rocket.currentEndpointId()); tick++) fixture.deliveryTick(rocket, tick);
+        assertEquals(
+            target.machineIdentity()
+                .id(),
+            rocket.currentEndpointId());
+        assertEquals(
+            0,
+            rocket.deliveryView()
+                .delivered()
+                .get(iron));
+        assertTrue(rocket.isRunning());
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.stopDelivery(TEAM, rocket.revision()));
+        assertEquals(Rocket.CommandResult.BLOCKED, rocket.clearDelivery(TEAM, rocket.revision()));
+        var definitions = new RocketPartRegistry();
+        definitions.register(cargo, RocketPartCategory.STRUCTURAL);
+        definitions.register(fixture.flightEngine(), RocketPartCategory.LIQUID_ENGINES);
+        fixture.registry.restoreNBT(fixture.registry.serializeNBT(), definitions);
+        rocket = fixture.registry.find(vehicleId);
+        assertEquals(
+            0,
+            rocket.deliveryView()
+                .delivered()
+                .get(iron));
+        assertEquals(576, target.testPort.updateContents(gold, -576, false));
+        for (int tick = 0; tick < 5000 && rocket.isRunning(); tick++) fixture.deliveryTick(rocket, tick);
+        assertFalse(rocket.isRunning());
+        assertEquals(home, rocket.location());
+        assertEquals(
+            64,
+            rocket.deliveryView()
+                .delivered()
+                .get(iron));
+        assertEquals(64, target.testPort.updateContents(iron, -Long.MAX_VALUE, true));
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        for (int tick = 0; tick < 15000 && rocket.deliveryView()
+            .enabled(); tick++) fixture.deliveryTick(rocket, tick);
+        assertFalse(
+            rocket.deliveryView()
+                .enabled());
+        assertFalse(rocket.isRunning());
+        assertEquals(home, rocket.location());
+        assertEquals(
+            150,
+            rocket.deliveryView()
+                .delivered()
+                .get(iron));
+        assertEquals(150, target.testPort.updateContents(iron, -Long.MAX_VALUE, true));
+        assertEquals(0, rocket.cargoAmount(iron));
+        assertEquals(
+            moduleIds,
+            rocket.modules()
+                .stream()
+                .map(Rocket.Module::id)
+                .toList());
+        assertEquals(advanced, rocket.schedule());
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.clearDelivery(TEAM, rocket.revision()));
+        assertNull(rocket.deliveryView());
+        assertEquals(advanced, rocket.schedule());
+    }
+
+    @Test
+    void simpleDeliveryPacksDifferentRequestsTogetherWithoutOverbookingOneCargoSlot() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var rocket = fixture.builtRocket(cargo, 100);
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        var target = fixture.deliveryDestination();
+        target.testPort = new TileEntityRocketLoadingPort();
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        var gold = ItemStackWrapper.of(new ItemStack(Items.gold_ingot));
+        fixture.silo.testPort.updateContents(iron, 65, false);
+        fixture.silo.testPort.updateContents(gold, 65, false);
+        fixture.silo.testPort.updateContents(FUEL, 10000, false);
+        fixture.silo.testPort.updateContents(OXIDIZER, 20000, false);
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        var order = new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(iron, 65L, gold, 65L));
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        for (int tick = 0; tick < 20000 && rocket.deliveryView()
+            .enabled(); tick++) fixture.deliveryTick(rocket, tick);
+        assertFalse(
+            rocket.deliveryView()
+                .enabled());
+        assertEquals(order.home(), rocket.location());
+        assertEquals(
+            order.requested(),
+            rocket.deliveryView()
+                .delivered());
+        assertEquals(65, target.testPort.updateContents(iron, -Long.MAX_VALUE, true));
+        assertEquals(65, target.testPort.updateContents(gold, -Long.MAX_VALUE, true));
+        assertTrue(
+            rocket.cargoContents()
+                .isEmpty());
+    }
+
+    @Test
+    void stoppingBeforeDepartureKeepsLoadedCargoAndReleasesTheSavedAdvancedRoute() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var rocket = fixture.builtRocket(cargo, 100);
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        var target = fixture.deliveryDestination();
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        fixture.silo.testPort.updateContents(iron, 1, false);
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        assertEquals(
+            Rocket.CommandResult.APPLIED,
+            rocket.saveDelivery(
+                TEAM,
+                rocket.revision(),
+                new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(iron, 1L))));
+        fixture.deliveryTick(rocket, 0);
+        assertTrue(rocket.isRunning());
+        assertEquals(1, rocket.cargoAmount(iron));
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.stopDelivery(TEAM, rocket.revision()));
+        assertFalse(rocket.isRunning());
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.clearDelivery(TEAM, rocket.revision()));
+        assertEquals(1, rocket.cargoAmount(iron));
+        assertNull(rocket.deliveryView());
+    }
+
+    @Test
+    void simpleDeliveryCanDepartWithOnlyPresenceOfDestinationFuelThenWaitsForTheFullRefill() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var engine = fixture.flightEngine()
+            .withEngine(
+                new RocketPartDef.Engine(
+                    1000000,
+                    3500,
+                    Map.of(FUEL, new RocketPartDef.Propellant(1, 1), OXIDIZER, new RocketPartDef.Propellant(2, 1))));
+        var rocket = fixture.builtRocket(cargo, fixture.silo, engine, 100);
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        var target = fixture.deliveryDestination();
+        target.testPort = new TileEntityRocketLoadingPort();
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        fixture.silo.testPort.updateContents(iron, 1, false);
+        fixture.silo.testPort.updateContents(FUEL, 10000, false);
+        fixture.silo.testPort.updateContents(OXIDIZER, 20000, false);
+        target.testPort.updateContents(FUEL, 1, false);
+        target.testPort.updateContents(OXIDIZER, 1, false);
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        var order = new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(iron, 1L));
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        for (int tick = 0; tick < 8000 && rocket.deliveryView()
+            .delivered()
+            .get(iron) == 0; tick++) fixture.deliveryTick(rocket, tick);
+        assertEquals(destination, rocket.location());
+        assertEquals(
+            1,
+            rocket.deliveryView()
+                .delivered()
+                .get(iron));
+        assertTrue(rocket.isRunning());
+        assertEquals(0, target.testPort.updateContents(FUEL, -Long.MAX_VALUE, true));
+        assertEquals(0, target.testPort.updateContents(OXIDIZER, -Long.MAX_VALUE, true));
+        target.testPort.updateContents(FUEL, 1000, false);
+        target.testPort.updateContents(OXIDIZER, 2000, false);
+        for (int tick = 0; tick < 8000 && rocket.deliveryView()
+            .enabled(); tick++) fixture.deliveryTick(rocket, tick);
+        assertFalse(rocket.isRunning());
+        assertFalse(
+            rocket.deliveryView()
+                .enabled());
+        assertEquals(order.home(), rocket.location());
+    }
+
+    @Test
+    void simpleDeliveryRejectsFilledContainersAtTheAuthoritativeCommand() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var rocket = fixture.builtRocket(cargo, 100);
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        var target = fixture.deliveryDestination();
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        var bucket = ItemStackWrapper.of(new ItemStack(Items.water_bucket));
+        var order = new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(bucket, 1L));
+        assertEquals(Rocket.CommandResult.BLOCKED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        assertNull(rocket.deliveryView());
+        assertFalse(rocket.isRunning());
+        assertTrue(
+            rocket.cargoContents()
+                .isEmpty());
+    }
+
+    @Test
+    void simpleModeUsesBothPadsAndRepairsOnlyTheWornModuleBeforeReturningHome() throws Exception {
+        var fixture = new Fixture(false);
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        var bill = new RocketPartDef.WorkBill(Map.of(iron, 1L), 10, 3);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()))
+            .withRepairBill(bill);
+        var rocket = fixture.builtRocket(cargo, 40);
+        var moduleId = rocket.modules()
+            .getFirst()
+            .id();
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        fixture.silo.testPort.updateContents(iron, 1, false);
+        fixture.silo.testPort.updateContents(FUEL, 10000, false);
+        fixture.silo.testPort.updateContents(OXIDIZER, 20000, false);
+        fixture.assembler.setInventorySlotContents(0, new ItemStack(Items.iron_ingot, 2));
+        var target = fixture.deliveryDestination();
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        var order = new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(iron, 1L));
+        assertEquals(Rocket.CommandResult.APPLIED, rocket.saveDelivery(TEAM, rocket.revision(), order));
+        boolean destinationService = false;
+        boolean homeService = false;
+        for (int tick = 0; tick < 12000 && rocket.deliveryView()
+            .enabled(); tick++) {
+            fixture.deliveryTick(rocket, tick);
+            var service = rocket.service();
+            if (service != null) {
+                if (service.padId()
+                    .equals(
+                        fixture.deliveryPad.machineIdentity()
+                            .id())
+                    && !service.repairs()
+                        .isEmpty())
+                    destinationService = true;
+                if (service.padId()
+                    .equals(
+                        fixture.pad.machineIdentity()
+                            .id()))
+                    homeService = true;
+            }
+        }
+        assertFalse(
+            rocket.deliveryView()
+                .enabled(),
+            () -> "problem=" + rocket.scheduleView()
+                .problemKey()
+                + " status="
+                + rocket.status()
+                + " location="
+                + rocket.location()
+                + " service="
+                + rocket.service()
+                + " modules="
+                + rocket.modules()
+                    .stream()
+                    .map(
+                        module -> module.id() + ":"
+                            + module.holder()
+                            + ":work="
+                            + rocket.workFor(module.id())
+                            + ":trip="
+                            + module.gantryTransport())
+                    .toList());
+        assertTrue(destinationService, "The destination pad must admit the worn module to paid repair");
+        assertTrue(homeService, "Healthy modules must still return to the home silo through gantry");
+        assertTrue(
+            rocket.module(moduleId)
+                .durabilityPercent() > 99);
+        assertEquals(1, fixture.assembler.getStackInSlot(0).stackSize);
+        assertEquals(order.home(), rocket.location());
+        assertEquals(1, target.testPort.updateContents(iron, -Long.MAX_VALUE, true));
+    }
+
+    @Test
+    void simpleModeWaitsForBothPadBindingsWithoutLoadingCargoOrLaunching() throws Exception {
+        var fixture = new Fixture(false);
+        var cargo = RocketPartDef.structural(92, "delivery_cargo", 1, 1, 100, null)
+            .withStorage(new RocketPartDef.Storage(1, 0, Map.of()));
+        var rocket = fixture.builtRocket(cargo, 100);
+        assertTrue(fixture.silo.acceptArrival(fixture.registry, rocket));
+        fixture.silo.testPort = new TileEntityRocketLoadingPort();
+        var iron = ItemStackWrapper.of(new ItemStack(Items.iron_ingot));
+        fixture.silo.testPort.updateContents(iron, 1, false);
+        var target = fixture.deliveryDestination();
+        var homePad = CelestialAssetStore.findEndpoint(
+            fixture.pad.machineIdentity()
+                .id());
+        var destinationPad = CelestialAssetStore.findEndpoint(
+            fixture.deliveryPad.machineIdentity()
+                .id());
+        homePad.asset()
+            .setEndpointServiceSilo(
+                homePad.endpoint()
+                    .id(),
+                null);
+        destinationPad.asset()
+            .setEndpointServiceSilo(
+                destinationPad.endpoint()
+                    .id(),
+                null);
+        var destination = VehicleSchedule.Place.at(
+            CelestialAssetStore.findEndpoint(
+                target.machineIdentity()
+                    .id()));
+        assertEquals(
+            Rocket.CommandResult.APPLIED,
+            rocket.saveDelivery(
+                TEAM,
+                rocket.revision(),
+                new Rocket.DeliveryPlan(rocket.location(), destination, Map.of(iron, 1L))));
+        fixture.deliveryTick(rocket, 0);
+        assertFalse(rocket.isRunning());
+        assertEquals(
+            "galaxia.vehicle.simple.waiting_home_pad",
+            rocket.scheduleView()
+                .problemKey());
+        homePad.asset()
+            .setEndpointServiceSilo(
+                homePad.endpoint()
+                    .id(),
+                fixture.silo.machineIdentity()
+                    .id());
+        for (int tick = 1; tick < 30; tick++) fixture.deliveryTick(rocket, tick);
+        assertFalse(rocket.isRunning());
+        assertEquals(
+            "galaxia.vehicle.simple.waiting_destination_pad",
+            rocket.scheduleView()
+                .problemKey());
+        assertEquals(0, rocket.cargoAmount(iron));
+        assertEquals(1, fixture.silo.testPort.updateContents(iron, -Long.MAX_VALUE, true));
+        destinationPad.asset()
+            .setEndpointServiceSilo(
+                destinationPad.endpoint()
+                    .id(),
+                target.machineIdentity()
+                    .id());
+        for (int tick = 30; tick < 60; tick++) fixture.deliveryTick(rocket, tick);
+        assertTrue(rocket.isRunning());
+        assertEquals(1, rocket.cargoAmount(iron));
+    }
+
     private final class Fixture {
 
         private final FormedPad pad = new FormedPad();
@@ -1417,6 +1799,63 @@ final class LandingPadServiceTest {
         private final Terminal assemblerTerminal = new Terminal();
         private final Terminal siloTerminal = new Terminal();
         private final Rocket.Registry registry = new Rocket.Registry();
+        private final List<TileEntityGantry> deliveryNodes = new ArrayList<>();
+        private FormedPad deliveryPad;
+        private FormedSilo deliverySilo;
+
+        private FormedSilo deliveryDestination() throws ReflectiveOperationException {
+            if (deliverySilo != null) return deliverySilo;
+            deliverySilo = new FormedSilo();
+            deliveryPad = new FormedPad();
+            register(deliverySilo, 6);
+            register(deliveryPad, 4);
+            var world = (LoadedEndpointWorld) loadedWorlds().get(DIMENSION);
+            world.tiles.put(new BlockPos(6, 0, 0), deliverySilo);
+            world.tiles.put(new BlockPos(4, 0, 0), deliveryPad);
+            var bridge = new Terminal();
+            bridge.xCoord = 3;
+            var arrival = new Terminal();
+            arrival.xCoord = 4;
+            arrival.connectPlatform(deliveryPad);
+            deliveryPad.setGantryTerminal(arrival);
+            var rail = new Terminal();
+            rail.xCoord = 5;
+            var receiver = new Terminal();
+            receiver.xCoord = 6;
+            receiver.connectSilo(deliverySilo);
+            deliverySilo.setGantryTerminal(receiver);
+            siloTerminal.connect(bridge);
+            bridge.connect(arrival);
+            arrival.connect(rail);
+            rail.connect(receiver);
+            deliveryNodes.addAll(List.of(bridge, arrival, rail, receiver));
+            CelestialAssetStore.findEndpoint(
+                pad.machineIdentity()
+                    .id())
+                .asset()
+                .setEndpointServiceSilo(
+                    pad.machineIdentity()
+                        .id(),
+                    silo.machineIdentity()
+                        .id());
+            CelestialAssetStore.findEndpoint(
+                deliveryPad.machineIdentity()
+                    .id())
+                .asset()
+                .setEndpointServiceSilo(
+                    deliveryPad.machineIdentity()
+                        .id(),
+                    deliverySilo.machineIdentity()
+                        .id());
+            deliverySilo.testPort = new TileEntityRocketLoadingPort();
+            return deliverySilo;
+        }
+
+        private void deliveryTick(Rocket rocket, double epoch) throws Exception {
+            assembler.injectEnergyUnits(ForgeDirection.SOUTH, 10, 1);
+            rocket.tick(registry, epoch);
+            tick(1);
+        }
 
         private Fixture(boolean configureSilo) {
             register(pad, 0);
@@ -1560,11 +1999,16 @@ final class LandingPadServiceTest {
             assembler.attachServerWorld();
             for (int i = 0; i < count; i++) {
                 pad.tickServices(registry);
+                if (deliveryPad != null) deliveryPad.tickServices(registry);
                 assembler.tickWork(registry);
                 GantryAPI.tickNode(registry, padTerminal);
                 GantryAPI.tickNode(registry, assemblerTerminal);
                 GantryAPI.tickNode(registry, siloTerminal);
-                for (var rocket : registry.all()) silo.tickServiceReturn(rocket);
+                for (var node : deliveryNodes) GantryAPI.tickNode(registry, node);
+                for (var rocket : registry.all()) {
+                    silo.tickServiceReturn(rocket);
+                    if (deliverySilo != null) deliverySilo.tickServiceReturn(rocket);
+                }
             }
         }
     }

@@ -36,6 +36,9 @@ public class BlockPlanetGalaxiaFalling extends BlockFalling {
         this.slipperiness = slipperiness;
         this.minDrop = minDrop;
         this.maxDrop = maxDrop;
+        // Hardness comes from getBlockHardness, but explosions read the field, stone has a ratio of about 1 to 6
+        this.setHardness(hardness);
+        this.setResistance(hardness * 5.0F);
 
         this.setBlockName(blockName);
         this.setBlockTextureName(Galaxia.TEXTURE_PREFIX + texturePath);
@@ -59,7 +62,7 @@ public class BlockPlanetGalaxiaFalling extends BlockFalling {
 
     @Override
     public int quantityDropped(int meta, int fortune, Random random) {
-        return random.nextInt() % (maxDrop - minDrop + 1) + minDrop;
+        return random.nextInt(maxDrop - minDrop + 1) + minDrop;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities;
 
+import java.util.List;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -22,6 +23,10 @@ import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
+import com.gtnewhorizons.galaxia.compat.gt.IRocketHatchHost;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatchElement;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatches;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
@@ -39,11 +44,14 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRo
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler.Operation;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityModuleAssembler.WorkRequest;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.MachineTerminals;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
+
+import gregtech.api.util.GTStructureUtility;
 
 /** Physical assembly coordinator. The world Rocket owns every produced module and paid work claim. */
 public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
-    implements IGuiHolder<PosGuiData>, IRocketControllerTE.TransportEndpoint {
+    implements IGuiHolder<PosGuiData>, IRocketControllerTE.TransportEndpoint, IRocketHatchHost {
 
     private final MachineIdentity identity = new MachineIdentity();
     private final EndpointBinding endpointBinding = new EndpointBinding();
@@ -55,7 +63,18 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     private RocketBlueprint clientBuiltView = new RocketBlueprint();
     private RocketBuildStatus clientBuildStatus = RocketBuildStatus.IDLE;
     private EntityRocket entityRocket;
-    private TileEntityGantryTerminal gantryTerminal;
+    private final MachineTerminals terminals = new MachineTerminals();
+    private final RocketHatches hatches = new RocketHatches();
+    private final IDistributedInventory loadingView = new IDistributedInventory() {
+
+        @Override
+        public List<IDistributedInventory> getChildren() {
+            if (!structureValid || worldObj == null) return List.of();
+            var nativeInventory = hatches.inventory(worldObj);
+            return loadingPort != null && loadingPort.isAvailable() ? List.of(nativeInventory, loadingPort)
+                : List.of(nativeInventory);
+        }
+    };
     private String pendingSchematicName = "";
     public boolean shouldRender = true;
 
@@ -77,7 +96,14 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     @Override
     @Nullable
     public IDistributedInventory loadingInventory() {
-        return structureValid && loadingPort != null && loadingPort.isAvailable() ? loadingPort : null;
+        if (!structureValid) return null;
+        if (hatches.hasAttachments()) return loadingView;
+        return loadingPort != null && loadingPort.isAvailable() ? loadingPort : null;
+    }
+
+    @Override
+    public RocketHatches getHatches() {
+        return hatches;
     }
 
     @Override
@@ -136,11 +162,11 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     public TileEntityGantryTerminal getGantryTerminal() {
-        return gantryTerminal;
+        return terminals.best();
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal terminal) {
-        gantryTerminal = terminal;
+        terminals.add(terminal);
     }
 
     public void orderModules() {
@@ -171,6 +197,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
     }
 
     private void tickConstruction(Rocket rocket) {
+        var gantryTerminal = getGantryTerminal();
         if (gantryTerminal == null || !structureValid) return;
         for (var slot : rocket.buildSlots()) {
             Rocket.Module module = rocket.modules()
@@ -195,13 +222,21 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                         .id(),
                     Operation.MANUFACTURE,
                     bill);
-                var accepted = GantryAPI.requestWork(gantryTerminal, rocket.teamId(), request);
+                GantryAPI.AcceptedWork accepted = null;
+                for (var source : terminals.all()) {
+                    accepted = GantryAPI.requestWork(source, rocket.teamId(), request);
+                    if (accepted != null) {
+                        gantryTerminal = source;
+                        break;
+                    }
+                }
                 if (accepted == null) continue;
+                final var acceptedWork = accepted;
                 var terminal = GantryAPI.findEndpointTerminals(gantryTerminal)
                     .stream()
                     .filter(
                         candidate -> candidate.terminalId()
-                            .equals(accepted.terminalId()))
+                            .equals(acceptedWork.terminalId()))
                     .findFirst()
                     .orElse(null);
                 if (terminal == null)
@@ -251,6 +286,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
             }
             if (module.holder()
                 .equals(new Rocket.Holder(Rocket.HolderKind.ASSEMBLER, assembler.controllerId()))) {
+                var receivingTerminal = terminals.receivingFrom(terminal);
+                if (receivingTerminal == null) continue;
                 GantryAPI.dispatch(
                     Galaxia.proxy.serverRuntime()
                         .rockets(),
@@ -258,7 +295,7 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
                     module.id(),
                     claim.workId(),
                     terminal,
-                    gantryTerminal,
+                    receivingTerminal,
                     new Rocket.Holder(Rocket.HolderKind.SILO_BUFFER, identity.id()));
             }
         }
@@ -371,7 +408,13 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
         .addElement('B', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_ASSEMBLING_CASING.get(), 0))
         .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_FRAMEBOX.get(), 0))
         .addElement('D', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_REINFORCEMENT.get(), 0))
-        .addElement('E', StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0))
+        .addElement(
+            'E',
+            GTStructureUtility.<TileEntitySilo>buildHatchAdder()
+                .anyOf(RocketHatchElement.InputBus, RocketHatchElement.InputHatch, RocketHatchElement.OutputBus)
+                .casingIndex(GalaxiaCasingTextures.LAUNCHPAD_SHEETING)
+                .hint(1)
+                .buildAndChain(StructureUtility.ofBlock(GalaxiaBlocksEnum.LAUNCHPAD_SHEETING.get(), 0)))
         .addElement('P', StructureUtility.ofChain(StructureUtility.ofTileAdder((silo, tile) -> {
             if (!(tile instanceof TileEntityRocketLoadingPort port)) return false;
             silo.loadingPort = port;
@@ -396,7 +439,8 @@ public class TileEntitySilo extends GalaxiaMultiblockBase<TileEntitySilo>
 
     @Override
     protected boolean checkStructure() {
-        gantryTerminal = null;
+        terminals.clear();
+        hatches.clear();
         loadingPort = null;
         return super.checkStructure();
     }

@@ -25,6 +25,10 @@ public class BlockCasing extends BlockUpdatable {
 
         setBlockName(registryName);
         setStepSound(soundTypeStone);
+        // Same as GT casings, override with the fluent setters below
+        setHardness(5.0F);
+        setResistance(10.0F);
+        setHarvestLevel("wrench", 1);
     }
 
     public BlockCasing harvest(String tool, int level) {

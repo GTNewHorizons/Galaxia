@@ -16,6 +16,11 @@ public class ConfigRocket {
 
     public static class Wear {
 
+        @Config.LangKey("galaxia.config.rocket.wear.automatic_repair_threshold")
+        @Config.DefaultDouble(75)
+        @Config.RangeDouble(min = 0, max = 100)
+        public double automaticRepairThresholdPercent = 75;
+
         @Config.LangKey("galaxia.config.rocket.wear.distance")
         @Config.DefaultDouble(10000000)
         @Config.RangeDouble(min = 1)

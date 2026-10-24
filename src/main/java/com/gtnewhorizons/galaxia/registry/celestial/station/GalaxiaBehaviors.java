@@ -11,8 +11,7 @@ import lombok.Getter;
 public enum GalaxiaBehaviors {
 
     ROOM(0, new RoomBehavior()),
-    DOCK(1, new DockBehavior()),
-    POWER_ROOM(2, new PowerRoomBehavior());
+    DOCK(1, new DockBehavior());
 
     @Getter
     private final int id;
@@ -40,8 +39,9 @@ public enum GalaxiaBehaviors {
         return behavior;
     }
 
+    /** Behavior with the given id, a plain room for ids that no longer exist */
     public static GalaxiaBehaviors byId(int id) {
-        return BY_ID[id];
+        return id >= 0 && id < BY_ID.length && BY_ID[id] != null ? BY_ID[id] : ROOM;
     }
 
     public static GalaxiaBehaviors of(IStationBehavior behavior) {

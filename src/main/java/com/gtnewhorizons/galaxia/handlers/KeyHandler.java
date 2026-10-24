@@ -1,14 +1,13 @@
 package com.gtnewhorizons.galaxia.handlers;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.player.EntityPlayer;
-
-import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
+import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.network.RocketScheduleOpenPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketTransitPacket;
@@ -16,7 +15,6 @@ import com.gtnewhorizons.galaxia.core.network.ToggleRCSPacket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
 
-import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -26,22 +24,11 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class KeyHandler {
 
-    private static KeyBinding toggleReactionControlSystem;
-    private static KeyBinding openVehicleSchedule;
     private boolean transitOpenRequested;
     private boolean transitMapEntered;
 
     public static void registerKeyBindings() {
-        toggleReactionControlSystem = new KeyBinding(
-            "key.galaxia.toggle_rcs",
-            Keyboard.KEY_C,
-            "key.categories.galaxia");
-        openVehicleSchedule = new KeyBinding(
-            "galaxia.rocket.schedule.key",
-            Keyboard.KEY_SPACE,
-            "key.categories.galaxia");
-        ClientRegistry.registerKeyBinding(toggleReactionControlSystem);
-        ClientRegistry.registerKeyBinding(openVehicleSchedule);
+        GalaxiaKeyBinds.init();
     }
 
     @SubscribeEvent
@@ -81,17 +68,21 @@ public class KeyHandler {
         EntityPlayer player = Minecraft.getMinecraft().thePlayer;
         if (player == null) return;
 
-        if (toggleReactionControlSystem.isPressed()) {
+        if (GalaxiaKeyBinds.TOGGLE_REACTION_CONTROL_SYSTEM.isPressed()) {
             boolean isEnabled = GalaxiaAPI.hasZeroGMovementCapability(player);
             Galaxia.GALAXIA_NETWORK.sendToServer(new ToggleRCSPacket(!isEnabled));
             GalaxiaAPI.setZeroGMovement(player, !isEnabled);
         }
 
-        if (openVehicleSchedule.isPressed()) {
+        if (GalaxiaKeyBinds.OPEN_VEHICLE_SCHEDULE.isPressed()) {
             EntityRocket rocket = player.ridingEntity instanceof EntityRocket direct ? direct
                 : player.ridingEntity instanceof EntityRocketSeat seat ? seat.getRocket() : null;
             if (rocket != null && rocket.vehicleId() != null)
                 Galaxia.GALAXIA_NETWORK.sendToServer(new RocketScheduleOpenPacket(rocket.vehicleId()));
+        }
+
+        if (GalaxiaKeyBinds.OPEN_OFFSCREEN_STARMAP.isPressed()) {
+            OffscreenStarmapGui.toggle();
         }
     }
 }

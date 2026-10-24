@@ -7,22 +7,28 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
-import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 
+/**
+ * Gantry rail. Connects to every gantry or terminal it touches, like a pipe, and only occupies the beam it draws
+ */
 public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
+
+    /** Half the size of the beam, the bounds grow from the centre to every connected face */
+    private static final float BEAM = 0.25f;
 
     public BlockGantry() {
         super(Material.iron);
-        this.setHardness(1.5F);
+        this.setHardness(3.0F);
+        this.setHarvestLevel("pickaxe", 1);
         this.setResistance(10.0f);
         this.setBlockTextureName("galaxia:machine/launchpad_sheeting");
     }
@@ -32,70 +38,12 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
         return new TileEntityGantry();
     }
 
-    /**
-     * Handles logic to be ran on block placing - in this case, connecting to other
-     * gantries
-     *
-     * @param world The world placed in
-     * @param x     X position of placed block
-     * @param y     Y position of placed block
-     * @param z     Z position of placed block
-     */
     @Override
     public void onBlockAdded(World world, int x, int y, int z) {
         super.onBlockAdded(world, x, y, z);
-        if (world.isRemote) return;
-
-        TileEntity te = world.getTileEntity(x, y, z);
-        if (!(te instanceof TileEntityGantry teg)) {
-            return;
-        }
-
-        // Check if there's a gantry directly above or below
-        TileEntityGantry conflictGantry = null;
-        if (world.getTileEntity(x, y - 1, z) instanceof TileEntityGantry g) conflictGantry = g;
-        else if (world.getTileEntity(x, y + 1, z) instanceof TileEntityGantry g) conflictGantry = g;
-
-        if (conflictGantry != null) {
-            Vec3 redirect = getLineEndDirection(conflictGantry);
-            int nx = x + (redirect != null ? (int) redirect.xCoord : 1);
-            int nz = z + (redirect != null ? (int) redirect.zCoord : 0);
-
-            // Remove from wrong position and place at redirected position
-            world.setBlock(x, y, z, Blocks.air, 0, 2);
-            if (world.getBlock(nx, y, nz)
-                .isReplaceable(world, nx, y, nz)) {
-                world.setBlock(nx, y, nz, this, 0, 3);
-                // Manually re-trigger this same logic for the new position
-                onBlockAdded(world, nx, y, nz);
-            }
-            return;
-        }
-
-        // Check valid directions and connect to others
-        for (Vec3 check_offset : GantryAPI.CHECK_OFFSETS) {
-            int cx = x + (int) check_offset.xCoord;
-            int cy = y + (int) check_offset.yCoord;
-            int cz = z + (int) check_offset.zCoord;
-
-            TileEntity checkTe = world.getTileEntity(cx, cy, cz);
-            if (checkTe instanceof TileEntityGantry checkGantry) {
-                teg.connect(checkGantry);
-            }
-        }
-
+        TileEntityGantry.onRailChanged(world, x, y, z);
     }
 
-    /**
-     * Handles logic on block break - in this case disconnecting from other gantries
-     *
-     * @param world The world placed in
-     * @param x     X position of placed block
-     * @param y     Y position of placed block
-     * @param z     Z position of placed block
-     * @param block The block to break
-     * @param meta  The metadata of the block being broken
-     */
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
         if (!world.isRemote && world.getTileEntity(x, y, z) instanceof TileEntityGantry node) {
@@ -104,8 +52,9 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
                     .rockets(),
                 new Rocket.Holder(Rocket.HolderKind.GANTRY, node.nodeId()),
                 node);
-            for (TileEntityGantry neighbour : new ArrayList<>(node.getNeighbours())) node.disconnect(neighbour);
         }
+        TileEntityGantry.onRailChanged(world, x, y, z);
+        world.removeTileEntity(x, y, z);
         super.breakBlock(world, x, y, z, block, meta);
     }
 
@@ -117,24 +66,6 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
     @Override
     public boolean isReplaceable(IBlockAccess world, int x, int y, int z) {
         return false;
-    }
-
-    @Override
-    public boolean canPlaceBlockAt(World worldIn, int x, int y, int z) {
-        TileEntityGantry conflictGantry = null;
-        if (worldIn.getTileEntity(x, y - 1, z) instanceof TileEntityGantry g) conflictGantry = g;
-        else if (worldIn.getTileEntity(x, y + 1, z) instanceof TileEntityGantry g) conflictGantry = g;
-
-        if (conflictGantry != null) {
-            Vec3 redirect = getLineEndDirection(conflictGantry);
-            int nx = x + (redirect != null ? (int) redirect.xCoord : 1);
-            int nz = z + (redirect != null ? (int) redirect.zCoord : 0);
-
-            // check we have no gantries above or below the diagonal
-            return (!(worldIn.getTileEntity(nx, y - 1, nz) instanceof TileEntityGantry))
-                && (!(worldIn.getTileEntity(nx, y + 1, nz) instanceof TileEntityGantry));
-        }
-        return true;
     }
 
     @Override
@@ -154,119 +85,78 @@ public class BlockGantry extends BlockUpdatable implements ITileEntityProvider {
     }
 
     /**
-     * Finds the "free-end" direction of the gantry line that the gantry
-     * belongs to.
-     * <p>
-     * We sum the unit vectors toward every connected neighbor to get the
-     * net line direction, then return the opposite (i.e. the direction pointing
-     * away from the bulk of the line, toward the open end).
+     * Sides the drawn rail reaches. A rail with a single connection is drawn as a full beam through the block, a rail
+     * without any as a beam along X
      *
-     * @param gantry The gantry whose line end we want to find
-     * @return A unit Vec3 in the free-end direction, or null if undetermined
+     * @param world The world to look in
+     * @param x     X position of the block
+     * @param y     Y position of the block
+     * @param z     Z position of the block
+     *
+     * @return Reached sides, bit per {@link ForgeDirection} ordinal
      */
-    public static Vec3 getLineEndDirection(TileEntityGantry gantry) {
-        double sumX = 0, sumZ = 0;
-
-        for (Vec3 dir : gantry.neighbourDirs) {
-            sumX += dir.xCoord;
-            sumZ += dir.zCoord;
+    public static int shapeMask(IBlockAccess world, int x, int y, int z) {
+        int mask = TileEntityGantry.connectionMask(world, x, y, z);
+        if (mask == 0) return (1 << ForgeDirection.EAST.ordinal()) | (1 << ForgeDirection.WEST.ordinal());
+        if (Integer.bitCount(mask) == 1) {
+            ForgeDirection only = ForgeDirection.getOrientation(Integer.numberOfTrailingZeros(mask));
+            mask |= 1 << only.getOpposite()
+                .ordinal();
         }
+        return mask;
+    }
 
-        if (sumX == 0 && sumZ == 0) {
-            // Gantry has balanced neighbors (middle of line) or no neighbors
-            return null;
+    /**
+     * Boxes making up a rail inside its block: the beam in the centre and one arm towards every reached side
+     *
+     * @param shape Reached sides, see {@link #shapeMask}
+     *
+     * @return Boxes relative to the block corner
+     */
+    public static List<AxisAlignedBB> partBoxes(int shape) {
+        double min = 0.5 - BEAM, max = 0.5 + BEAM;
+        List<AxisAlignedBB> boxes = new ArrayList<>(7);
+        boxes.add(AxisAlignedBB.getBoundingBox(min, min, min, max, max, max));
+        for (ForgeDirection side : ForgeDirection.VALID_DIRECTIONS) {
+            if (!has(shape, side)) continue;
+            boxes.add(
+                AxisAlignedBB.getBoundingBox(
+                    side.offsetX < 0 ? 0 : side.offsetX > 0 ? max : min,
+                    side.offsetY < 0 ? 0 : side.offsetY > 0 ? max : min,
+                    side.offsetZ < 0 ? 0 : side.offsetZ > 0 ? max : min,
+                    side.offsetX < 0 ? min : side.offsetX > 0 ? 1 : max,
+                    side.offsetY < 0 ? min : side.offsetY > 0 ? 1 : max,
+                    side.offsetZ < 0 ? min : side.offsetZ > 0 ? 1 : max));
         }
-
-        // The free end is opposite to the net neighbor direction
-        return Vec3.createVectorHelper(-Math.signum(sumX), 0, -Math.signum(sumZ));
+        return boxes;
     }
 
     @Override
+    public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
+        int mask = shapeMask(world, x, y, z);
+        float min = 0.5f - BEAM, max = 0.5f + BEAM;
+        setBlockBounds(
+            has(mask, ForgeDirection.WEST) ? 0 : min,
+            has(mask, ForgeDirection.DOWN) ? 0 : min,
+            has(mask, ForgeDirection.NORTH) ? 0 : min,
+            has(mask, ForgeDirection.EAST) ? 1 : max,
+            has(mask, ForgeDirection.UP) ? 1 : max,
+            has(mask, ForgeDirection.SOUTH) ? 1 : max);
+    }
+
+    /**
+     * Collides with the beam in the centre and one arm per connection, so players can walk past a rail
+     */
+    @Override
     public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List<AxisAlignedBB> list,
         Entity entity) {
-        DiagonalType slope = checkDiagonalType(world, x, y, z);
-
-        if (slope == DiagonalType.SLOPE_X_ASCENDING) {
-            this.setBlockBounds(0f, 0f, 0f, 0.33f, 0.33f, 1.0f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0.33f, 0.33f, 0f, 0.66f, 0.66f, 1.0f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0.66F, 0.66F, 0.0F, 1.0F, 1.0F, 1.0F);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-        } else if (slope == DiagonalType.SLOPE_X_DESCENDING) {
-            this.setBlockBounds(0.66F, 0.0F, 0.0F, 1.0F, 0.33F, 1.0F);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0.33F, 0.0F, 0.0F, 0.66F, 0.66F, 1.0F);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0.0F, 0.33F, 0.0F, 0.33F, 1.0F, 1.0F);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-        } else if (slope == DiagonalType.SLOPE_Z_ASCENDING) {
-            this.setBlockBounds(0f, 0f, 0f, 1.0f, 0.33f, 0.33f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0f, 0.33f, 0f, 0.66f, 0.66f, 0.66f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0f, 0.66f, 0.33f, 1.0f, 1f, 1f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-        } else if (slope == DiagonalType.SLOPE_Z_DESCENDING) {
-            this.setBlockBounds(0f, 0f, 0.5f, 1f, 0.33f, 1f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0f, 0f, 0.5f, 1f, 0.66f, 0.66f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-
-            this.setBlockBounds(0f, 0f, 0.0f, 1f, 1f, 0.33f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
-        } else {
-            this.setBlockBounds(0f, 0f, 0f, 1f, 1f, 1f);
-            super.addCollisionBoxesToList(world, x, y, z, mask, list, entity);
+        for (AxisAlignedBB box : partBoxes(shapeMask(world, x, y, z))) {
+            AxisAlignedBB placed = box.getOffsetBoundingBox(x, y, z);
+            if (mask.intersectsWith(placed)) list.add(placed);
         }
-        this.setBlockBounds(0f, 0f, 0f, 1f, 1f, 1f);
     }
 
-    public enum DiagonalType {
-        NONE,
-        SLOPE_X_ASCENDING,
-        SLOPE_X_DESCENDING,
-        SLOPE_Z_ASCENDING,
-        SLOPE_Z_DESCENDING
+    private static boolean has(int mask, ForgeDirection side) {
+        return (mask & (1 << side.ordinal())) != 0;
     }
-
-    protected DiagonalType checkDiagonalType(IBlockAccess world, int x, int y, int z) {
-        Block thisBlock = world.getBlock(x, y, z);
-
-        boolean posX_posY = world.getBlock(x + 1, y + 1, z) == thisBlock; // Up-East
-        boolean negX_negY = world.getBlock(x - 1, y - 1, z) == thisBlock; // Down-West
-        if (posX_posY || negX_negY) {
-            return DiagonalType.SLOPE_X_ASCENDING;
-        }
-
-        boolean negX_posY = world.getBlock(x - 1, y + 1, z) == thisBlock; // Up-West
-        boolean posX_negY = world.getBlock(x + 1, y - 1, z) == thisBlock; // Down-East
-        if (negX_posY || posX_negY) {
-            return DiagonalType.SLOPE_X_DESCENDING;
-        }
-        // 2. Check Z-Y Plane (South / North slopes)
-        boolean posZ_posY = world.getBlock(x, y + 1, z + 1) == thisBlock; // Up-South
-        boolean negZ_negY = world.getBlock(x, y - 1, z - 1) == thisBlock; // Down-North
-        if (posZ_posY || negZ_negY) {
-            return DiagonalType.SLOPE_Z_ASCENDING;
-        }
-
-        boolean negZ_posY = world.getBlock(x, y + 1, z - 1) == thisBlock; // Up-North
-        boolean posZ_negY = world.getBlock(x, y - 1, z + 1) == thisBlock; // Down-South
-        if (negZ_posY || posZ_negY) {
-            return DiagonalType.SLOPE_Z_DESCENDING;
-        }
-
-        // Default: Not a diagonal
-        return DiagonalType.NONE;
-    }
-
 }

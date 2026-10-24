@@ -8,6 +8,9 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuel;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuels;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef.Engine;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef.Kind;
@@ -15,6 +18,8 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPar
 
 /** Registered definitions. Post-initialization binds real resources and paid work bills. */
 public class RocketPartRegistry {
+
+    private static final double STANDARD_GRAVITY_MPS2 = 9.80665;
 
     private static final RocketPartRegistry INSTANCE = new RocketPartRegistry();
     private final Map<Integer, RocketPartDef> parts = new HashMap<>();
@@ -82,6 +87,18 @@ public class RocketPartRegistry {
         return List.copyOf(parts.values());
     }
 
+    @Nullable
+    public RocketPartDef getFuelTank(FuelTankFrame frame, RocketFuel fuel) {
+        return getByName("galaxia.rocket.module.fuel_tank_" + frame.label + "_" + fuel.key());
+    }
+
+    public List<RocketFuel> getFuelsFor(FuelTankFrame frame) {
+        return RocketFuels.all()
+            .stream()
+            .filter(frame::canHold)
+            .toList();
+    }
+
     public void registerAll() {
         parts.clear();
         categoryMap.clear();
@@ -105,7 +122,7 @@ public class RocketPartRegistry {
             3,
             5,
             config.tankDryMassKg,
-            "fuel_tank_1",
+            "fuel_tank_3x5",
             Kind.FUEL_TANK,
             0,
             0,
@@ -179,6 +196,43 @@ public class RocketPartRegistry {
             new Storage(0, config.fluidCargoCapacity, Map.of()),
             null);
         register(FLUID_STORAGE_T1, RocketPartCategory.STRUCTURAL);
+        int id = 8;
+        for (RocketFuel fuel : RocketFuels.all()) {
+            var engine = fuel.engine();
+            register(
+                definition(
+                    id++,
+                    "engine_" + fuel.key(),
+                    engine.width(),
+                    engine.height(),
+                    engine.weight(),
+                    engine.assetFolder(),
+                    Kind.ENGINE,
+                    0,
+                    0,
+                    new Storage(0, 0, Map.of()),
+                    new Engine(engine.thrust() * STANDARD_GRAVITY_MPS2, engine.isp() * STANDARD_GRAVITY_MPS2, Map.of()))
+                        .withFuel(fuel, null),
+                RocketPartCategory.LIQUID_ENGINES);
+        }
+        for (FuelTankFrame frame : FuelTankFrame.values()) {
+            for (RocketFuel fuel : getFuelsFor(frame)) {
+                register(
+                    definition(
+                        id++,
+                        "fuel_tank_" + frame.label + "_" + fuel.key(),
+                        frame.width,
+                        frame.height,
+                        frame.weight,
+                        frame.assetFolder,
+                        Kind.FUEL_TANK,
+                        0,
+                        0,
+                        new Storage(0, 0, Map.of()),
+                        null).withFuel(fuel, frame),
+                    RocketPartCategory.FUEL_TANKS);
+            }
+        }
     }
 
     private static RocketPartDef definition(int id, String name, int width, int height, double massKg,

@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -16,7 +17,6 @@ import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.api.IPanelHandler;
-import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -29,12 +29,14 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData.Achievement;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -57,27 +59,18 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int MINIMUM_CANVAS_WIDTH = 1024;
     private static final int MINIMUM_CANVAS_HEIGHT = 576;
 
-    private static final IDrawable TOP_BUTTON_BORDER = new Rectangle().hollow(1)
-        .color(EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-
     private float interfaceScale = 1f;
 
     private static final int PANEL_INSET = 10;
     private static final int PANEL_TOP = 30;
-    private static final int DETAILS_RIGHT_INSET = 18;
-    private static final int TOP_BUTTON_GAP = 6;
-    private static final int SIGNALS_W = 66;
-    private static final int TOP_BUTTON_H = 16;
-    private static final int TRANSFERS_W = 92;
-    private static final int SATELLITE_LINKS_W = 98;
-    private static final int ASSETS_W = 66;
-    private static final int HIERARCHY_TOGGLE_W = 74;
     private static final int TRANSIT_WIDTH = 360;
     private static final int TRANSIT_HEIGHT = 76;
     private static final String TRANSIT_TEXT = "galaxia.rocket.transit.";
 
-    private final OrbitalView.OrbitalMapWidget mapWidget;
     private boolean selectingBody;
+
+    private final OrbitalView.OrbitalMapWidget mapWidget;
+    private final WindowLayer windows = new WindowLayer(() -> interfaceScale);
 
     private static final SimpleGuiFactory TRANSIT_FACTORY = GuiFactories
         .createSimple("galaxia:rocket_transit", new IGuiHolder<GuiData>() {
@@ -95,7 +88,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             @Override
             @SideOnly(Side.CLIENT)
             public ModularScreen createScreen(GuiData data, ModularPanel panel) {
-                return new ModularScreen(Galaxia.MODID, panel);
+                return GalacticMapWidget.createScreen(panel);
             }
         });
 
@@ -121,16 +114,18 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     @SideOnly(Side.CLIENT)
-    public static ModularScreen createScreen(ModularPanel mainPanel) {
-        prepareClientOpen();
-        return new ModularScreen(Galaxia.MODID, mainPanel);
+    public static void prepareClientOpen() {
+        // A map replaces the current UI. Let native close events dispose its panels and sync state first.
+        Minecraft mc = Minecraft.getMinecraft();
+        // The server replaced its old containers. Echoing close-all would also close the new one.
+        ModularNetwork.CLIENT.closeAll(mc.thePlayer, false);
+        mc.displayGuiScreen(null);
     }
 
     @SideOnly(Side.CLIENT)
-    public static void prepareClientOpen() {
-        Minecraft mc = Minecraft.getMinecraft();
-        ModularNetwork.CLIENT.closeAll(mc.thePlayer, false);
-        mc.displayGuiScreen(null);
+    public static ModularScreen createScreen(ModularPanel mainPanel) {
+        prepareClientOpen();
+        return new ModularScreen(Galaxia.MODID, mainPanel);
     }
 
     public static ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
@@ -165,6 +160,8 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
 
             @Override
             public boolean onKeyPressed(char character, int keyCode) {
+                if (keyCode == Keyboard.KEY_ESCAPE && !(getContext().getFocusedWidget()
+                    .getElement() instanceof TextFieldWidget) && content.windows.closeTop()) return true;
                 var transit = RocketTransitPacket.Handler.current();
                 if (!content.selectingBody && transit != null
                     && transit.restricted()
@@ -177,16 +174,12 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             .child(content);
     }
 
-    public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, IPanelHandler vehiclesPanel) {
+    private GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, IPanelHandler vehiclesPanel) {
         name("starmap.screen");
-        TextFieldWidget renameField = new TextFieldWidget().left(SIDEBAR_WIDTH)
-            .top(-1000)
-            .width(180)
-            .height(22)
+        // Shown in the rename dialog of the asset manager
+        TextFieldWidget renameField = GalaxiaUi
+            .textField(StatCollector.translateToLocal("galaxia.gui.orbital.asset.name"), 180)
             .setMaxLength(48)
-            .setTextColor(EnumColors.MapSidebarSearchInput.getColor())
-            .hintText(StatCollector.translateToLocal("galaxia.gui.orbital.asset.name"))
-            .hintColor(EnumColors.MapSidebaSearchLabel.getColor())
             .setFocusOnGuiOpen(false);
         ParentWidget<?> mapArea = new ParentWidget<>().left(SIDEBAR_WIDTH)
             .top(0)
@@ -199,85 +192,78 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         this.mapWidget = new OrbitalView.OrbitalMapWidget(galaxyRoot).withInitialLayer(initialLayer)
             .attachRenameField(renameField);
         this.mapWidget.setClickMode(preferences.clickMode(worldPreferenceKey, playerPreferenceKey));
-        Flow toolbar = Flow.row()
+        Flow toolbar = GalaxiaUi.row()
             .name("starmap.toolbar")
             .pos(PANEL_INSET, PANEL_INSET)
-            .height(TOP_BUTTON_H)
-            .coverChildrenWidth()
-            .childPadding(TOP_BUTTON_GAP)
             .child(
-                createTopBarButton(
+                toolbarToggle(
                     "signals",
-                    SIGNALS_W,
-                    () -> toolbarText(mapWidget.isSignalsOpen() ? "signals.open" : "signals.closed"),
+                    "galaxia.gui.orbital.toolbar.signals",
+                    mapWidget::isSignalsOpen,
                     mapWidget::toggleSignals))
             .child(
-                createTopBarButton(
+                toolbarToggle(
                     "transfers",
-                    TRANSFERS_W,
-                    () -> toolbarText(mapWidget.areTransfersHidden() ? "transfers.show" : "transfers.hide"),
+                    "galaxia.gui.orbital.toolbar.transfers",
+                    () -> !mapWidget.areTransfersHidden(),
                     mapWidget::toggleTransfersHidden))
             .child(
-                createTopBarButton(
+                toolbarToggle(
                     "satelliteLinks",
-                    SATELLITE_LINKS_W,
-                    () -> toolbarText(mapWidget.isSatelliteNetworkHidden() ? "satellites.show" : "satellites.hide"),
+                    "galaxia.gui.orbital.toolbar.satellites",
+                    () -> !mapWidget.isSatelliteNetworkHidden(),
                     mapWidget::toggleSatelliteNetworkHidden))
             .child(
-                createTopBarButton(
+                toolbarToggle(
                     "assets",
-                    ASSETS_W,
-                    () -> toolbarText(mapWidget.isAssetsPanelOpen() ? "assets.open" : "assets.closed"),
+                    "galaxia.gui.orbital.toolbar.assets",
+                    mapWidget::isAssetsPanelOpen,
                     mapWidget::toggleAssetsPanel))
             .child(
-                createTopBarButton(
-                    "vehicles",
-                    80,
-                    () -> StatCollector.translateToLocal("galaxia.rocket.schedule.fleet"),
-                    vehiclesPanel::openPanel).setEnabledIf(widget -> !selectingBody))
-            .child(createTopBarButton("clickMode", HIERARCHY_TOGGLE_W, this::clickModeLabel, () -> {
+                GalaxiaUi
+                    .button(
+                        IKey.lang("galaxia.rocket.schedule.fleet"),
+                        GalaxiaUi.width(StatCollector.translateToLocal("galaxia.rocket.schedule.fleet")) + 10,
+                        vehiclesPanel::openPanel)
+                    .name("starmap.toolbar.vehicles")
+                    .setEnabledIf(widget -> !selectingBody))
+            .child(GalaxiaUi.button(IKey.dynamic(this::clickModeLabel), clickModeWidth(), () -> {
                 mapWidget.toggleClickMode();
                 preferences.setClickMode(worldPreferenceKey, playerPreferenceKey, mapWidget.getClickMode());
-            }).tooltipDynamic(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.orbital.click_mode.tooltip")))
-                .onUpdateListener(ButtonWidget::markTooltipDirty, true));
+            })
+                .name("starmap.toolbar.clickMode")
+                .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.orbital.click_mode.tooltip"))));
 
         mapArea.child(
             mapWidget.pos(0, 0)
                 .sizeRel(1f));
-        var details = mapWidget.createPinnedInfoWidget();
-        mapArea.child(
-            details.name("starmap.panel.details")
-                .right(DETAILS_RIGHT_INSET)
-                .top(
-                    () -> Math.max(PANEL_TOP, (mapArea.getArea().height - details.getArea().height) / 2),
-                    Unit.Measure.PIXEL));
-        mapArea.child(mapWidget.createTransferTooltipWidget());
+        mapArea.child(mapWidget.createPinnedInfoWidget());
         mapArea.child(mapWidget.createTransferSimulatorWidget());
         mapArea.child(mapWidget.createAssetActionsWidget());
         mapArea.child(
-            createTransitStatusWidget(RocketTransitPacket.Handler::current, GalaxiaCelestialAPI::get)
-                .right(DETAILS_RIGHT_INSET)
+            createTransitStatusWidget(RocketTransitPacket.Handler::current, GalaxiaCelestialAPI::get).right(18)
                 .top(PANEL_TOP));
         mapArea.child(toolbar);
         mapArea.child(
             mapWidget.createSignalsWidget()
-                .name("starmap.panel.signals")
                 .pos(PANEL_INSET, PANEL_TOP));
         mapArea.child(
             mapWidget.createAssetsPanelWidget()
-                .name("starmap.panel.assets")
                 .pos(PANEL_INSET, PANEL_TOP));
         mapArea.child(
             mapWidget.createContextMenuWidget()
                 .pos(0, 0)
                 .sizeRel(1f));
+        child(mapArea);
+        // After the map, so bodies and orbits drawn past the map's edge stay under the translucent sidebar
         child(
             new CelestialSidebarWidget(galaxyRoot, initialLayer, mapWidget).left(0)
                 .top(0)
                 .width(SIDEBAR_WIDTH)
                 .heightRel(1f));
-        child(mapArea);
-        child(renameField);
+        child(
+            windows.pos(0, 0)
+                .sizeRel(1f));
     }
 
     @Override
@@ -298,6 +284,10 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     public void transform(IViewportStack stack) {
         super.transform(stack);
         stack.scale(interfaceScale, interfaceScale);
+    }
+
+    public WindowLayer windows() {
+        return windows;
     }
 
     public OrbitalView.OrbitalMapWidget mapWidget() {
@@ -324,7 +314,7 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
             .name("rocket.transit.vehicle")
             .pos(8, 8)
             .size(TRANSIT_WIDTH - 16, 10)
-            .color(EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
+            .color(GalaxiaGuiStyle.ACCENT));
         panel.child(IKey.dynamic(() -> {
             var view = current.get();
             if (view == null) return "";
@@ -411,29 +401,22 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
                 .toLowerCase(Locale.ROOT));
     }
 
-    private static String toolbarText(String key) {
-        return StatCollector.translateToLocal("galaxia.gui.orbital.toolbar." + key);
-    }
-
     private String clickModeLabel() {
         String key = mapWidget.getClickMode() == OrbitalMapClickMode.FOLLOW ? "galaxia.gui.orbital.click_mode.follow"
             : "galaxia.gui.orbital.click_mode.hierarchy";
         return StatCollector.translateToLocal(key);
     }
 
-    private ButtonWidget<?> createTopBarButton(String name, int width, Supplier<String> labelSupplier,
-        Runnable onClick) {
-        return new ButtonWidget<>().name("starmap.toolbar." + name)
-            .size(width, TOP_BUTTON_H)
-            .background(new Rectangle().color(EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()), TOP_BUTTON_BORDER)
-            .hoverBackground(
-                new Rectangle().color(EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()),
-                TOP_BUTTON_BORDER)
-            .overlay(IKey.dynamic(labelSupplier::get))
-            .onMousePressed(mb -> {
-                onClick.run();
-                return true;
-            });
+    /** Toolbar button that stays lit while what it shows is on */
+    private static ButtonWidget<?> toolbarToggle(String name, String langKey, BooleanSupplier on, Runnable onClick) {
+        String label = StatCollector.translateToLocal(langKey);
+        return GalaxiaUi.toggle(() -> label, GalaxiaUi.width(label) + 10, on, onClick)
+            .name("starmap.toolbar." + name);
     }
 
+    private static int clickModeWidth() {
+        return Math.max(
+            GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.orbital.click_mode.follow")),
+            GalaxiaUi.width(StatCollector.translateToLocal("galaxia.gui.orbital.click_mode.hierarchy"))) + 10;
+    }
 }

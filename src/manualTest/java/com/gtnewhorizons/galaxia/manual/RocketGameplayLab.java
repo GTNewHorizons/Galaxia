@@ -457,9 +457,17 @@ public final class RocketGameplayLab {
                 if (previous != null) previous.connect(node);
                 previous = node;
                 if (current.equals(end)) break;
-                current = new BlockPos(
+                if (current.x() != end.x()) current = new BlockPos(
                     current.x() + Integer.signum(end.x() - current.x()),
+                    current.y(),
+                    current.z());
+                else if (current.y() != end.y()) current = new BlockPos(
+                    current.x(),
                     current.y() + Integer.signum(end.y() - current.y()),
+                    current.z());
+                else current = new BlockPos(
+                    current.x(),
+                    current.y(),
                     current.z() + Integer.signum(end.z() - current.z()));
             }
         }

@@ -1,5 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.celestial;
 
+import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -17,7 +19,6 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
-import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidCelestialMaterializer;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidFieldProfile;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.content.GeneratedAsteroids;
@@ -85,14 +86,6 @@ public final class CelestialRegistry {
         Fluid fluid = stack != null ? stack.getFluid() : null;
         if (fluid == null) throw new IllegalStateException("Required atmosphere gas is not available: " + material);
         return fluid;
-    }
-
-    private static PlayableDimensionProfile.Builder stationBuildable(PlayableDimensionProfile.Builder builder) {
-        return builder.addValidSpaceStationBlocks(
-            GalaxiaBlocksEnum.RUSTY_SCAFFOLDING.get(),
-            GalaxiaBlocksEnum.SPACE_STATION_BLOCK.get(),
-            GalaxiaBlocksEnum.SPACE_STATION_PANEL.get(),
-            GalaxiaBlocksEnum.SPACE_STATION_GLASS.get());
     }
 
     public static void registerDefaults() {
@@ -468,12 +461,13 @@ public final class CelestialRegistry {
                             "ore.small.zinc")
                         .metadata("surface", "undefined"))
                 .playableDimensionProfile(
-                    stationBuildable(
-                        PlayableDimensionProfile.builder(DimensionEnum.MARS)
-                            .airResistance(0.1)
-                            .effects(dimensionEffects(67, 0, 0))
-                            .tier(EnumTiers.TIER_2)
-                            .worldGeneration(Mars::configureWorldProvider)).build())
+                    PlayableDimensionProfile.builder(DimensionEnum.MARS)
+                        .orbitView(EnumTextures.MARS.get())
+                        .airResistance(0.1)
+                        .effects(dimensionEffects(67, 0, 0))
+                        .tier(EnumTiers.TIER_2)
+                        .worldGeneration(Mars::configureWorldProvider)
+                        .build())
                 .featureTileChance(0.16)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 4.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -618,13 +612,14 @@ public final class CelestialRegistry {
                         .metadata("surface", "undefined")
                         .metadata("status", "placeholder_homeworld"))
                 .playableDimensionProfile(
-                    stationBuildable(
-                        PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD)
-                            .effects(
-                                EffectBuilder.builder()
-                                    .build())
-                            .tier(EnumTiers.TIER_1)
-                            .worldGeneration(CelestialRegistry::configureOverworldProvider)).build())
+                    PlayableDimensionProfile.builder(DimensionEnum.OVERWORLD)
+                        .orbitView(LocationGalaxia("textures/environment/planets/overworld.png"))
+                        .effects(
+                            EffectBuilder.builder()
+                                .build())
+                        .tier(EnumTiers.TIER_1)
+                        .worldGeneration(CelestialRegistry::configureOverworldProvider)
+                        .build())
                 .featureTileChance(0.20)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 2.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 1.5)
@@ -669,15 +664,16 @@ public final class CelestialRegistry {
                             "ore.small.meteoriciron")
                         .metadata("surface", "undefined"))
                 .playableDimensionProfile(
-                    stationBuildable(
-                        PlayableDimensionProfile.builder(DimensionEnum.MOON)
-                            .airResistance(0.01)
-                            .celestialBodies(
-                                Moon.buildSky()
-                                    .build())
-                            .effects(dimensionEffects(225, 0, 0))
-                            .tier(EnumTiers.TIER_1)
-                            .worldGeneration(Moon::configureWorldProvider)).build())
+                    PlayableDimensionProfile.builder(DimensionEnum.MOON)
+                        .orbitView(EnumTextures.MOON.get())
+                        .airResistance(0.01)
+                        .celestialBodies(
+                            Moon.buildSky()
+                                .build())
+                        .effects(dimensionEffects(225, 0, 0))
+                        .tier(EnumTiers.TIER_1)
+                        .worldGeneration(Moon::configureWorldProvider)
+                        .build())
                 .featureTileChance(0.14)
                 .feature(PlanetaryFeatureRegistry.REGOLITH_FLATS, 5.0)
                 .feature(PlanetaryFeatureRegistry.STABLE_BEDROCK, 2.0)
@@ -1653,12 +1649,14 @@ public final class CelestialRegistry {
                         .metadata("surface", "undefined")
                         .metadata("minorBodies", "enabled"))
                 .playableDimensionProfile(
-                    stationBuildable(
-                        PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
-                            .provider(WorldProviderSpace.class)
-                            .airResistance(0.0)
-                            .effects(dimensionEffects(67, 0, 0))
-                            .worldGeneration(FrozenBelt::configureWorldProvider)).build())
+                    PlayableDimensionProfile.builder(DimensionEnum.FROZEN_BELT)
+                        .provider(WorldProviderSpace.class)
+                        // A belt has no planet to look down on from an orbit
+                        .forbidOrbit()
+                        .airResistance(0.0)
+                        .effects(dimensionEffects(67, 0, 0))
+                        .worldGeneration(FrozenBelt::configureWorldProvider)
+                        .build())
                 .featureTileChance(0.34)
                 .feature(PlanetaryFeatureRegistry.MINERAL_VEIN, 4.0)
                 .feature(PlanetaryFeatureRegistry.RARE_CRYSTAL_FORMATION, 1.2)

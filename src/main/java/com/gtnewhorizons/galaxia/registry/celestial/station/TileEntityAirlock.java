@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
@@ -32,6 +33,12 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.gui.AirlockGUI;
 import lombok.Getter;
 
 public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> implements IGuiHolder<PosGuiData> {
+
+    // Airlocks work in any orientation
+    @Override
+    public IAlignmentLimits getAlignmentLimits() {
+        return IAlignmentLimits.UNLIMITED;
+    }
 
     public enum AirlockState {
         CLOSED,
@@ -538,7 +545,7 @@ public class TileEntityAirlock extends GalaxiaMultiblockBase<TileEntityAirlock> 
 
     private void notifyDirtySeal() {
         for (BlockPos controllerPos : getStationControllers()) {
-            TileStationBase<?> controller = controllerPos.getTE(worldObj);
+            TileStationBase<?> controller = controllerPos.getTE(worldObj, TileStationBase.class);
             if (controller != null) controller.markSealedDirty();
         }
     }

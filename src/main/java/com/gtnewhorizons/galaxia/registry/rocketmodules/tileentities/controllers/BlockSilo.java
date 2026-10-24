@@ -15,6 +15,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 
 import cpw.mods.fml.relauncher.Side;
@@ -30,7 +31,9 @@ public class BlockSilo extends BlockContainer {
 
     public BlockSilo() {
         super(Material.iron);
-        setHardness(1.5f);
+        setHardness(5.0F);
+        setResistance(10.0F);
+        setHarvestLevel("pickaxe", 1);
     }
 
     @Override
@@ -52,7 +55,8 @@ public class BlockSilo extends BlockContainer {
         TileEntity te = world.getTileEntity(x, y, z);
 
         if (te instanceof TileEntitySilo silo) {
-            ForgeDirection facing = silo.getPlacedFacing();
+            ForgeDirection facing = silo.getCurrentFacing()
+                .getDirection();
             if (side == facing.ordinal()) {
                 return frontIcon;
             }
@@ -78,6 +82,7 @@ public class BlockSilo extends BlockContainer {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntitySilo silo && silo.machineIdentity()
             .canUse(player, TeamAction.BUILD_MODULE)) {
+            if (GalaxiaMultiblockBase.handleWrench(world, x, y, z, player, side, hitX, hitY, hitZ)) return true;
             silo.refreshEndpoint();
             GuiFactories.tileEntity()
                 .open(player, x, y, z);

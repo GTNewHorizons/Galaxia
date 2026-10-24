@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
@@ -39,6 +40,85 @@ final class GantryTransportTest {
         GalaxiaTestBootstrap.ensureMinecraft();
         TileEntity.addMapping(TileEntityGantry.class, "test.galaxia.transport_node");
         TileEntity.addMapping(Terminal.class, "test.galaxia.transport_terminal");
+    }
+
+    @Test
+    void concreteModulesTravelThroughVerticalRails() {
+        var route = new Route();
+        route.middle.xCoord = 0;
+        route.middle.yCoord = 1;
+        route.right.xCoord = 0;
+        route.right.yCoord = 2;
+        route.left.connect(route.middle);
+        route.middle.connect(route.right);
+        var registry = new Rocket.Registry();
+        Rocket rocket = vehicle(route.left, registry);
+        UUID moduleId = rocket.modules()
+            .getFirst()
+            .id();
+        assertEquals(
+            GantryAPI.DispatchResult.ACCEPTED,
+            dispatch(registry, rocket, UUID.randomUUID(), route.left, route.right));
+        route.tick(registry, 40);
+        assertEquals(
+            holder(route.right),
+            rocket.module(moduleId)
+                .holder());
+        assertEquals(
+            43,
+            rocket.module(moduleId)
+                .durabilityPercent());
+    }
+
+    @Test
+    void cachedRoutesAreRebuiltWhenRailsDisconnect() {
+        var route = new Route();
+        var initial = route.left.getNetwork();
+        assertEquals(
+            3,
+            initial.route(route.left, route.right)
+                .size());
+        assertSame(initial, route.left.getNetwork());
+        route.middle.disconnect(route.right);
+        assertFalse(initial.isValid());
+        assertNull(
+            route.left.getNetwork()
+                .route(route.left, route.right));
+        route.middle.connect(route.right);
+        assertEquals(
+            3,
+            route.left.getNetwork()
+                .route(route.left, route.right)
+                .size());
+    }
+
+    @Test
+    void terminalModesControlAdmissionWithoutChangingModuleCustody() {
+        var route = new Route();
+        var registry = new Rocket.Registry();
+        Rocket rocket = vehicle(route.left, registry);
+        route.right.cycleMode();
+        assertEquals(TerminalMode.INPUT, route.right.getMode());
+        assertEquals(
+            GantryAPI.DispatchResult.RECEIVER_UNAVAILABLE,
+            dispatch(registry, rocket, UUID.randomUUID(), route.left, route.right));
+        assertEquals(
+            holder(route.left),
+            rocket.modules()
+                .getFirst()
+                .holder());
+        route.right.cycleMode();
+        route.right.cycleMode();
+        route.left.cycleMode();
+        route.left.cycleMode();
+        assertEquals(TerminalMode.OUTPUT, route.left.getMode());
+        assertEquals(
+            GantryAPI.DispatchResult.RECEIVER_UNAVAILABLE,
+            dispatch(registry, rocket, UUID.randomUUID(), route.left, route.right));
+        assertNull(
+            rocket.modules()
+                .getFirst()
+                .gantryTransport());
     }
 
     @Test

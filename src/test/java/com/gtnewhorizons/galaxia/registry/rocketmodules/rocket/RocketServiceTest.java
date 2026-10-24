@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -30,6 +31,75 @@ final class RocketServiceTest {
     @BeforeAll
     static void bootstrap() {
         GalaxiaTestBootstrap.ensureMinecraft();
+    }
+
+    @Test
+    void explicitReturnHandlesHealthyModulesWithoutAssigningRepairWork() {
+        Rocket rocket = assembled(List.of(95.0, 100.0));
+        UUID pad = UUID.randomUUID(), silo = UUID.randomUUID();
+        UUID occurrence = UUID.randomUUID();
+        var action = new VehicleSchedule.Repair(UUID.randomUUID(), 75, silo);
+        assertEquals(Rocket.ServiceResult.ACCEPTED, rocket.beginService(occurrence, action, pad, silo));
+        assertTrue(
+            rocket.service()
+                .repairs()
+                .isEmpty());
+        assertEquals(
+            2,
+            rocket.service()
+                .returns()
+                .size());
+        for (var module : rocket.modules()) {
+            assertEquals(new Rocket.Holder(Rocket.HolderKind.PAD_BUFFER, pad), module.holder());
+            assertNull(rocket.workFor(module.id()));
+            var target = new Rocket.Holder(Rocket.HolderKind.SILO_BUFFER, silo);
+            var handoff = rocket.beginTransfer(
+                module.id(),
+                rocket.service()
+                    .returns()
+                    .get(module.id()),
+                module.holder(),
+                target);
+            assertEquals(Rocket.TransferResult.ACCEPTED, rocket.confirmTransfer(handoff, target));
+        }
+        assertTrue(rocket.assemble(silo));
+        assertTrue(
+            rocket.service()
+                .reassembled());
+        assertEquals(silo, rocket.currentEndpointId());
+        assertEquals(
+            List.of(95.0, 100.0),
+            rocket.modules()
+                .stream()
+                .map(Rocket.Module::durabilityPercent)
+                .toList());
+    }
+
+    @Test
+    void ordinaryRepairSkipsHealthyModulesAndKeepsThemInstalled() {
+        Rocket rocket = assembled(List.of(95.0, 100.0));
+        assertEquals(
+            Rocket.ServiceResult.SKIPPED,
+            rocket.beginService(
+                UUID.randomUUID(),
+                new VehicleSchedule.Repair(UUID.randomUUID(), 75),
+                UUID.randomUUID(),
+                UUID.randomUUID()));
+        assertNull(rocket.service());
+        assertEquals(Rocket.Status.PHYSICAL, rocket.status());
+        for (var module : rocket.modules())
+            assertEquals(new Rocket.Holder(Rocket.HolderKind.INSTALLED, rocket.id()), module.holder());
+    }
+
+    @Test
+    void explicitReturnCannotBeAdmittedToAnotherSilo() {
+        Rocket rocket = assembled(List.of(40.0));
+        var action = new VehicleSchedule.Repair(UUID.randomUUID(), 75, UUID.randomUUID());
+        assertEquals(
+            Rocket.ServiceResult.CONFLICT,
+            rocket.beginService(UUID.randomUUID(), action, UUID.randomUUID(), UUID.randomUUID()));
+        assertNull(rocket.service());
+        assertEquals(Rocket.Status.PHYSICAL, rocket.status());
     }
 
     // Product contract: admission freezes the per-module <= threshold decision for this landing occurrence.

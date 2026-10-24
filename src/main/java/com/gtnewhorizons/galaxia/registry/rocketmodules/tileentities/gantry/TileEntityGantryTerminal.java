@@ -22,6 +22,7 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
 
     private TileEntity connectedController;
     private Binding binding;
+    private TerminalMode mode = TerminalMode.BOTH;
 
     private enum ControllerKind {
         SILO,
@@ -33,6 +34,21 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
 
     public UUID terminalId() {
         return nodeId();
+    }
+
+    public TerminalMode getMode() {
+        return mode;
+    }
+
+    public void cycleMode() {
+        mode = mode.next();
+        sync();
+    }
+
+    @Nullable
+    public int[] getConsumerPosition() {
+        TileEntity controller = controller();
+        return controller == null ? null : new int[] { controller.xCoord, controller.yCoord, controller.zCoord };
     }
 
     public void connectSilo(TileEntitySilo silo) {
@@ -116,6 +132,7 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
 
     /** Pure admission checks do not move a module or consume resources. */
     public boolean canReceive(Rocket rocket, Rocket.Module module, UUID workId, Rocket.Holder receiver) {
+        if (!mode.delivers) return false;
         TileEntity tile = controller();
         if (!(tile instanceof IRocketControllerTE controller) || !controller.isStructureValid()
             || !controller.machineIdentity()
@@ -156,6 +173,7 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
+        tag.setInteger("mode", mode.ordinal());
         if (binding != null) tag.setTag("controller", encodeBinding());
     }
 
@@ -192,12 +210,22 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
+        readMode(tag);
         readBinding(tag);
+    }
+
+    private void readMode(NBTTagCompound tag) {
+        int ordinal = tag.getInteger("mode");
+        TerminalMode[] modes = TerminalMode.values();
+        if (ordinal < 0 || ordinal >= modes.length) throw new IllegalStateException("Invalid Gantry terminal mode");
+        mode = modes[ordinal];
     }
 
     @Override
     public Packet getDescriptionPacket() {
         var packet = (S35PacketUpdateTileEntity) super.getDescriptionPacket();
+        packet.func_148857_g()
+            .setInteger("mode", mode.ordinal());
         if (binding != null) packet.func_148857_g()
             .setTag("controller", encodeBinding());
         return packet;
@@ -206,6 +234,7 @@ public class TileEntityGantryTerminal extends TileEntityGantry {
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
         super.onDataPacket(net, packet);
+        readMode(packet.func_148857_g());
         readBinding(packet.func_148857_g());
     }
 }

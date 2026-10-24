@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.preview;
 
+import com.cleanroommc.modularui.screen.ModularPanel;
 import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
 import dev.modularui.preview.PreviewEntrypoint;
@@ -11,8 +12,9 @@ final class UtilityPreviews {
     static PreviewEntrypoint teamPermissions() {
         return PreviewEntrypoint.of(TeamPermissionScreen.class, context -> {
             PreviewSupport.initializePreviewTeam();
-            return new TeamPermissionScreen()
-                .buildUI(PreviewSupport.guiData(), PreviewSupport.sync(context), PreviewSupport.settings());
+            ModularPanel panel = PreviewSupport.windowPanel();
+            TeamPermissionScreen.open(PreviewSupport.layerOf(panel));
+            return panel;
         });
     }
 

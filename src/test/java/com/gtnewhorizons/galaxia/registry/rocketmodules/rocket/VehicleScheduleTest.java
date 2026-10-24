@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -200,6 +201,52 @@ final class VehicleScheduleTest {
         assertThrows(IllegalArgumentException.class, () -> action.qualifies(Double.NaN));
         assertThrows(IllegalArgumentException.class, () -> action.qualifies(-1));
         assertThrows(IllegalArgumentException.class, () -> new Repair(UUID.randomUUID(), 101));
+    }
+
+    @Test
+    void repairWithExactReturnSiloPreservesItsMandatoryHandlingTargetAfterReload() {
+        UUID silo = UUID.randomUUID();
+        var action = new Repair(UUID.randomUUID(), 75, silo);
+        var stop = new Visit(UUID.randomUUID(), visit().place(), List.of(action));
+        var schedule = new VehicleSchedule(List.of(stop), Mode.RUN_ONCE);
+        var restored = VehicleSchedule.deserializeNBT(schedule.serializeNBT());
+        assertEquals(
+            action,
+            restored.visits()
+                .getFirst()
+                .actions()
+                .getFirst());
+        assertEquals(
+            silo,
+            ((Repair) restored.visits()
+                .getFirst()
+                .actions()
+                .getFirst()).returnSiloId());
+        assertFalse(action.qualifies(95));
+    }
+
+    @Test
+    void repairSavedWithoutReturnTargetRetainsItsConditionalBehavior() {
+        var action = new Repair(UUID.randomUUID(), 75);
+        var stop = new Visit(UUID.randomUUID(), visit().place(), List.of(action));
+        var saved = new VehicleSchedule(List.of(stop), Mode.RUN_ONCE).serializeNBT();
+        var encoded = saved.getTagList("visits", NBT.TAG_COMPOUND)
+            .getCompoundTagAt(0)
+            .getTagList("actions", NBT.TAG_COMPOUND)
+            .getCompoundTagAt(0);
+        assertFalse(encoded.hasKey("returnSilo"));
+        var restored = VehicleSchedule.deserializeNBT(saved);
+        assertNull(
+            ((Repair) restored.visits()
+                .getFirst()
+                .actions()
+                .getFirst()).returnSiloId());
+        assertEquals(
+            action,
+            restored.visits()
+                .getFirst()
+                .actions()
+                .getFirst());
     }
 
     @Test

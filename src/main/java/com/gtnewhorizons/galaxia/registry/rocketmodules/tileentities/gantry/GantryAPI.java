@@ -1,14 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -16,6 +9,7 @@ import javax.annotation.Nullable;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketModule;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
@@ -26,13 +20,9 @@ import gregtech.api.util.GTUtility;
 /** Connected machine admission and physical trips whose authoritative state belongs to the Rocket. */
 public final class GantryAPI {
 
-    private static final int MAX_CHAIN_SIZE = 256;
-
-    public static final Vec3[] CHECK_OFFSETS = { Vec3.createVectorHelper(1, 0, 0), Vec3.createVectorHelper(-1, 0, 0),
-        Vec3.createVectorHelper(0, 0, 1), Vec3.createVectorHelper(0, 0, -1), Vec3.createVectorHelper(1, 1, 0),
-        Vec3.createVectorHelper(1, -1, 0), Vec3.createVectorHelper(-1, 1, 0), Vec3.createVectorHelper(-1, -1, 0),
-        Vec3.createVectorHelper(0, 1, 1), Vec3.createVectorHelper(0, -1, 1), Vec3.createVectorHelper(0, 1, -1),
-        Vec3.createVectorHelper(0, -1, -1) };
+    public static final Vec3[] CHECK_OFFSETS = java.util.Arrays.stream(ForgeDirection.VALID_DIRECTIONS)
+        .map(side -> Vec3.createVectorHelper(side.offsetX, side.offsetY, side.offsetZ))
+        .toArray(Vec3[]::new);
 
     private GantryAPI() {}
 
@@ -73,6 +63,10 @@ public final class GantryAPI {
         TileEntityModuleAssembler.WorkRequest request) {
         List<TileEntityGantryTerminal> candidates = findEndpointTerminals(origin).stream()
             .filter(terminal -> terminal.getAssembler() != null)
+            .filter(
+                terminal -> terminal.getMode().accepts
+                    && (request.operation() != TileEntityModuleAssembler.Operation.REPAIR
+                        || terminal.getMode().delivers))
             .sorted(
                 Comparator.comparingInt((TileEntityGantryTerminal terminal) -> terminal.getAssembler().xCoord)
                     .thenComparingInt(terminal -> terminal.getAssembler().yCoord)
@@ -107,6 +101,8 @@ public final class GantryAPI {
         var controller = sourceTerminal == null ? null : sourceTerminal.controllerIdentity();
         boolean heldHere = module.holder()
             .equals(new Rocket.Holder(Rocket.HolderKind.GANTRY, source.nodeId()));
+        if (!heldHere && sourceTerminal != null && !sourceTerminal.getMode().accepts)
+            return DispatchResult.RECEIVER_UNAVAILABLE;
         var targetController = destination.controllerIdentity();
         if ((!heldHere && (controller == null || !controller.belongsTo(rocket.teamId()))) || targetController == null
             || !targetController.belongsTo(rocket.teamId())
@@ -138,7 +134,8 @@ public final class GantryAPI {
             .equals(controller.id()))) {
             return DispatchResult.WRONG_SOURCE;
         }
-        if (!destination.canReceive(rocket, module, workId, receiver)) return DispatchResult.RECEIVER_UNAVAILABLE;
+        if (!destination.getMode().delivers || !destination.canReceive(rocket, module, workId, receiver))
+            return DispatchResult.RECEIVER_UNAVAILABLE;
         List<TileEntityGantry> route = path(source, destination);
         if (route == null) return DispatchResult.BLOCKED_ROUTE;
         List<UUID> reserved = route.stream()
@@ -343,14 +340,8 @@ public final class GantryAPI {
 
     @Nullable
     public static TileEntityGantry findNode(TileEntityGantry start, UUID nodeId) {
-        var nodes = connectedNodes(start);
-        return nodes == null ? null
-            : nodes.stream()
-                .filter(
-                    node -> node.nodeId()
-                        .equals(nodeId))
-                .findFirst()
-                .orElse(null);
+        return start.getNetwork()
+            .findNode(nodeId);
     }
 
     @Nullable
@@ -367,60 +358,21 @@ public final class GantryAPI {
 
     @Nullable
     private static List<TileEntityGantry> connectedNodes(TileEntityGantry start) {
-        var queue = new ArrayDeque<TileEntityGantry>();
-        var visited = new HashSet<UUID>();
-        var nodes = new ArrayList<TileEntityGantry>();
-        queue.add(start);
-        visited.add(start.nodeId());
-        while (!queue.isEmpty()) {
-            TileEntityGantry current = queue.removeFirst();
-            nodes.add(current);
-            if (nodes.size() > MAX_CHAIN_SIZE) return null;
-            for (TileEntityGantry next : current.getNeighbours()) {
-                if (visited.add(next.nodeId())) queue.addLast(next);
-            }
-        }
-        return nodes;
+        return start.getNetwork()
+            .getNodes();
     }
 
     @Nullable
-    private static List<TileEntityGantry> path(TileEntityGantry start, TileEntityGantry end) {
-        List<TileEntityGantry> graph = connectedNodes(start);
-        if (graph == null || !graph.contains(end)) return null;
-        Map<TileEntityGantry, Double> costs = new HashMap<>();
-        Map<TileEntityGantry, TileEntityGantry> previous = new HashMap<>();
-        Set<TileEntityGantry> settled = new HashSet<>();
-        var queue = new PriorityQueue<TileEntityGantry>(Comparator.comparingDouble(costs::get));
-        costs.put(start, 0.0);
-        queue.add(start);
-        while (!queue.isEmpty()) {
-            TileEntityGantry current = queue.remove();
-            if (current == end) break;
-            settled.add(current);
-            for (TileEntityGantry next : current.getNeighbours()) {
-                if (settled.contains(next) || !adjacent(current, next)) continue;
-                double candidate = costs.get(current) + (current.yCoord == next.yCoord ? 1.0 : 1.5);
-                if (candidate >= costs.getOrDefault(next, Double.POSITIVE_INFINITY)) continue;
-                costs.put(next, candidate);
-                previous.put(next, current);
-                queue.remove(next);
-                queue.add(next);
-            }
-        }
-        if (start != end && !previous.containsKey(end)) return null;
-        List<TileEntityGantry> route = new ArrayList<>();
-        for (TileEntityGantry current = end; current != null; current = previous.get(current)) route.addFirst(current);
-        return route;
+    private static List<TileEntityGantry> path(TileEntityGantry start, TileEntityGantryTerminal end) {
+        return start.getNetwork()
+            .route(start, end);
     }
 
     private static boolean adjacent(TileEntityGantry first, TileEntityGantry second) {
         int x = second.xCoord - first.xCoord;
         int y = second.yCoord - first.yCoord;
         int z = second.zCoord - first.zCoord;
-        for (Vec3 offset : CHECK_OFFSETS) {
-            if (x == offset.xCoord && y == offset.yCoord && z == offset.zCoord) return true;
-        }
-        return false;
+        return Math.abs(x) + Math.abs(y) + Math.abs(z) == 1;
     }
 
     public static boolean isTerminal(TileEntityGantry gantry) {

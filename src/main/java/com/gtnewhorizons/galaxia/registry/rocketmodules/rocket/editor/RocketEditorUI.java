@@ -12,7 +12,6 @@ import net.minecraft.world.World;
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
-import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -22,10 +21,12 @@ import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.SingleChildWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.render.rockets.ModuleDrawable;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.network.CommitBlueprintAndOrderPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketScheduleSyncHandler;
@@ -168,27 +169,24 @@ public class RocketEditorUI {
             final int catIdx = i;
             RocketPartCategory cat = cats[i];
 
-            Flow col = Flow.column()
-                .coverChildren()
-                .childPadding(2);
+            var col = new ListWidget<>().widthRel(1)
+                .heightRel(1);
 
             for (RocketPartDef part : RocketPartRegistry.instance()
                 .getByCategory(cat)) {
                 final int partId = part.id();
                 col.child(
-                    new ButtonWidget<>().size(34, 34)
+                    new ButtonWidget<>().widthRel(1)
+                        .height(34)
                         .background(new DynamicDrawable(() -> {
                             if (selectedPartId.getValue() == partId)
                                 return EnumTextures.SILO_PART_BACKGROUND_SELECTED.getImage();
                             return EnumTextures.SILO_PART_BACKGROUND.getImage();
                         }))
-                        .overlay(UITexture.fullImage(part.siloIconLocation()))
+                        .overlay(new ModuleDrawable(part, 3))
                         .tooltip(t -> {
-                            t.addLine(IKey.lang(part.nameKey()));
-                            t.add(
-                                UITexture.fullImage(part.spriteLocation())
-                                    .asIcon()
-                                    .size(48, 48 * part.height() / part.width()));
+                            t.addLine(IKey.str(part.name()));
+                            PartTooltips.describe(part, t);
                         })
                         .onMousePressed(b -> {
                             if (b == 0) {

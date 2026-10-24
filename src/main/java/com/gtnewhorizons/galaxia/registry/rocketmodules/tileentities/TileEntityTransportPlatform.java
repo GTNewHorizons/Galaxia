@@ -127,11 +127,14 @@ public class TileEntityTransportPlatform extends GalaxiaMultiblockBase<TileEntit
                     .equals(installed) || module.pendingTransfer() != null || module.gantryTransport() != null)) {
             return Rocket.ServiceResult.CONFLICT;
         }
-        if (rocket.modules()
+        if (action.returnSiloId() == null && rocket.modules()
             .stream()
             .noneMatch(module -> action.qualifies(module.durabilityPercent()))) return Rocket.ServiceResult.SKIPPED;
         UUID siloId = serviceSiloId();
-        if (siloId == null || gantryTerminal == null) return Rocket.ServiceResult.CONFLICT;
+        if (siloId == null || gantryTerminal == null
+            || action.returnSiloId() != null && !action.returnSiloId()
+                .equals(siloId))
+            return Rocket.ServiceResult.CONFLICT;
         var target = GantryAPI.findControllerTerminal(gantryTerminal, siloId);
         var silo = target == null ? null : target.getSilo();
         if (silo == null || !silo.isAvailableTo(rocket.teamId(), rocket.bodyKey())

@@ -26,7 +26,6 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
 public class RocketSchematicItemRenderer implements IItemRenderer {
 
     private static final ResourceLocation SCHEMATIC_BASE = LocationGalaxia("textures/items/tool/schematic_base.png");
-    private static final ResourceLocation MISSING_TEXTURE = LocationGalaxia("textures/gui/rocket/placeholder_part.png");
 
     private static final int SIZE = 128;
     private static final int PADDING = 8;
@@ -131,10 +130,6 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         if (pixelsPerCell < 1) pixelsPerCell = 1;
 
         for (RocketPartInstance part : parts) {
-            ResourceLocation tex = part.def()
-                .spriteLocation();
-            if (tex == null) tex = MISSING_TEXTURE;
-
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = PADDING + (usable - totalHeight * pixelsPerCell) / 2f + (part.y() - minY) * pixelsPerCell;
             float w = part.def()
@@ -142,7 +137,7 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             float h = part.def()
                 .height() * pixelsPerCell;
 
-            drawQuad(textureManager, tex, x, y, w, h, -0.02f);
+            ModuleModelRenderer.drawInGui(part.def(), x, y, w, h, 1f);
         }
 
         GL11.glPopAttrib();

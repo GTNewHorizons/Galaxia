@@ -4,38 +4,31 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
-record ContextMenuAction(String labelKey, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
-
-record ContextMenuLayout(int left, int top, int right, int bottom, int headerHeight, int rowHeight,
-    List<ContextMenuAction> actions) {}
+record ContextMenuAction(String labelKey, boolean enabled, OrbitalContextMenuWidget.ContextMenuActionType actionType) {}
 
 public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextMenuWidget> {
 
-    private static final int MENU_SIDE_PADDING = 14;
-    private static final int MENU_OUTLINE_THICKNESS = 2;
-    private static final int HEADER_HEIGHT = 24;
-    private static final int ROW_HEIGHT = 20;
-    private static final int ROW_HOVER_INSET_X = 0;
-    private static final int ROW_HOVER_INSET_Y = 0;
-    private static final int HEADER_TEXT_X = 14;
-    private static final int HEADER_TEXT_Y = 8;
-    private static final int ROW_TEXT_X = 14;
-    private static final int ROW_TEXT_Y = 6;
+    private static final int MIN_WIDTH = 100;
+    /** Space kept between the menu and the edge of the map */
+    private static final int EDGE = 8;
 
     interface Callbacks {
 
@@ -53,16 +46,14 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
     private final OrbitalView.OrbitalContextMenuState state;
     private final Callbacks callbacks;
     private final StarmapViewContext view;
-    private final ParentWidget<?> menu = new ParentWidget<>().name("starmap.context.menu");
-    private final ParentWidget<?> actionRows = new ParentWidget<>();
     private String lastSignature = "";
+    private Flow menu;
     private Consumer<CelestialObjectKey> bodySelection;
     private ParentWidget<?> bodyChoices;
 
     void selectBodies(Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
         bodySelection = onSelected;
         bodyChoices = choices;
-        menu.child(choices.pos(MENU_SIDE_PADDING, HEADER_HEIGHT));
     }
 
     void onBodyOpened(CelestialObject body) {
@@ -73,37 +64,15 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         this.state = state;
         this.callbacks = callbacks;
         this.view = view;
-        PassiveBackgroundLayer backgroundLayer = new PassiveBackgroundLayer().pos(0, 0)
-            .widthRel(1f)
-            .heightRel(1f)
-            .background(createMenuBackgroundDrawable());
-        menu.child(backgroundLayer);
-        menu.child(
-            WidgetOutline
-                .create(backgroundLayer, MENU_OUTLINE_THICKNESS, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
-        menu.child(
-            new TextWidget<>(
-                IKey.dynamic(
-                    () -> state.body() == null ? ""
-                        : state.body()
-                            .displayName())).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                                .shadow(true)
-                                .pos(HEADER_TEXT_X, HEADER_TEXT_Y));
-        menu.child(
-            actionRows.widthRel(1f)
-                .heightRel(1f));
-        child(menu);
         setEnabled(false);
         size(0, 0);
     }
 
     boolean isPointInMenu(int localX, int localY) {
-        if (!state.isOpen()) return false;
-        ContextMenuLayout layout = getLayout(state.body(), state.x(), state.y(), getArea().width, getArea().height);
-        if (layout == null) return false;
-        return localX >= layout.left() - MENU_OUTLINE_THICKNESS && localX <= layout.right() + MENU_OUTLINE_THICKNESS
-            && localY >= layout.top() - MENU_OUTLINE_THICKNESS
-            && localY <= layout.bottom() + MENU_OUTLINE_THICKNESS;
+        if (!state.isOpen() || menu == null) return false;
+        return localX >= menu.getArea().rx && localX <= menu.getArea().rx + menu.getArea().width
+            && localY >= menu.getArea().ry
+            && localY <= menu.getArea().ry + menu.getArea().height;
     }
 
     @Override
@@ -111,7 +80,7 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         super.onUpdate();
         if (!state.isOpen()) {
             if (isEnabled()) {
-                actionRows.removeAll();
+                removeAll();
                 scheduleResize();
             }
             lastSignature = "";
@@ -139,7 +108,8 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         if (!state.isOpen()) return true;
         ModularGuiContext context = getContext();
         if (context == null) return true;
-        return !isPointInMenu(context.getMouseX() - getArea().x, context.getMouseY() - getArea().y);
+        int[] local = GalaxiaUi.toLocal(this, context.getAbsMouseX(), context.getAbsMouseY());
+        return !isPointInMenu(local[0], local[1]);
     }
 
     private String buildSignature() {
@@ -156,56 +126,62 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
             + '|'
             + getArea().height
             + '|'
-            + callbacks.canDebugSatellites(body)
-            + '|'
-            + (bodyChoices == null ? "" : bodyChoices.getArea().width + "x" + bodyChoices.getArea().height);
+            + callbacks.canDebugSatellites(body);
     }
 
     private void rebuildChildren() {
-        actionRows.removeAll();
+        if (menu != null && bodyChoices != null) menu.remove(bodyChoices);
+        removeAll();
+        menu = null;
         CelestialObject body = state.body();
-        ContextMenuLayout layout = getLayout(body, state.x(), state.y(), getArea().width, getArea().height);
-        if (layout == null) return;
-        menu.pos(layout.left(), layout.top())
-            .size(layout.right() - layout.left(), layout.bottom() - layout.top());
+        if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return;
+        List<ContextMenuAction> actions = bodyChoices == null ? buildActions(body, callbacks.canDebugSatellites(body))
+            : List.of();
+        int width = Math.max(MIN_WIDTH, GalaxiaUi.width(body.displayName()));
+        for (ContextMenuAction action : actions) width = Math
+            .max(width, GalaxiaUi.width(StatCollector.translateToLocal(action.labelKey())) + GalaxiaUi.PAD * 2);
 
-        for (int i = 0; i < layout.actions()
-            .size(); i++) {
-            ContextMenuAction action = layout.actions()
-                .get(i);
-            int rowTop = layout.headerHeight() + i * layout.rowHeight();
-            actionRows.child(createActionRow(body, action, layout.rowHeight()).pos(0, rowTop));
-        }
-
-        scheduleResize();
+        if (bodyChoices != null) width = Math.max(width, bodyChoices.getArea().width);
+        Flow column = GalaxiaUi.column();
+        column.name("starmap.context.menu")
+            .padding(GalaxiaUi.PAD)
+            .background(EnumTextures.GUI_PANEL.getImage());
+        column.child(
+            GalaxiaUi.clipped(body.displayName(), width, GalaxiaGuiStyle.TEXT_TITLE)
+                .height(GalaxiaUi.ICON));
+        if (bodyChoices != null) column.child(bodyChoices);
+        else for (ContextMenuAction action : actions) column.child(actionRow(body, action, width));
+        // Opens at the click, pulled back inside the map when it would cross an edge
+        Flow placed = column;
+        column.left(() -> clamp(state.x(), getArea().width - placed.getArea().width), Unit.Measure.PIXEL)
+            .top(() -> clamp(state.y(), getArea().height - placed.getArea().height), Unit.Measure.PIXEL);
+        menu = column;
+        child(column);
     }
 
-    private ParentWidget<?> createActionRow(CelestialObject body, ContextMenuAction action, int height) {
-        ParentWidget<?> row = new ParentWidget<>().widthRel(1f)
-            .height(height);
+    private static int clamp(int at, int max) {
+        return Math.max(EDGE, Math.min(at, max - EDGE));
+    }
 
-        row.child(
-            new ButtonWidget<>().name(
-                "starmap.context." + action.actionType()
-                    .name())
-                .pos(ROW_HOVER_INSET_X, ROW_HOVER_INSET_Y)
-                .widthRelOffset(1f, -ROW_HOVER_INSET_X * 2)
-                .height(height - ROW_HOVER_INSET_Y * 2)
-                .background(IDrawable.EMPTY)
-                .hoverBackground(
-
-                    (context, x, y, w, h, ignoredTheme) -> Gui
-                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
-                .onMousePressed(mouseButton -> {
-                    if (mouseButton != 0) return true;
-                    handleAction(body, action);
-                    return true;
-                }));
-        row.child(
-            new TextWidget<>(IKey.lang(action.labelKey())).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                .shadow(true)
-                .pos(ROW_TEXT_X, ROW_TEXT_Y));
-        return row;
+    private ButtonWidget<?> actionRow(CelestialObject body, ContextMenuAction action, int width) {
+        IKey label = IKey.str(StatCollector.translateToLocal(action.labelKey()))
+            .color(action.enabled() ? GalaxiaGuiStyle.TEXT : GalaxiaGuiStyle.TEXT_DIM)
+            .alignment(Alignment.CenterLeft);
+        ButtonWidget<?> row = new ButtonWidget<>().size(width, GalaxiaUi.BUTTON_H)
+            .background(IDrawable.EMPTY)
+            .overlay(
+                label.asIcon()
+                    .marginLeft(GalaxiaUi.PAD));
+        if (!action.enabled()) return row;
+        return row.name(
+            "starmap.context." + action.actionType()
+                .name())
+            .hoverBackground(EnumTextures.GUI_BUTTON_HOVERED.getImage())
+            .onMousePressed(mouseButton -> {
+                if (mouseButton != 0) return true;
+                handleAction(body, action);
+                return true;
+            });
     }
 
     private void handleAction(CelestialObject body, ContextMenuAction action) {
@@ -222,78 +198,36 @@ public final class OrbitalContextMenuWidget extends ParentWidget<OrbitalContextM
         }
     }
 
-    private ContextMenuLayout getLayout(CelestialObject body, int menuX, int menuY, int widgetWidth, int widgetHeight) {
-        if (body == null || body.objectClass() == CelestialObject.Class.GALAXY) return null;
-
-        List<ContextMenuAction> actions = bodyChoices == null ? buildActions(body, callbacks.canDebugSatellites(body))
-            : List.of();
-        Minecraft mc = Minecraft.getMinecraft();
-        int maxTextWidth = mc.fontRenderer.getStringWidth(body.displayName());
-        for (ContextMenuAction action : actions) {
-            maxTextWidth = Math.max(
-                maxTextWidth,
-                mc.fontRenderer.getStringWidth(
-                    IKey.lang(action.labelKey())
-                        .get()));
-        }
-
-        int width = Math.max(160, maxTextWidth + MENU_SIDE_PADDING * 2);
-        if (bodyChoices != null) width = Math.max(width, bodyChoices.getArea().width + MENU_SIDE_PADDING * 2);
-        int headerHeight = HEADER_HEIGHT;
-        int rowHeight = ROW_HEIGHT;
-        int height = headerHeight + (bodyChoices == null ? actions.size() * rowHeight : bodyChoices.getArea().height);
-
-        int left = Math.max(8, Math.min(menuX, widgetWidth - width - 8));
-        int top = Math.max(8, Math.min(menuY, widgetHeight - height - 8));
-
-        return new ContextMenuLayout(left, top, left + width, top + height, headerHeight, rowHeight, actions);
-    }
-
     static List<ContextMenuAction> buildActions(CelestialObject body, boolean canDebugSatellites) {
         List<ContextMenuAction> actions = new ArrayList<>();
         actions.add(
             new ContextMenuAction(
                 "galaxia.gui.orbital.context_menu.manage_assets",
+                true,
                 ContextMenuActionType.MANAGE_ASSETS));
         if (canDebugSatellites) {
             actions.add(
                 new ContextMenuAction(
                     "galaxia.satellite.action.add_communication",
+                    true,
                     ContextMenuActionType.ADD_COMMUNICATION_SATELLITE));
             actions.add(
                 new ContextMenuAction(
                     "galaxia.satellite.action.delete_communication",
+                    true,
                     ContextMenuActionType.DELETE_COMMUNICATION_SATELLITES));
             actions.add(
                 new ContextMenuAction(
                     "galaxia.satellite.action.add_prospecting",
+                    true,
                     ContextMenuActionType.ADD_PROSPECTING_SATELLITE));
             actions.add(
                 new ContextMenuAction(
                     "galaxia.satellite.action.delete_prospecting",
+                    true,
                     ContextMenuActionType.DELETE_PROSPECTING_SATELLITES));
         }
         return actions;
-    }
-
-    private static final class PassiveBackgroundLayer extends ParentWidget<PassiveBackgroundLayer> {
-
-        @Override
-        public boolean canHover() {
-            return false;
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-    }
-
-    private IDrawable createMenuBackgroundDrawable() {
-        return (context, x, y, width, height, ignoredTheme) -> {
-            Gui.drawRect(x, y, x + width, y + height, EnumColors.MAP_COLOR_MODAL_BG.getColor());
-            Gui.drawRect(x, y, x + width, y + HEADER_HEIGHT, EnumColors.MAP_COLOR_MODAL_HEADER.getColor());
-        };
     }
 
     public enum ContextMenuActionType {

@@ -12,23 +12,17 @@ import javax.annotation.Nonnull;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
+import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
 import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
-import com.gtnewhorizons.galaxia.client.EnumColors;
-import com.gtnewhorizons.galaxia.core.state.NbtReader;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
-
-import lombok.Getter;
 
 public class GalaxiaTeamData implements INetworkTeamData {
 
     public static final String ID = "GALAXIA";
-
-    @Getter
-    private int teamColor = EnumColors.MAP_COLOR_TEAM_ACCENT.getColor();
 
     private final EnumMap<TeamAction, TeamRole> permissions = new EnumMap<>(TeamAction.class);
     private final EnumSet<Achievement> achievements = EnumSet.noneOf(Achievement.class);
@@ -109,18 +103,11 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
-        tag.setInteger("teamColor", teamColor);
         var encodedAchievements = new NBTTagList();
         for (Achievement achievement : achievements) encodedAchievements.appendTag(new NBTTagString(achievement.id()));
         tag.setTag("achievements", encodedAchievements);
         tag.setLong("openingSurveyTicks", openingSurveyTicks);
         tag.setBoolean("openingSurveyComplete", openingSurveyComplete);
-        var inherited = new NBTTagList();
-        inheritedTeamIds.stream()
-            .sorted()
-            .forEach(id -> inherited.appendTag(new NBTTagString(id.toString())));
-        tag.setTag("inheritedTeamIds", inherited);
-
         int size = permissions.size();
         int[] actionOrdinals = new int[size];
         int[] roleOrdinals = new int[size];
@@ -134,24 +121,28 @@ public class GalaxiaTeamData implements INetworkTeamData {
         }
         tag.setIntArray("permActions", actionOrdinals);
         tag.setIntArray("permRoles", roleOrdinals);
+        NBTTagList merged = new NBTTagList();
+        inheritedTeamIds.stream()
+            .sorted()
+            .forEach(id -> merged.appendTag(new NBTTagString(id.toString())));
+        tag.setTag("mergedTeamIds", merged);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
-        var in = new NbtReader(tag, "galaxiaTeamData");
         achievements.clear();
-        var encodedAchievements = in.strings("achievements");
+        var encodedAchievements = tag.getTagList("achievements", NBT.TAG_STRING);
         for (int i = 0; i < encodedAchievements.tagCount(); i++)
             achievements.add(Achievement.fromId(encodedAchievements.getStringTagAt(i)));
-        openingSurveyTicks = in.longValue("openingSurveyTicks");
+        openingSurveyTicks = tag.getLong("openingSurveyTicks");
         if (openingSurveyTicks < 0) throw new IllegalStateException("Opening survey progress must not be negative");
-        openingSurveyComplete = in.bool("openingSurveyComplete");
+        openingSurveyComplete = tag.getBoolean("openingSurveyComplete");
         inheritedTeamIds.clear();
-        var inherited = in.strings("inheritedTeamIds");
+        var inherited = tag.getTagList("inheritedTeamIds", NBT.TAG_STRING);
         for (int i = 0; i < inherited.tagCount(); i++)
             inheritedTeamIds.add(UUID.fromString(inherited.getStringTagAt(i)));
-        teamColor = tag.hasKey("teamColor") ? tag.getInteger("teamColor")
-            : EnumColors.MAP_COLOR_MODAL_HEADER.getColor();
+        var merged = tag.getTagList("mergedTeamIds", NBT.TAG_STRING);
+        for (int i = 0; i < merged.tagCount(); i++) inheritedTeamIds.add(UUID.fromString(merged.getStringTagAt(i)));
 
         permissions.clear();
         if (tag.hasKey("permActions")) {
@@ -176,7 +167,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
             openingSurveyTicks = Math.max(openingSurveyTicks, other.openingSurveyTicks);
             openingSurveyComplete |= other.openingSurveyComplete;
             inheritedTeamIds.addAll(other.inheritedTeamIds);
-            this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -195,7 +185,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
             }
             openingSurveyTicks = Math.max(openingSurveyTicks, other.openingSurveyTicks);
             openingSurveyComplete |= other.openingSurveyComplete;
-            this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -208,8 +197,8 @@ public class GalaxiaTeamData implements INetworkTeamData {
     @Override
     public void markSyncedToClient() {}
 
-    public void setTeamColor(int color) {
-        this.teamColor = color;
+    public boolean hasMergedTeamId(@Nonnull UUID teamId) {
+        return inheritedTeamIds.contains(teamId);
     }
 
     public TeamRole getRequiredRole(TeamAction action) {

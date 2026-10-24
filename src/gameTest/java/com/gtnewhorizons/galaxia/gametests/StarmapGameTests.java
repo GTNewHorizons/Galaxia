@@ -17,9 +17,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
-import com.cleanroommc.modularui.utils.TreeUtil;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
-import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.CelestialSidebarWidget;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.network.AssetStateSync;
@@ -36,6 +34,7 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClickTarget;
+import com.gtnewhorizons.horizonqa.api.client.ClientScenario;
 import com.gtnewhorizons.horizonqa.api.client.ClientTarget;
 import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
@@ -51,6 +50,65 @@ public final class StarmapGameTests {
     private static final CelestialObjectKey BODY = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
 
     private StarmapGameTests() {}
+
+    /** Bug regression: every item-opened starmap replaces previous screens and their child panels. */
+    @GameTest(timeoutTicks = 600)
+    public static void openingStarmapDisposesPreviousScreensAndPopups(GameTestHelper helper) {
+        com.cleanroommc.modularui.api.widget.IWidget[] previous = new com.cleanroommc.modularui.api.widget.IWidget[3];
+        GuiTestSupport.openMap(helper)
+            .client("open a different real GUI over the old map", c -> {
+                previous[0] = GuiTestSupport.requireScreen("galactic_orbital_map")
+                    .getMainPanel();
+                com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen.open();
+            })
+            .awaitClient(
+                "team settings are open",
+                c -> GuiTestSupport.requireWindow(com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen.WINDOW_ID))
+            .client("open a native child panel", c -> {
+                previous[1] = GuiTestSupport
+                    .requireWindow(com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen.WINDOW_ID);
+                com.cleanroommc.modularui.api.IPanelHandler.simple(previous[0].getPanel(), (parent, player) -> {
+                    var popup = com.cleanroommc.modularui.screen.ModularPanel.defaultPanel("lifecycle_popup", 100, 80);
+                    previous[2] = popup;
+                    return popup;
+                }, true)
+                    .openPanel();
+            })
+            .awaitClient("both old panels are active", c -> {
+                if (GuiTestSupport.requireScreen("galactic_orbital_map")
+                    .getPanelManager()
+                    .getOpenPanels()
+                    .size() != 2) throw new AssertionError("Native popup was not opened");
+            })
+            .server("open the held map through its real item entry point", () -> {
+                var player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
+                var held = player.getHeldItem();
+                held.getItem()
+                    .onItemRightClick(held, player.worldObj, player);
+            })
+            .awaitClient("new map has no previous screens or popups", c -> {
+                var screen = GuiTestSupport.requireScreen("galactic_orbital_map");
+                for (var panel : previous)
+                    if (panel.isValid()) throw new AssertionError("Old GUI panel remained valid");
+                if (screen.getPanelManager()
+                    .getOpenPanels()
+                    .size() != 1
+                    || screen.getContext()
+                        .getParentScreen() != null)
+                    throw new AssertionError("The starmap retained a previous UI");
+            })
+            .awaitServer("the clean map retains its live server container", () -> {
+                var player = (EntityPlayerMP) helper.getWorld().playerEntities.get(0);
+                if (!(player.openContainer instanceof com.cleanroommc.modularui.screen.ModularContainer))
+                    throw new AssertionError("Closing the old UI also closed the new map's server container");
+            })
+            .step("close the clean map")
+            .key(Keyboard.KEY_ESCAPE, '\0')
+            .awaitClient(
+                "closing the map returns to gameplay",
+                c -> { if (c.screen() != null) throw new AssertionError("Closing the map reopened an old GUI"); })
+            .succeed();
+    }
 
     /** Product contract: hidden planets and moons remain reachable through their parent's map markers. */
     @GameTest(timeoutTicks = 1200)
@@ -119,7 +177,7 @@ public final class StarmapGameTests {
     /** Integration contract: authored deposits resolve to registered items in the loaded modpack. */
     @GameTest(timeoutTicks = 300)
     public static void registeredOrePoolsResolveItems(GameTestHelper helper) {
-        GuiTestSupport.openMap(helper)
+        ClientTest.scenario(helper)
             .client("resolve authored deposits against the loaded ore registries", c -> {
                 var checked = new java.util.HashSet<String>();
                 for (var body : CelestialRegistry.getAll()) {
@@ -144,18 +202,7 @@ public final class StarmapGameTests {
                 .key())) {
             if (star.objectClass() != CelestialObject.Class.STAR) continue;
             var key = star.key();
-            sequence.click(ClientTarget.of("galaxy", c -> sidebarLayerTarget(false)))
-                .awaitClient("galaxy view ready for star selection: " + key, c -> {
-                    var map = GuiTestSupport.map();
-                    if (!CelestialRegistry.getPrimaryRoot()
-                        .key()
-                        .equals(
-                            map.getViewRoot()
-                                .key())
-                        || map.visibleBodyBounds(key) == null)
-                        throw new AssertionError("Galaxy transition has not exposed the requested star");
-                })
-                .click(ClientTarget.of("star " + key, c -> GuiTestSupport.bodyTarget(key)))
+            galaxyLayer(sequence, key).click(ClientTarget.of("star " + key, c -> GuiTestSupport.bodyTarget(key)))
                 .click(ClientTarget.of("enter " + key, c -> sidebarLayerTarget(true)))
                 .awaitClient("system and planets visible: " + key, c -> {
                     var map = GuiTestSupport.map();
@@ -194,31 +241,16 @@ public final class StarmapGameTests {
         for (CelestialObjectId id : List.of(CelestialObjectId.VEGA, CelestialObjectId.ALPHA_CENTAURI_A)) {
             var key = CelestialObjectKey.registered(id);
             Point originalClick = new Point();
-            Rectangle[] previousBounds = new Rectangle[1];
             var motion = new SystemEntryMotion(key);
-            sequence.click(ClientTarget.of("galaxy layer", c -> sidebarLayerTarget(false)))
-                .withinTicks(300)
-                .awaitClient("galaxy layer visible", c -> {
-                    if (GuiTestSupport.map()
-                        .getViewRoot()
-                        .key()
-                        .registeredBodyId() != CelestialObjectId.NOVUM_CAELUM)
-                        throw new AssertionError("Galaxy button did not open the galaxy");
-                    Rectangle bounds = GuiTestSupport.map()
-                        .visibleBodyBounds(key);
-                    boolean settled = bounds != null && bounds.equals(previousBounds[0]);
-                    previousBounds[0] = bounds;
-                    if (!settled) throw new AssertionError("Star marker is still moving into the galaxy overview");
-                })
-                .client("observe system entry motion", c -> {
-                    FMLCommonHandler.instance()
+            galaxyLayer(sequence, key).client("observe system entry motion", c -> {
+                FMLCommonHandler.instance()
+                    .bus()
+                    .register(motion);
+                c.afterTest(
+                    () -> FMLCommonHandler.instance()
                         .bus()
-                        .register(motion);
-                    c.afterTest(
-                        () -> FMLCommonHandler.instance()
-                            .bus()
-                            .unregister(motion));
-                })
+                        .unregister(motion));
+            })
                 .async(
                     "select star and enter its system",
                     c -> c.click(0, "select star " + id, ignored -> GuiTestSupport.bodyTarget(key))
@@ -259,6 +291,23 @@ public final class StarmapGameTests {
         sequence.succeed();
     }
 
+    private static ClientScenario galaxyLayer(ClientScenario sequence, CelestialObjectKey key) {
+        Rectangle[] previousBounds = new Rectangle[1];
+        return sequence.click(ClientTarget.of("galaxy layer", c -> sidebarLayerTarget(false)))
+            .withinTicks(300)
+            .awaitClient("galaxy layer visible", c -> {
+                var map = GuiTestSupport.map();
+                if (map.getViewRoot()
+                    .key()
+                    .registeredBodyId() != CelestialObjectId.NOVUM_CAELUM)
+                    throw new AssertionError("Galaxy button did not open the galaxy");
+                Rectangle bounds = map.visibleBodyBounds(key);
+                boolean settled = bounds != null && bounds.equals(previousBounds[0]);
+                previousBounds[0] = bounds;
+                if (!settled) throw new AssertionError("Star marker is still moving into the galaxy overview");
+            });
+    }
+
     /** Bug regression probe: observe the rendered marker, without changing camera state or input. */
     public static final class SystemEntryMotion {
 
@@ -294,16 +343,7 @@ public final class StarmapGameTests {
     }
 
     private static ClickTarget sidebarLayerTarget(boolean system) {
-        var screen = GuiTestSupport.requireScreen("galactic_orbital_map");
-        var sidebar = TreeUtil.flatListByType(screen.getMainPanel(), CelestialSidebarWidget.class)
-            .getFirst();
-        var matrix = LocatedWidget.of(sidebar)
-            .getTransformationMatrix();
-        return new ClickTarget(
-            sidebar,
-            new Rectangle(matrix.transformX(system ? 110 : 40, 23), matrix.transformY(system ? 110 : 40, 23), 1, 1),
-            () -> sidebar.isValid() && sidebar.getPanel()
-                .isBelowMouse(sidebar));
+        return GuiTestSupport.namedTarget(system ? "starmap.sidebar.layer.system" : "starmap.sidebar.layer.galaxy");
     }
 
     /** Integration contract: text entry owns keys while focused, and screen shortcuts execute once elsewhere. */
@@ -480,7 +520,7 @@ public final class StarmapGameTests {
             })
             .step("open signals before resize")
             .click(control("starmap.toolbar.signals"));
-        for (int[] dimensions : List.of(new int[] { 2400, 1280 }, new int[] { 1281, 721 })) {
+        for (int[] dimensions : List.of(new int[] { 1440, 900 }, new int[] { 1281, 721 })) {
             sequence.step("resize open map to " + dimensions[0] + "x" + dimensions[1])
                 .withinTicks(150)
                 .resizeWindow(dimensions[0], dimensions[1])
@@ -497,7 +537,9 @@ public final class StarmapGameTests {
                         throw new AssertionError("Resizing discarded the selected body");
                     if (!map.isSignalsOpen()) throw new AssertionError("Resizing closed the signals panel");
                     if (mc.gameSettings.guiScale != 5) throw new AssertionError("Map changed the global GUI scale");
-                    var details = GuiTestSupport.widgetBounds(map.createPinnedInfoWidget());
+                    var details = GuiTestSupport.widgetBounds(
+                        GuiTestSupport.requireWindow(
+                            com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OrbitalPinnedInfoContentBuilder.OrbitalPinnedInfoWidget.WINDOW));
                     var canvas = GuiTestSupport.widgetBounds(map);
                     if (details.isEmpty() || !canvas.contains(details) || details.x < canvas.getCenterX())
                         throw new AssertionError("Body details must remain visible on the right of the map");
@@ -581,6 +623,7 @@ public final class StarmapGameTests {
     /** Bug regression: dismissing a context menu must not select the body underneath the same click. */
     @GameTest(timeoutTicks = 600)
     public static void selectsBodyFromLiveOrbitalFrame(GameTestHelper helper) {
+        CelestialObjectKey[] selectionBeforeDismissal = new CelestialObjectKey[1];
         GuiTestSupport.openMap(helper)
             .step("open Mars context menu")
             .rightClick(
@@ -595,14 +638,37 @@ public final class StarmapGameTests {
                         .getFocusedBody()
                         .key()))
                     throw new AssertionError("Overworld is already selected before dismissal");
+                selectionBeforeDismissal[0] = GuiTestSupport.map()
+                    .getFocusedBody()
+                    .key();
             })
-            .step("dismiss context menu over Overworld without selecting it")
-            .click(// Right-button targeting permits a body outside the open menu. The actual input is a left click.
-                ClientTarget.of("dismiss over Overworld", c -> GuiTestSupport.bodyTarget(BODY, 1)))
+            .step("dismiss context menu over an unobstructed body without selecting it")
+            .click(ClientTarget.of("body outside context menu", c -> {
+                var menu = GuiTestSupport.findNamedWidget("starmap.context.menu");
+                if (menu == null) return null;
+                Rectangle bounds = GuiTestSupport.widgetBounds(menu);
+                bounds.grow(4, 4);
+                var map = GuiTestSupport.map();
+                var matrix = LocatedWidget.of(map)
+                    .getTransformationMatrix();
+                for (var id : List.of(
+                    CelestialObjectId.OVERWORLD,
+                    CelestialObjectId.VENUS,
+                    CelestialObjectId.MERCURY,
+                    CelestialObjectId.JUPITER)) {
+                    var key = CelestialObjectKey.registered(id);
+                    var local = map.visibleBodyBounds(key);
+                    if (local != null && !bounds.contains(
+                        matrix.transformX(local.x + local.width / 2, local.y + local.height / 2),
+                        matrix.transformY(local.x + local.width / 2, local.y + local.height / 2)))
+                        return GuiTestSupport.bodyTarget(key, 1);
+                }
+                return null;
+            }))
             .client("dismissal leaves selection unchanged", c -> {
                 if (GuiTestSupport.findNamedWidget("starmap.context.menu") != null)
                     throw new AssertionError("Context menu remains open after dismissal");
-                if (BODY.equals(
+                if (!selectionBeforeDismissal[0].equals(
                     GuiTestSupport.map()
                         .getFocusedBody()
                         .key()))

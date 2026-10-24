@@ -274,6 +274,7 @@ public record VehicleSchedule(@Nonnull List<Visit> visits, @Nonnull Mode mode, @
             case Repair repair -> {
                 out.setString("type", "repair");
                 out.setDouble("threshold", repair.thresholdPercent());
+                if (repair.returnSiloId() != null) out.setString("returnSilo", repair.returnSiloId().toString());
             }
         }
         return out;
@@ -308,7 +309,11 @@ public record VehicleSchedule(@Nonnull List<Visit> visits, @Nonnull Mode mode, @
                     throw new IllegalArgumentException("Deploy cargo must be an item");
                 yield new Deploy(id, item, in.longValue("amount"));
             }
-            case "repair" -> new Repair(id, in.doubleValue("threshold"));
+            case "repair" -> new Repair(
+                id,
+                in.doubleValue("threshold"),
+                in.tag()
+                    .hasKey("returnSilo") ? UUID.fromString(in.string("returnSilo")) : null);
             default -> throw new IllegalArgumentException("Unknown schedule action type");
         };
     }
@@ -516,8 +521,12 @@ public record VehicleSchedule(@Nonnull List<Visit> visits, @Nonnull Mode mode, @
         }
     }
 
-    /** The threshold decides admission. Admitted modules are repaired to full durability. */
-    public record Repair(@Nonnull UUID id, double thresholdPercent) implements Action {
+    /** The threshold selects full repairs. An exact return target also requires handling healthy modules. */
+    public record Repair(@Nonnull UUID id, double thresholdPercent, @Nullable UUID returnSiloId) implements Action {
+
+        public Repair(UUID id, double thresholdPercent) {
+            this(id, thresholdPercent, null);
+        }
 
         public Repair {
             validatePercent(thresholdPercent);

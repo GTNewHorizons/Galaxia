@@ -9,17 +9,21 @@ import javax.annotation.Nullable;
 
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigRocket;
 import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.core.state.NbtReader;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuel;
 
 /** Authored module properties. Concrete resources and durability belong to the produced module. */
 public record RocketPartDef(int id, @Nonnull String nameKey, int width, int height, double dryMassKg,
     @Nullable String assetFolder, @Nonnull Kind kind, int seats, int decouplerStage, @Nonnull Storage storage,
-    @Nullable Engine engine, @Nullable WorkBill manufactureBill, @Nullable WorkBill repairBill) {
+    @Nullable Engine engine, @Nullable WorkBill manufactureBill, @Nullable WorkBill repairBill, int coreColor,
+    @Nullable FuelTankFrame tankFrame, @Nullable RocketFuel fuel) {
 
     private static final String MODULE_DOMAIN = "textures/model/modules/";
 
@@ -31,6 +35,59 @@ public record RocketPartDef(int id, @Nonnull String nameKey, int width, int heig
         if ((kind == Kind.ENGINE) != (engine != null)) {
             throw new IllegalArgumentException("Only an engine module has propulsion settings");
         }
+        if (coreColor < -1 || coreColor > 0xFFFFFF) throw new IllegalArgumentException("Invalid module core color");
+        if (tankFrame != null && (kind != Kind.FUEL_TANK || fuel == null))
+            throw new IllegalArgumentException("A fuel tank frame requires its fuel");
+    }
+
+    public RocketPartDef(int id, String nameKey, int width, int height, double dryMassKg, @Nullable String assetFolder,
+        Kind kind, int seats, int decouplerStage, Storage storage, @Nullable Engine engine,
+        @Nullable WorkBill manufactureBill, @Nullable WorkBill repairBill) {
+        this(
+            id,
+            nameKey,
+            width,
+            height,
+            dryMassKg,
+            assetFolder,
+            kind,
+            seats,
+            decouplerStage,
+            storage,
+            engine,
+            manufactureBill,
+            repairBill,
+            -1,
+            null,
+            null);
+    }
+
+    public String name() {
+        if (tankFrame != null) return StatCollector
+            .translateToLocalFormatted("galaxia.rocket_part.fuel_tank", tankFrame.label, fuel.name());
+        if (fuel != null && kind == Kind.ENGINE)
+            return StatCollector.translateToLocalFormatted("galaxia.rocket_part.engine", fuel.name());
+        return StatCollector.translateToLocal(nameKey);
+    }
+
+    public RocketPartDef withFuel(RocketFuel fuel, @Nullable FuelTankFrame frame) {
+        return new RocketPartDef(
+            id,
+            nameKey,
+            width,
+            height,
+            dryMassKg,
+            assetFolder,
+            kind,
+            seats,
+            decouplerStage,
+            storage,
+            engine,
+            manufactureBill,
+            repairBill,
+            fuel.color(),
+            frame,
+            fuel);
     }
 
     @Nonnull
@@ -67,7 +124,10 @@ public record RocketPartDef(int id, @Nonnull String nameKey, int width, int heig
             replacement,
             engine,
             manufactureBill,
-            repairBill);
+            repairBill,
+            coreColor,
+            tankFrame,
+            fuel);
     }
 
     @Nonnull
@@ -85,7 +145,10 @@ public record RocketPartDef(int id, @Nonnull String nameKey, int width, int heig
             storage,
             replacement,
             manufactureBill,
-            repairBill);
+            repairBill,
+            coreColor,
+            tankFrame,
+            fuel);
     }
 
     @Nonnull
@@ -103,7 +166,10 @@ public record RocketPartDef(int id, @Nonnull String nameKey, int width, int heig
             storage,
             engine,
             replacement,
-            repairBill);
+            repairBill,
+            coreColor,
+            tankFrame,
+            fuel);
     }
 
     @Nonnull
@@ -121,27 +187,20 @@ public record RocketPartDef(int id, @Nonnull String nameKey, int width, int heig
             storage,
             engine,
             manufactureBill,
-            replacement);
+            replacement,
+            coreColor,
+            tankFrame,
+            fuel);
     }
 
-    @Nonnull
+    @Nullable
     public ResourceLocation modelLocation() {
-        return LocationGalaxia(MODULE_DOMAIN + assetFolder + "/model.obj");
+        return assetFolder == null ? null : LocationGalaxia(MODULE_DOMAIN + assetFolder + "/model.obj");
     }
 
-    @Nonnull
-    public ResourceLocation spriteLocation() {
-        return LocationGalaxia(MODULE_DOMAIN + assetFolder + "/schematic_sprite.png");
-    }
-
-    @Nonnull
+    @Nullable
     public ResourceLocation textureLocation() {
-        return LocationGalaxia(MODULE_DOMAIN + assetFolder + "/texture.png");
-    }
-
-    @Nonnull
-    public ResourceLocation siloIconLocation() {
-        return LocationGalaxia(MODULE_DOMAIN + assetFolder + "/silo_icon.png");
+        return assetFolder == null ? null : LocationGalaxia(MODULE_DOMAIN + assetFolder + "/texture.png");
     }
 
     public enum Kind {

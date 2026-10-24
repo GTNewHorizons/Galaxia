@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -41,7 +42,9 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.core.state.CelestialObjectKeyState;
+import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.core.state.NbtReader;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset.Endpoint.Kind;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
@@ -61,6 +64,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.VehicleSchedule;
 public final class VehicleScheduleUI {
 
     private static final String PREFIX = "galaxia.rocket.schedule.";
+    private static final String SIMPLE_PREFIX = "galaxia.vehicle.simple.";
     private static final double METRES_PER_KILOMETRE = 1000;
     private static final int WIDTH = 600;
     private static final int HEIGHT = 400;
@@ -148,6 +152,27 @@ public final class VehicleScheduleUI {
         private boolean pendingSave;
         private boolean overview;
         private boolean manual;
+        private boolean simple;
+        private boolean simpleDirty;
+        private boolean simpleChoosingItem;
+        private int simpleScroll;
+        private int simpleDestinationsScroll;
+        private long simpleBaseRevision;
+        @Nullable
+        private VehicleSchedule.Place simpleHome;
+        @Nullable
+        private VehicleSchedule.Place simpleDestination;
+        @Nullable
+        private CelestialObjectKey simpleBody;
+        private final Map<InventoryKey, Long> simpleRequests = new LinkedHashMap<>();
+        @Nullable
+        private Consumer<Session> saveDelivery;
+        @Nullable
+        private Consumer<Session> stopDelivery;
+        @Nullable
+        private Consumer<Session> clearDelivery;
+        private boolean pendingDeliverySave;
+        private boolean pendingDeliveryClear;
         private boolean manualDirty;
         private boolean pendingLanding;
         private boolean pendingLandingCancellation;
@@ -211,7 +236,8 @@ public final class VehicleScheduleUI {
             if (view == null || pending
                 || warningRequired()
                 || bodyMap == null
-                || !manual && (selectedVisit == null || !editable(selectedVisit))) return;
+                || simple && !simpleEditable()
+                || !manual && !simple && (selectedVisit == null || !editable(selectedVisit))) return;
             navigating = true;
             bodyMap.accept(this);
         }
@@ -225,13 +251,22 @@ public final class VehicleScheduleUI {
                     .anyMatch(
                         candidate -> candidate.key()
                             .equals(body))
-                && (manual ? view.status() == Rocket.Status.PHYSICAL
-                    : selectedVisit != null && visit() != null && editable(selectedVisit));
+                && (simple ? simpleEditable() && simpleDestinations(body).size() > 0
+                    : manual ? view.status() == Rocket.Status.PHYSICAL
+                        : selectedVisit != null && visit() != null && editable(selectedVisit));
         }
 
         public boolean selectDestinationBody(CelestialObjectKey body) {
             if (!canSelectDestinationBody(body)) return false;
-            if (manual) manualDestination(body, manualX, manualZ);
+            if (simple) {
+                if (!body.equals(simpleBody)) {
+                    simpleBody = body;
+                    simpleDestination = null;
+                    simpleDestinationsScroll = 0;
+                    simpleDirty = true;
+                    changed();
+                }
+            } else if (manual) manualDestination(body, manualX, manualZ);
             else if (!visit().place()
                 .body()
                 .equals(body))
@@ -257,6 +292,17 @@ public final class VehicleScheduleUI {
             out.setBoolean("manual", manual);
             out.setBoolean("manualDirty", manualDirty);
             out.setBoolean("overview", overview);
+            out.setBoolean("simple", simple);
+            out.setBoolean("simpleDirty", simpleDirty);
+            out.setLong("simpleRevision", simpleBaseRevision);
+            out.setInteger("simpleScroll", simpleScroll);
+            out.setInteger("simpleDestinationsScroll", simpleDestinationsScroll);
+            out.setBoolean("simpleChoosingItem", simpleChoosingItem);
+            out.setString("simpleSearch", simple ? search : "");
+            if (simpleHome != null) out.setTag("simpleHome", simpleHome.serializeNBT());
+            if (simpleDestination != null) out.setTag("simpleDestination", simpleDestination.serializeNBT());
+            if (simpleBody != null) out.setTag("simpleBody", CelestialObjectKeyState.encode(simpleBody));
+            out.setTag("simpleRequests", InventoryKeyState.encodeAmounts(simpleRequests));
             if (manualBody != null) out.setTag("manualBody", CelestialObjectKeyState.encode(manualBody));
             out.setString("manualX", manualX);
             out.setString("manualZ", manualZ);
@@ -297,6 +343,33 @@ public final class VehicleScheduleUI {
                 manual = in.bool("manual");
                 manualDirty = in.bool("manualDirty");
                 overview = in.bool("overview");
+                simple = in.bool("simple");
+                simpleDirty = in.bool("simpleDirty");
+                simpleBaseRevision = in.longValue("simpleRevision");
+                if (simpleBaseRevision < 0) throw new IllegalArgumentException("Invalid delivery revision");
+                simpleScroll = in.integer("simpleScroll", 0, Integer.MAX_VALUE);
+                simpleDestinationsScroll = in.integer("simpleDestinationsScroll", 0, Integer.MAX_VALUE);
+                simpleChoosingItem = in.bool("simpleChoosingItem");
+                if (simple) search = in.string("simpleSearch");
+                simpleHome = encoded.hasKey("simpleHome") ? VehicleSchedule.Place.deserializeNBT(
+                    in.compound("simpleHome")
+                        .tag())
+                    : null;
+                simpleDestination = encoded.hasKey("simpleDestination") ? VehicleSchedule.Place.deserializeNBT(
+                    in.compound("simpleDestination")
+                        .tag())
+                    : null;
+                simpleBody = encoded.hasKey("simpleBody") ? CelestialObjectKeyState.decode(
+                    in.compound("simpleBody")
+                        .tag())
+                    : null;
+                simpleRequests.clear();
+                var requests = InventoryKeyState.decodeAmounts(in, "simpleRequests");
+                for (var request : requests.entrySet()) {
+                    if (!(request.getKey() instanceof ItemStackWrapper) || request.getValue() <= 0)
+                        throw new IllegalArgumentException("Invalid simple delivery request");
+                }
+                simpleRequests.putAll(requests);
                 manualBody = encoded.hasKey("manualBody") ? CelestialObjectKeyState.decode(
                     in.compound("manualBody")
                         .tag())
@@ -340,6 +413,159 @@ public final class VehicleScheduleUI {
             return this;
         }
 
+        public Session deliveryCommands(Consumer<Session> save, Consumer<Session> stop, Consumer<Session> clear) {
+            saveDelivery = save;
+            stopDelivery = stop;
+            clearDelivery = clear;
+            return this;
+        }
+
+        public void showSimple() {
+            if (pending || warningRequired()) return;
+            simple = true;
+            manual = false;
+            overview = false;
+            picker = Picker.NONE;
+            changed();
+        }
+
+        public void showAdvanced() {
+            if (pending || warningRequired()) return;
+            simple = false;
+            manual = false;
+            overview = false;
+            picker = Picker.NONE;
+            changed();
+        }
+
+        public boolean simpleMode() {
+            return simple;
+        }
+
+        public long simpleBaseRevision() {
+            return simpleBaseRevision;
+        }
+
+        public boolean simpleEditable() {
+            return view != null && !pending
+                && !warningRequired()
+                && view.status() == Rocket.Status.PHYSICAL
+                && view.manualMission() == null
+                && !view.running()
+                && (view.delivery() == null || !view.delivery()
+                    .enabled());
+        }
+
+        private List<EndpointChoice> simpleDestinations(@Nullable CelestialObjectKey body) {
+            return catalog.endpoints()
+                .stream()
+                .filter(
+                    endpoint -> endpoint.kind() == Kind.SILO && endpoint.body()
+                        .equals(body))
+                .filter(
+                    endpoint -> simpleHome == null || !(simpleHome.target() instanceof VehicleSchedule.Exact home)
+                        || !home.endpointId()
+                            .equals(endpoint.endpointId()))
+                .toList();
+        }
+
+        public void simpleDestination(EndpointChoice endpoint) {
+            if (!simpleEditable() || !simpleDestinations(endpoint.body()).contains(endpoint)) return;
+            var selected = new VehicleSchedule.Place(
+                endpoint.body(),
+                endpoint.context(),
+                new VehicleSchedule.Exact(endpoint.endpointId(), endpoint.kind()));
+            if (selected.equals(simpleDestination)) return;
+            simpleBody = endpoint.body();
+            simpleDestination = selected;
+            simpleDirty = true;
+            changed();
+        }
+
+        public void simpleRequest(ItemStackWrapper resource, long amount) {
+            if (!simpleEditable()) return;
+            if (amount < 0) throw new IllegalArgumentException("Delivery amount must be nonnegative");
+            if (amount == 0) {
+                if (simpleRequests.remove(resource) == null) return;
+            } else if (Long.valueOf(amount)
+                .equals(simpleRequests.put(resource, amount))) return;
+            simpleDirty = true;
+            changed();
+        }
+
+        @Nullable
+        public Rocket.DeliveryPlan simplePlan() {
+            if (!hasSimplePlan()) return null;
+            return new Rocket.DeliveryPlan(simpleHome, simpleDestination, simpleRequests);
+        }
+
+        private boolean hasSimplePlan() {
+            return simpleHome != null && simpleHome.target() instanceof VehicleSchedule.Exact home
+                && home.kind() == Kind.SILO
+                && simpleDestination != null
+                && !simpleRequests.isEmpty();
+        }
+
+        private boolean newDeliveryOrder() {
+            if (view == null || view.delivery() == null) return false;
+            var accepted = view.delivery()
+                .plan();
+            return !java.util.Objects.equals(simpleHome, accepted.home())
+                || !java.util.Objects.equals(simpleDestination, accepted.destination())
+                || !simpleRequests.equals(accepted.requested());
+        }
+
+        private void restoreSimple() {
+            var delivery = view.delivery();
+            simpleHome = delivery == null ? view.place()
+                : delivery.plan()
+                    .home();
+            simpleDestination = delivery == null ? null
+                : delivery.plan()
+                    .destination();
+            simpleBody = simpleDestination == null ? simpleHome.body() : simpleDestination.body();
+            simpleRequests.clear();
+            if (delivery != null) simpleRequests.putAll(
+                delivery.plan()
+                    .requested());
+            simpleDirty = false;
+            simpleBaseRevision = view.revision();
+        }
+
+        public void requestDeliverySave() {
+            if (!simpleEditable() || dirty() || !hasSimplePlan() || saveDelivery == null) return;
+            pending = true;
+            pendingSave = false;
+            pendingDeliverySave = true;
+            problemKey = null;
+            changed();
+            saveDelivery.accept(this);
+        }
+
+        public void requestDeliveryStop() {
+            if (view == null || view.delivery() == null
+                || !view.delivery()
+                    .enabled()
+                || pending
+                || stopDelivery == null) return;
+            pending = true;
+            pendingSave = false;
+            changed();
+            stopDelivery.accept(this);
+        }
+
+        public void requestDeliveryClear() {
+            if (!simpleEditable() || view.delivery() == null
+                || view.delivery()
+                    .enabled()
+                || clearDelivery == null) return;
+            pending = true;
+            pendingSave = false;
+            pendingDeliveryClear = true;
+            changed();
+            clearDelivery.accept(this);
+        }
+
         public Session manualCommands(Consumer<Session> search, Consumer<Session> accept, Consumer<Session> cancel) {
             searchLanding = search;
             acceptLanding = accept;
@@ -380,7 +606,7 @@ public final class VehicleScheduleUI {
         }
 
         public void openManual() {
-            if (view == null || pending || warningRequired()) return;
+            if (view == null || pending || warningRequired() || view.delivery() != null) return;
             manual = true;
             overview = false;
             picker = Picker.NONE;
@@ -534,6 +760,7 @@ public final class VehicleScheduleUI {
                 .equals(view.lockedVisitIds())
                 || !java.util.Objects.equals(this.view.launchWarning(), view.launchWarning())
                 || !java.util.Objects.equals(this.view.manualMission(), view.manualMission())
+                || !java.util.Objects.equals(this.view.delivery(), view.delivery())
                 || !this.catalog.sameChoices(catalog)
                 || acknowledgement && pending
                 || overview && !java.util.Objects.equals(this.view, view);
@@ -546,6 +773,11 @@ public final class VehicleScheduleUI {
             }
             this.view = view;
             this.catalog = catalog;
+            if (!sameVehicle || !restoring && !simpleDirty
+                || acknowledgement && problemKey == null && (pendingDeliverySave || pendingDeliveryClear))
+                restoreSimple();
+            if (!sameVehicle) simple = view.delivery() != null;
+            if (acknowledgement && pendingDeliveryClear && problemKey == null) simple = false;
             if (!restoring && sameVehicle && !sameManual && view.manualMission() == null && !manualDirty) {
                 resetManual();
             }
@@ -568,6 +800,8 @@ public final class VehicleScheduleUI {
                 pending = false;
                 pendingSave = false;
                 pendingLanding = false;
+                pendingDeliverySave = false;
+                pendingDeliveryClear = false;
             }
             if (acknowledgement || problemKey != null || !sameVehicle) this.problemKey = problemKey;
             if (!sameVehicle) {
@@ -611,6 +845,8 @@ public final class VehicleScheduleUI {
             pendingSave = false;
             pendingLanding = false;
             pendingLandingCancellation = false;
+            pendingDeliverySave = false;
+            pendingDeliveryClear = false;
             searchingLanding = false;
             problemKey = key;
             changed();
@@ -618,6 +854,7 @@ public final class VehicleScheduleUI {
 
         public boolean editable(UUID visitId) {
             return view != null && !pending
+                && view.delivery() == null
                 && !warningRequired()
                 && !view.lockedVisitIds()
                     .contains(visitId);
@@ -639,14 +876,14 @@ public final class VehicleScheduleUI {
         }
 
         public void edit(VehicleSchedule replacement) {
-            if (pending || view == null || warningRequired()) return;
+            if (pending || view == null || warningRequired() || view.delivery() != null) return;
             draft = replacement;
             problemKey = null;
             changed();
         }
 
         public void addVisit() {
-            if (view == null || pending || warningRequired()) return;
+            if (view == null || pending || warningRequired() || view.delivery() != null) return;
             var id = UUID.randomUUID();
             var place = draft.visits()
                 .isEmpty() ? view.place()
@@ -758,6 +995,10 @@ public final class VehicleScheduleUI {
             pendingSave = false;
             pendingLanding = false;
             pendingLandingCancellation = false;
+            pendingDeliverySave = false;
+            pendingDeliveryClear = false;
+            restoreSimple();
+            simpleChoosingItem = false;
             draft = view.schedule();
             baseRevision = view.revision();
             problemKey = null;
@@ -804,7 +1045,7 @@ public final class VehicleScheduleUI {
         }
 
         public void requestSave() {
-            if (view == null || pending || manual || warningRequired() || !dirty()) return;
+            if (view == null || pending || manual || warningRequired() || view.delivery() != null || !dirty()) return;
             pending = true;
             pendingSave = true;
             problemKey = null;
@@ -814,6 +1055,7 @@ public final class VehicleScheduleUI {
 
         public void requestStart() {
             if (view == null || pending
+                || view.delivery() != null
                 || warningRequired()
                 || !manual && view.manualMission() != null
                 || dirty() && view.manualMission() == null
@@ -868,7 +1110,7 @@ public final class VehicleScheduleUI {
                 EnumTextures.GUI_WELL.getImage()
                     .draw(context, x + 4, y + height - FOOTER_HEIGHT, width - 8, FOOTER_HEIGHT - 4, theme);
             });
-        BooleanSupplier unsaved = () -> session.dirty() || panel.getContext()
+        BooleanSupplier unsaved = () -> (session.simple ? session.simpleDirty : session.dirty()) || panel.getContext()
             .getFocusedWidget()
             .getElement() instanceof ScheduleField field
             && !field.getText()
@@ -898,7 +1140,7 @@ public final class VehicleScheduleUI {
                             .toString()
                             .substring(0, 8)),
                 () -> {
-                    if (session.dirty()) {
+                    if (session.dirty() || session.simpleDirty || unsaved.getAsBoolean()) {
                         session.fail(PREFIX + "switch_unsaved");
                         return;
                     }
@@ -916,17 +1158,45 @@ public final class VehicleScheduleUI {
         panel.child(
             ButtonWidget.panelCloseButton()
                 .name("rocket.schedule.close"));
+        panel.child(buttonText(() -> simpleText(session.simpleMode() ? "advanced_mode" : "simple_mode"), () -> {
+            if (session.simpleMode()) session.showAdvanced();
+            else session.showSimple();
+        }).name("rocket.schedule.editor_mode")
+            .relative(header)
+            .left(170)
+            .top(0)
+            .width(120)
+            .heightRel(1f)
+            .setEnabledIf(widget -> session.view != null && !session.pending && !session.warningRequired()));
+        var advancedControls = new ParentWidget<>().sizeRel(1f)
+            .setEnabledIf(widget -> !session.simple);
+        panel.child(advancedControls);
         panel.child(
+            IKey.lang(SIMPLE_PREFIX + "intro")
+                .asWidget()
+                .pos(INSET, 35)
+                .size(WIDTH - 2 * INSET, 18)
+                .color(MUTED)
+                .setEnabledIf(widget -> session.simple && !session.manual && !session.warningRequired()));
+        panel.child(
+            IKey.lang(SIMPLE_PREFIX + "automatic_service")
+                .asWidget()
+                .pos(INSET, 53)
+                .size(WIDTH - 2 * INSET, 14)
+                .color(MUTED)
+                .setEnabledIf(widget -> session.simpleMode() && !session.manual && !session.warningRequired()));
+        advancedControls.child(
             button("add_visit", session::addVisit).primaryWhen(
                 () -> session.draft != null && session.draft.visits()
                     .isEmpty())
                 .pos(INSET, 35)
                 .size(100, 18)
                 .setEnabledIf(
-                    widget -> session.view != null && !session.manual
+                    widget -> session.view != null && session.view.delivery() == null
+                        && !session.manual
                         && !session.pending
                         && !session.warningRequired()));
-        panel.child(
+        advancedControls.child(
             buttonText(
                 () -> tr(
                     session.draft != null && session.draft.mode() == VehicleSchedule.Mode.LOOP ? "loop" : "run_once"),
@@ -939,10 +1209,11 @@ public final class VehicleScheduleUI {
                     .pos(117, 35)
                     .size(88, 18)
                     .setEnabledIf(
-                        widget -> session.view != null && !session.manual
+                        widget -> session.view != null && session.view.delivery() == null
+                            && !session.manual
                             && !session.pending
                             && !session.warningRequired()));
-        panel.child(
+        advancedControls.child(
             buttonText(
                 () -> tr(session.safeDurability() ? "safe_on" : "safe_off"),
                 () -> {
@@ -952,10 +1223,11 @@ public final class VehicleScheduleUI {
                     .pos(212, 35)
                     .size(180, 18)
                     .setEnabledIf(
-                        widget -> session.view != null && !session.manual
+                        widget -> session.view != null && session.view.delivery() == null
+                            && !session.manual
                             && !session.pending
                             && !session.warningRequired()));
-        panel.child(
+        advancedControls.child(
             IKey.dynamic(
                 () -> session.view == null ? tr("loading")
                     : session.pending ? tr("pending") : unsaved.getAsBoolean() ? tr("unsaved") : tr("saved"))
@@ -982,7 +1254,7 @@ public final class VehicleScheduleUI {
                         : session.problemKey != null || session.view != null && session.view.problemKey() != null
                             || session.draft != null && !session.draft.hasValidRefueling() ? GalaxiaGuiStyle.WARN
                                 : MUTED));
-        panel.child(button("cancel", () -> {
+        advancedControls.child(button("cancel", () -> {
             session.cancel();
             panel.closeIfOpen();
         }).quiet()
@@ -1003,8 +1275,8 @@ public final class VehicleScheduleUI {
             session.requestSave();
             return true;
         });
-        panel.child(save);
-        panel.child(
+        advancedControls.child(save);
+        advancedControls.child(
             button("start", session::requestStart)
                 .primaryWhen(
                     () -> !unsaved.getAsBoolean() && session.draft != null
@@ -1015,7 +1287,8 @@ public final class VehicleScheduleUI {
                 .pos(WIDTH - 88, HEIGHT - 25)
                 .size(78, 18)
                 .setEnabledIf(
-                    widget -> session.view != null && session.view.manualMission() == null
+                    widget -> session.view != null && session.view.delivery() == null
+                        && session.view.manualMission() == null
                         && !session.manual
                         && !unsaved.getAsBoolean()
                         && !session.pending
@@ -1023,15 +1296,18 @@ public final class VehicleScheduleUI {
                         && session.start != null
                         && !session.draft.visits()
                             .isEmpty()));
-        panel.child(buttonText(() -> tr(session.overview ? "schedule_view" : "overview"), () -> {
+        advancedControls.child(buttonText(() -> tr(session.overview ? "schedule_view" : "overview"), () -> {
             session.overview = !session.overview;
             session.changed();
         }).quiet()
             .name("rocket.schedule.overview")
             .pos(WIDTH - 110, 35)
             .size(100, 18)
-            .setEnabledIf(widget -> session.view != null && !session.manual && !session.warningRequired()));
-        panel.child(buttonText(() -> tr(session.manual ? "schedule_view" : "manual"), () -> {
+            .setEnabledIf(
+                widget -> session.view != null && session.view.delivery() == null
+                    && !session.manual
+                    && !session.warningRequired()));
+        advancedControls.child(buttonText(() -> tr(session.manual ? "schedule_view" : "manual"), () -> {
             if (session.manual) {
                 session.manual = false;
                 session.picker = Picker.NONE;
@@ -1041,7 +1317,10 @@ public final class VehicleScheduleUI {
             .name("rocket.schedule.manual")
             .pos(INSET, HEIGHT - 25)
             .size(110, 18)
-            .setEnabledIf(w -> session.view != null && !session.pending && !session.warningRequired()));
+            .setEnabledIf(
+                w -> session.view != null && session.view.delivery() == null
+                    && !session.pending
+                    && !session.warningRequired()));
         var sections = new ParentWidget<>().pos(INSET, HEADER - SECTION_LABEL_HEIGHT)
             .size(WIDTH - 2 * INSET, SECTION_LABEL_HEIGHT)
             .setEnabledIf(
@@ -1072,7 +1351,8 @@ public final class VehicleScheduleUI {
                 .pos(DETAIL_X - INSET, 0)
                 .size(DETAIL_WIDTH, 14)
                 .color(MUTED));
-        panel.child(sections);
+        advancedControls.child(sections);
+        simpleFooter(panel, session);
         panel.onCloseAction(session::cancel);
         return panel;
     }
@@ -1211,7 +1491,8 @@ public final class VehicleScheduleUI {
             return session.view != null && session.draft != null
                 && !session.warningRequired()
                 && !session.manual
-                && !session.overview;
+                && !session.overview
+                && !session.simple;
         }
 
         private void refresh() {
@@ -1226,6 +1507,7 @@ public final class VehicleScheduleUI {
                         .color(MUTED));
                 else if (session.warningRequired()) launchWarning(overlay, session);
                 else if (session.manual) manualForm(overlay, session);
+                else if (session.simple) simpleForm(overlay, session);
                 else vehicleOverview(overlay, session);
                 overlay.scheduleResize();
                 return;
@@ -1301,6 +1583,284 @@ public final class VehicleScheduleUI {
             inspector.refreshRows();
             choices.refreshRows();
         }
+    }
+
+    private static void simpleFooter(ModularPanel panel, Session session) {
+        var footer = new ParentWidget<>().pos(0, HEIGHT - 25)
+            .widthRel(1f)
+            .height(18)
+            .setEnabledIf(widget -> session.simpleMode() && !session.manual && !session.warningRequired());
+        footer.child(buttonText(() -> tr("cancel"), () -> {
+            session.cancel();
+            panel.closeIfOpen();
+        }).quiet()
+            .pos(INSET, 0)
+            .size(90, 18));
+        footer.child(
+            buttonText(() -> simpleText("detach"), session::requestDeliveryClear).name("rocket.simple.detach")
+                .pos(110, 0)
+                .size(160, 18)
+                .setEnabledIf(
+                    widget -> session.simpleEditable() && session.view.delivery() != null
+                        && !session.view.delivery()
+                            .enabled()
+                        && session.clearDelivery != null));
+        footer.child(
+            buttonText(() -> simpleText("stop"), session::requestDeliveryStop).name("rocket.simple.stop")
+                .pos(280, 0)
+                .size(130, 18)
+                .tooltip(t -> t.addLine(IKey.lang(SIMPLE_PREFIX + "stop_hint")))
+                .setEnabledIf(
+                    widget -> session.view != null && session.view.delivery() != null
+                        && session.view.delivery()
+                            .enabled()
+                        && !session.pending
+                        && session.stopDelivery != null));
+        var start = buttonText(
+            () -> simpleText(session.newDeliveryOrder() ? "start_new" : "start"),
+            session::requestDeliverySave).name("rocket.simple.start")
+                .right(INSET)
+                .top(0)
+                .size(170, 18)
+                .tooltip(
+                    t -> t.addLine(
+                        IKey.dynamic(() -> simpleText(session.newDeliveryOrder() ? "new_order_hint" : "start_hint"))))
+                .primaryWhen(session::hasSimplePlan)
+                .setEnabledIf(
+                    widget -> session.simpleEditable() && session.hasSimplePlan()
+                        && !session.dirty()
+                        && session.saveDelivery != null
+                        && (session.simpleDirty || session.view.delivery() == null
+                            || !session.view.delivery()
+                                .enabled()));
+        start.onMousePressed(mouse -> {
+            if (mouse != 0) return false;
+            start.getContext()
+                .removeFocus();
+            if (!start.canInteract.getAsBoolean()) return false;
+            session.requestDeliverySave();
+            return true;
+        });
+        footer.child(start);
+        panel.child(footer);
+    }
+
+    private static void simpleForm(ParentWidget<?> content, Session session) {
+        content.child(
+            IKey.lang(SIMPLE_PREFIX + "title")
+                .asWidget()
+                .pos(0, 0)
+                .color(ACCENT));
+        content.child(
+            IKey.lang(SIMPLE_PREFIX + "home")
+                .asWidget()
+                .pos(0, 24)
+                .color(MUTED));
+        content.child(
+            GalaxiaUi
+                .clipped(
+                    session.simpleHome == null ? simpleText("home_required")
+                        : targetName(session.simpleHome, session.catalog),
+                    LIST_WIDTH,
+                    TEXT)
+                .pos(0, 40)
+                .height(18));
+        content.child(
+            IKey.lang(SIMPLE_PREFIX + "destination")
+                .asWidget()
+                .pos(0, 68)
+                .color(MUTED));
+        content.child(
+            bodyMapButton(session, () -> bodyName(session.simpleBody, session.catalog)).name("rocket.simple.body")
+                .pos(0, 86)
+                .size(LIST_WIDTH, 22)
+                .setEnabledIf(widget -> session.simpleEditable() && session.bodyMap != null));
+        var destinations = new ScrollContent(
+            "rocket.simple.destinations",
+            LIST_WIDTH,
+            156,
+            () -> session.simpleDestinationsScroll,
+            value -> session.simpleDestinationsScroll = value);
+        destinations.pos(0, 116)
+            .background(EnumTextures.GUI_WELL.getImage());
+        destinations.rows.padding(4);
+        var available = session.simpleDestinations(session.simpleBody);
+        if (available.isEmpty()) destinations.rows.child(
+            IKey.lang(SIMPLE_PREFIX + "no_silos")
+                .asWidget()
+                .widthRel(1f)
+                .height(40)
+                .color(MUTED)
+                .margin(6));
+        for (var endpoint : available) {
+            boolean selected = session.simpleDestination != null
+                && session.simpleDestination.target() instanceof VehicleSchedule.Exact exact
+                && exact.endpointId()
+                    .equals(endpoint.endpointId());
+            destinations.rows.child(
+                buttonText(endpoint::routingName, () -> session.simpleDestination(endpoint))
+                    .name("rocket.simple.destination." + endpoint.endpointId())
+                    .widthRel(1f)
+                    .height(26)
+                    .primaryWhen(() -> selected)
+                    .setEnabledIf(widget -> session.simpleEditable()));
+        }
+        content.child(destinations);
+        var requests = new ParentWidget<>().pos(DETAIL_X - INSET, 0)
+            .size(DETAIL_WIDTH, CONTENT_HEIGHT);
+        content.child(requests);
+        if (session.simpleChoosingItem) {
+            simpleItemChoices(requests, session);
+            return;
+        }
+        requests.child(
+            IKey.lang(SIMPLE_PREFIX + "requests")
+                .asWidget()
+                .pos(0, 0)
+                .color(ACCENT));
+        requests.child(buttonText(() -> simpleText("add_request"), () -> {
+            session.simpleChoosingItem = true;
+            session.search = "";
+            session.simpleScroll = 0;
+            session.changed();
+        }).name("rocket.simple.add_request")
+            .right(0)
+            .top(0)
+            .size(110, 22)
+            .setEnabledIf(widget -> session.simpleEditable()));
+        var list = new ScrollContent(
+            "rocket.simple.requests",
+            DETAIL_WIDTH,
+            CONTENT_HEIGHT - 30,
+            () -> session.simpleScroll,
+            value -> session.simpleScroll = value);
+        list.pos(0, 30)
+            .background(EnumTextures.GUI_WELL.getImage());
+        list.rows.padding(4);
+        if (session.simpleRequests.isEmpty()) list.rows.child(
+            IKey.lang(SIMPLE_PREFIX + "empty_requests")
+                .asWidget()
+                .widthRel(1f)
+                .height(50)
+                .color(MUTED)
+                .margin(6));
+        var entries = session.simpleRequests.entrySet()
+            .stream()
+            .sorted(java.util.Comparator.comparing(entry -> resourceName(entry.getKey())))
+            .toList();
+        for (int index = 0; index < entries.size(); index++) list.rows.child(
+            simpleRequestRow(
+                session,
+                (ItemStackWrapper) entries.get(index)
+                    .getKey(),
+                index));
+        requests.child(list);
+    }
+
+    private static ParentWidget<?> simpleRequestRow(Session session, ItemStackWrapper resource, int index) {
+        long requested = session.simpleRequests.get(resource);
+        var row = new ParentWidget<>().widthRel(1f)
+            .height(58)
+            .background(EnumTextures.GUI_PANEL.getImage());
+        row.child(
+            GalaxiaUi.clipped(resourceName(resource), DETAIL_WIDTH - 48, TEXT)
+                .pos(4, 4)
+                .height(16));
+        var remove = buttonText(() -> "x", () -> session.simpleRequest(resource, 0)).quiet()
+            .danger()
+            .name("rocket.simple.remove_request." + index)
+            .right(4)
+            .top(3)
+            .size(20, 18)
+            .setEnabledIf(widget -> session.simpleEditable());
+        remove.onMousePressed(mouse -> {
+            if (mouse != 0) return false;
+            remove.getContext()
+                .removeFocus();
+            if (!remove.canInteract.getAsBoolean()) return false;
+            session.simpleRequest(resource, 0);
+            return true;
+        });
+        row.child(remove);
+        row.child(
+            IKey.lang(SIMPLE_PREFIX + "requested")
+                .asWidget()
+                .pos(4, 30)
+                .color(MUTED));
+        row.child(
+            field(
+                session,
+                () -> Long.toString(requested),
+                value -> session.simpleRequest(resource, Long.parseLong(value))).name("rocket.simple.amount." + index)
+                    .pos(82, 26)
+                    .size(82, 22)
+                    .setMaxLength(19)
+                    .setEnabledIf(widget -> session.simpleEditable()));
+        long delivered = session.view.delivery() == null ? 0
+            : session.view.delivery()
+                .delivered()
+                .getOrDefault(resource, 0L);
+        row.child(
+            GalaxiaUi.clipped(simpleText("delivered", delivered), DETAIL_WIDTH - 178, MUTED)
+                .pos(172, 30)
+                .height(16));
+        return row;
+    }
+
+    private static void simpleItemChoices(ParentWidget<?> content, Session session) {
+        content.child(
+            IKey.lang(SIMPLE_PREFIX + "choose_item")
+                .asWidget()
+                .pos(0, 0)
+                .color(ACCENT));
+        content.child(buttonText(() -> tr("back"), () -> {
+            session.simpleChoosingItem = false;
+            session.simpleScroll = 0;
+            session.changed();
+        }).quiet()
+            .right(0)
+            .top(0)
+            .size(60, 20));
+        content.child(field(session, () -> session.search, value -> {
+            session.search = value;
+            session.changed();
+        }).name("rocket.simple.search")
+            .pos(0, 28)
+            .widthRel(1f)
+            .height(22)
+            .hintText(tr("search")));
+        var list = new ScrollContent(
+            "rocket.simple.items",
+            DETAIL_WIDTH,
+            CONTENT_HEIGHT - 58,
+            () -> session.simpleScroll,
+            value -> session.simpleScroll = value);
+        list.pos(0, 58)
+            .background(EnumTextures.GUI_WELL.getImage());
+        list.rows.padding(4);
+        boolean found = false;
+        for (var resource : session.catalog.resources()) {
+            if (!(resource instanceof ItemStackWrapper item) || !Rocket.acceptsItemCargo(item.toStack(1))
+                || session.simpleRequests.containsKey(item)
+                || !matches(resourceName(item), session.search)) continue;
+            found = true;
+            list.rows.child(buttonText(() -> resourceName(item), () -> {
+                session.simpleRequest(item, 1);
+                session.simpleChoosingItem = false;
+                session.simpleScroll = 0;
+                session.changed();
+            }).widthRel(1f)
+                .height(26)
+                .setEnabledIf(widget -> session.simpleEditable()));
+        }
+        if (!found) list.rows.child(
+            IKey.lang(SIMPLE_PREFIX + "no_items")
+                .asWidget()
+                .widthRel(1f)
+                .height(50)
+                .color(MUTED)
+                .margin(4));
+        content.child(list);
     }
 
     private static void manualForm(ParentWidget<?> content, Session session) {
@@ -2166,11 +2726,12 @@ public final class VehicleScheduleUI {
                 field(
                     session,
                     () -> Double.toString(repair.thresholdPercent()),
-                    value -> session.replaceAction(new VehicleSchedule.Repair(action.id(), Double.parseDouble(value))))
-                        .name("rocket.schedule.threshold")
-                        .pos(0, 108)
-                        .size(120, 20)
-                        .setEnabledIf(w -> editable));
+                    value -> session.replaceAction(
+                        new VehicleSchedule.Repair(action.id(), Double.parseDouble(value), repair.returnSiloId())))
+                            .name("rocket.schedule.threshold")
+                            .pos(0, 108)
+                            .size(120, 20)
+                            .setEnabledIf(w -> editable));
             details.child(
                 IKey.lang(PREFIX + "repair_hint")
                     .asWidget()
@@ -2189,8 +2750,8 @@ public final class VehicleScheduleUI {
                     .height(20)
                     .background(EnumTextures.GUI_WELL.getImage());
                 slider.onUpdateListener(widget -> {
-                    if (!widget.isDragging() && threshold[0] != repair.thresholdPercent())
-                        session.replaceAction(new VehicleSchedule.Repair(action.id(), threshold[0]));
+                    if (!widget.isDragging() && threshold[0] != repair.thresholdPercent()) session
+                        .replaceAction(new VehicleSchedule.Repair(action.id(), threshold[0], repair.returnSiloId()));
                 });
                 details.child(slider);
             }
@@ -2728,6 +3289,24 @@ public final class VehicleScheduleUI {
         if (session.pending) return tr("pending");
         if (session.problemKey != null) return StatCollector.translateToLocal(session.problemKey);
         if (session.view == null) return tr("loading");
+        if (session.simple) {
+            if (session.dirty()) return simpleText("advanced_unsaved");
+            if (session.view.problemKey() != null) return StatCollector.translateToLocal(session.view.problemKey());
+            if (session.simpleHome == null || !(session.simpleHome.target() instanceof VehicleSchedule.Exact home)
+                || home.kind() != Kind.SILO) return simpleText("home_required");
+            if (session.simpleDirty) return tr("unsaved");
+            var delivery = session.view.delivery();
+            if (delivery == null) return simpleText("hint");
+            boolean complete = delivery.plan()
+                .requested()
+                .entrySet()
+                .stream()
+                .allMatch(
+                    entry -> delivery.delivered()
+                        .getOrDefault(entry.getKey(), 0L) >= entry.getValue());
+            return simpleText(complete ? "complete" : delivery.enabled() ? "active" : "stopped");
+        }
+        if (session.view.delivery() != null) return simpleText("managed_advanced");
         if (!session.draft.hasValidRefueling()) return tr("refuel_silo_required");
         if (session.view.problemKey() != null) return StatCollector.translateToLocal(session.view.problemKey());
         if (!session.safeDurability()) return tr("safe_warning");
@@ -2877,6 +3456,10 @@ public final class VehicleScheduleUI {
 
     private static String tr(String key, Object... args) {
         return StatCollector.translateToLocalFormatted(PREFIX + key, args);
+    }
+
+    private static String simpleText(String key, Object... args) {
+        return StatCollector.translateToLocalFormatted(SIMPLE_PREFIX + key, args);
     }
 
     private static boolean matches(String value, String query) {

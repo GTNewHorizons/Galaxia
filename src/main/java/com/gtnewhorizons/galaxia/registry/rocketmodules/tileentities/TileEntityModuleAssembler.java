@@ -38,6 +38,10 @@ import com.gtnewhorizon.structurelib.alignment.enumerable.ExtendedFacing;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
+import com.gtnewhorizons.galaxia.compat.gt.IRocketHatchHost;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatchElement;
+import com.gtnewhorizons.galaxia.compat.gt.RocketHatches;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.compat.teams.TeamAction;
 import com.gtnewhorizons.galaxia.core.Galaxia;
@@ -52,20 +56,23 @@ import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.Rocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryAPI;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.MachineTerminals;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantryTerminal;
 
 import gregtech.api.interfaces.tileentity.IEnergyConnected;
 import gregtech.api.util.GTOreDictUnificator;
+import gregtech.api.util.GTStructureUtility;
 
 /** Supplied manufacture and repair of one exactly assigned module at a time. */
-public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler>
-    implements IGuiHolder<PosGuiData>, IRocketControllerTE, IInventory, IFluidHandler, IEnergyConnected {
+public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityModuleAssembler> implements
+    IGuiHolder<PosGuiData>, IRocketControllerTE, IRocketHatchHost, IInventory, IFluidHandler, IEnergyConnected {
 
     private final MachineIdentity identity = new MachineIdentity();
     private final SupplyLimits limits;
     private final ItemStack[] inputs;
     private final FluidTank[] tanks;
-    private TileEntityGantryTerminal gantryTerminal;
+    private final MachineTerminals terminals = new MachineTerminals();
+    private final RocketHatches hatches = new RocketHatches();
     private WorkRequest accepted;
     private UUID acceptedTeam;
     private int remainingTicks;
@@ -175,6 +182,11 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         return identity.id();
     }
 
+    @Override
+    public RocketHatches getHatches() {
+        return hatches;
+    }
+
     /** Inspects and reserves the entire exact bill without yielding to another machine or tick. */
     public Admission tryAccept(@Nonnull UUID requestingTeam, @Nonnull WorkRequest request) {
         if (!identity.belongsTo(requestingTeam)) return Admission.WRONG_TEAM;
@@ -190,6 +202,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         if (!structureValid || (worldObj != null && worldObj.isRemote) || limits.euCapacity() < request.euPerTick()) {
             return Admission.INVALID_MACHINE;
         }
+        pullSupplies();
         int[] itemRemoval = new int[inputs.length];
         int[] fluidRemoval = new int[tanks.length];
         Map<InventoryKey, Long> reserved = new LinkedHashMap<>();
@@ -288,9 +301,18 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     @Override
     public void updateEntity() {
         super.updateEntity();
-        if (worldObj != null && !worldObj.isRemote) tickWork(
-            Galaxia.proxy.serverRuntime()
-                .rockets());
+        if (worldObj != null && !worldObj.isRemote) {
+            pullSupplies();
+            tickWork(
+                Galaxia.proxy.serverRuntime()
+                    .rockets());
+        }
+    }
+
+    private void pullSupplies() {
+        if (!structureValid || worldObj == null || worldObj.isRemote) return;
+        hatches.transferInputItemsTo(worldObj, this);
+        hatches.transferInputFluidsTo(worldObj, this);
     }
 
     /** Paid work pauses with its vehicle while a destroyed holder awaits explicit recovery. */
@@ -354,7 +376,7 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
         remainingTicks = 0;
         moduleReceived = false;
         structureValid = false;
-        gantryTerminal = null;
+        terminals.clear();
         markDirty();
     }
 
@@ -650,11 +672,20 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     }
 
     public void setGantryTerminal(TileEntityGantryTerminal terminal) {
-        gantryTerminal = terminal;
+        terminals.add(terminal);
     }
 
     public TileEntityGantryTerminal getGantryTerminal() {
-        return gantryTerminal;
+        return terminals.best();
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        if (worldObj != null && !worldObj.isRemote) {
+            hatches.clear();
+            terminals.clear();
+        }
+        return super.checkStructure();
     }
 
     @Override
@@ -703,7 +734,8 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
     }
 
     public boolean checkValidGraph() {
-        return gantryTerminal != null && gantryTerminal.checkValidGraph();
+        var terminal = getGantryTerminal();
+        return terminal != null && terminal.checkValidGraph();
     }
 
     @Override
@@ -776,7 +808,13 @@ public class TileEntityModuleAssembler extends GalaxiaMultiblockBase<TileEntityM
                 "main",
                 new String[][] { { "CCC", "CCC", "CCC" }, { "C C", "T T", "C C" }, { "C C", "C C", "C C" },
                     { "C C", "C C", "C C" }, { "CCC", "C~C", "CCC" } })
-            .addElement('C', StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0))
+            .addElement(
+                'C',
+                GTStructureUtility.<TileEntityModuleAssembler>buildHatchAdder()
+                    .anyOf(RocketHatchElement.InputBus, RocketHatchElement.InputHatch)
+                    .casingIndex(GalaxiaCasingTextures.RUSTY_PANEL)
+                    .hint(1)
+                    .buildAndChain(StructureUtility.ofBlock(GalaxiaBlocksEnum.RUSTY_PANEL.get(), 0)))
             .addElement('T', StructureUtility.ofChain(StructureUtility.ofTileAdder((assembler, te) -> {
                 if (!(te instanceof TileEntityGantryTerminal terminal)) return false;
                 assembler.setGantryTerminal(terminal);

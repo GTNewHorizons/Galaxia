@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.gt5;
 
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
@@ -15,6 +17,11 @@ import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelContainment;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuels;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.ModuleRecipe;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef.Engine;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef.Propellant;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef.Storage;
@@ -170,6 +177,91 @@ public final class RocketContent {
                     Map.of(ore(OrePrefixes.plate, Materials.StainlessSteel), (long) config.repairMaterialAmount),
                     config.repairEuPerTick,
                     config.repairTicks)));
+        registry.replace(
+            RocketPartRegistry.DECOUPLER_T1.withManufactureBill(
+                ModuleRecipe.builder()
+                    .ore("plateSteel", 8)
+                    .ore("screwSteel", 8)
+                    .duration(120)
+                    .build()
+                    .toWorkBill(config.manufactureEuPerTick))
+                .withRepairBill(aluminiumRepair));
+        registry.replace(
+            RocketPartRegistry.LANDER_T1.withManufactureBill(
+                ModuleRecipe.builder()
+                    .ore("plateAluminium", 16)
+                    .ore("circuitGood", 2)
+                    .duration(300)
+                    .build()
+                    .toWorkBill(config.manufactureEuPerTick))
+                .withRepairBill(aluminiumRepair));
+        registry.replace(
+            RocketPartRegistry.RIDER_T1.withManufactureBill(
+                ModuleRecipe.builder()
+                    .ore("plateSteel", 20)
+                    .ore("plateRubber", 6)
+                    .duration(300)
+                    .build()
+                    .toWorkBill(config.manufactureEuPerTick))
+                .withRepairBill(aluminiumRepair));
+        registerFuelModules(registry);
+    }
+
+    private static void registerFuelModules(RocketPartRegistry registry) {
+        var recipes = new ArrayList<ModuleRecipe>();
+        for (var frame : FuelTankFrame.values()) recipes.add(frame.recipe);
+        for (var fuel : RocketFuels.all()) {
+            recipes.add(fuel.coreRecipe());
+            recipes.add(
+                fuel.engine()
+                    .recipe());
+        }
+        var missing = recipes.stream()
+            .flatMap(
+                recipe -> recipe.inputs()
+                    .stream())
+            .map(ModuleRecipe.Input::oreName)
+            .filter(Objects::nonNull)
+            .distinct()
+            .filter(name -> GTOreDictUnificator.get(name, 1) == null)
+            .toList();
+        if (!missing.isEmpty())
+            throw new IllegalStateException("Missing rocket recipe inputs: " + String.join(", ", missing));
+        var config = ConfigRocket.basic;
+        for (RocketPartDef definition : registry.getAll()) {
+            var fuel = definition.fuel();
+            if (fuel == null) continue;
+            var fluid = fuel.fluid();
+            if (fluid == null) throw new IllegalStateException("Missing rocket fuel " + fuel.key());
+            var key = new FluidKey(fluid, null);
+            RocketPartDef configured;
+            ModuleRecipe recipe;
+            if (definition.kind() == RocketPartDef.Kind.ENGINE) {
+                var engine = definition.engine();
+                configured = definition.withEngine(
+                    new Engine(
+                        engine.thrustNewtons(),
+                        engine.exhaustVelocityMps(),
+                        Map.of(key, new Propellant(1, fuel.density()))));
+                recipe = fuel.engine()
+                    .recipe();
+            } else {
+                var frame = definition.tankFrame();
+                configured = definition.withStorage(new Storage(0, 0, Map.of(key, (long) frame.capacity())));
+                recipe = frame.recipe.plus(
+                    fuel.coreRecipe()
+                        .times(frame.cells()));
+            }
+            var material = fuel.containment() == FuelContainment.EXOTIC ? Materials.StainlessSteel
+                : Materials.Aluminium;
+            registry.replace(
+                configured.withManufactureBill(recipe.toWorkBill(config.manufactureEuPerTick))
+                    .withRepairBill(
+                        new WorkBill(
+                            Map.of(ore(OrePrefixes.plate, material), (long) config.repairMaterialAmount),
+                            config.repairEuPerTick,
+                            config.repairTicks)));
+        }
     }
 
     private static InventoryKey item(ItemList component) {

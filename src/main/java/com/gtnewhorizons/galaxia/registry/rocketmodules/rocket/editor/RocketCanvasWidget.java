@@ -1,9 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.editor;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
 import net.minecraft.client.Minecraft;
@@ -22,6 +19,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.render.rockets.ModuleModelRenderer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketBlueprint;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
@@ -218,46 +216,23 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         List<RocketPartInstance> parts = blueprint.getParts();
         if (parts.isEmpty()) return;
 
-        Map<ResourceLocation, List<RocketPartInstance>> byTexture = new LinkedHashMap<>();
-        List<RocketPartInstance> untextured = new ArrayList<>();
-
+        Tessellator tes = Tessellator.instance;
         for (RocketPartInstance part : parts) {
             RocketPartDef def = part.def();
-            if (def.assetFolder() != null) {
-                byTexture.computeIfAbsent(def.spriteLocation(), k -> new ArrayList<>())
-                    .add(part);
-            } else {
-                untextured.add(part);
+            if (def.modelLocation() != null) {
+                ModuleModelRenderer
+                    .drawInGui(def, part.x() * CELL, part.y() * CELL, def.width() * CELL, def.height() * CELL, 1f);
+                continue;
             }
-        }
 
-        Tessellator tes = Tessellator.instance;
-
-        if (!untextured.isEmpty()) {
+            // Modules without a model yet are drawn as plain blocks
             GlStateManager.disableTexture2D();
             GL11.glColor4f(0.85f, 0.55f, 0.15f, 1.0f);
-
             tes.startDrawingQuads();
-            for (RocketPartInstance part : untextured) {
-                addPlainQuad(tes, part.def(), part.x(), part.y());
-            }
+            addPlainQuad(tes, def, part.x(), part.y());
             tes.draw();
-
             GlStateManager.enableTexture2D();
             GL11.glColor4f(1f, 1f, 1f, 1f);
-        }
-
-        if (!byTexture.isEmpty()) {
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            for (Map.Entry<ResourceLocation, List<RocketPartInstance>> entry : byTexture.entrySet()) {
-                mc.renderEngine.bindTexture(entry.getKey());
-
-                tes.startDrawingQuads();
-                for (RocketPartInstance part : entry.getValue()) {
-                    addTexturedQuad(tes, part.def(), part.x(), part.y());
-                }
-                tes.draw();
-            }
         }
     }
 
@@ -313,24 +288,23 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         int pw = def.width() * CELL;
         int ph = def.height() * CELL;
 
-        float r = 1.0f;
-        float g = valid ? 1.0f : 0.35f;
-        float b = valid ? 1.0f : 0.35f;
-
         Tessellator tes = Tessellator.instance;
 
-        if (def.assetFolder() != null) {
-            GL11.glColor4f(r, g, b, PREVIEW_ALPHA);
-            mc.renderEngine.bindTexture(def.spriteLocation());
-
-            tes.startDrawingQuads();
-            tes.addVertexWithUV(px, py + ph, 0, 0, 1);
-            tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
-            tes.addVertexWithUV(px + pw, py, 0, 1, 0);
-            tes.addVertexWithUV(px, py, 0, 0, 0);
-            tes.draw();
-
-            GL11.glColor4f(1f, 1f, 1f, 1f);
+        if (def.modelLocation() != null) {
+            ModuleModelRenderer.drawInGui(def, px, py, pw, ph, valid ? PREVIEW_ALPHA + 0.25f : PREVIEW_ALPHA);
+            if (!valid) {
+                // Red wash over the ghost marks a spot the part can't go
+                GlStateManager.disableTexture2D();
+                GL11.glColor4f(1f, 0.25f, 0.25f, 0.35f);
+                tes.startDrawingQuads();
+                tes.addVertex(px, py + ph, 0);
+                tes.addVertex(px + pw, py + ph, 0);
+                tes.addVertex(px + pw, py, 0);
+                tes.addVertex(px, py, 0);
+                tes.draw();
+                GlStateManager.enableTexture2D();
+                GL11.glColor4f(1f, 1f, 1f, 1f);
+            }
             return;
         }
 
@@ -358,18 +332,6 @@ public class RocketCanvasWidget extends Widget<RocketCanvasWidget> {
         tes.addVertex(px + pw, py + ph, 0);
         tes.addVertex(px + pw, py, 0);
         tes.addVertex(px, py, 0);
-    }
-
-    private void addTexturedQuad(Tessellator tes, RocketPartDef def, int partX, int partY) {
-        int px = partX * CELL;
-        int py = partY * CELL;
-        int pw = def.width() * CELL;
-        int ph = def.height() * CELL;
-
-        tes.addVertexWithUV(px, py + ph, 0, 0, 1);
-        tes.addVertexWithUV(px + pw, py + ph, 0, 1, 1);
-        tes.addVertexWithUV(px + pw, py, 0, 1, 0);
-        tes.addVertexWithUV(px, py, 0, 0, 0);
     }
 
     private void pollDrag() {

@@ -1,10 +1,9 @@
 package com.gtnewhorizons.galaxia.core.network;
 
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.Teleporter;
-import net.minecraft.world.WorldServer;
+import net.minecraftforge.common.DimensionManager;
+
+import com.gtnewhorizons.galaxia.registry.dimension.DimensionTeleport;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -69,66 +68,13 @@ public class TeleportRequestPacket implements IMessage {
         @Override
         public IMessage onMessage(TeleportRequestPacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            ServerTickTaskQueue.schedule(() -> teleport(message, player));
+            ServerTickTaskQueue.schedule(() -> {
+                if (com.gtnewhorizons.galaxia.core.Galaxia.proxy.serverRuntime()
+                    .restrictedPassenger(player.getUniqueID()) != null) return;
+                if (!DimensionManager.isDimensionRegistered(message.dim)) return;
+                DimensionTeleport.teleport(player, message.dim, message.x, message.y, message.z);
+            });
             return null;
         }
-
-        private void teleport(TeleportRequestPacket message, EntityPlayerMP player) {
-            if (com.gtnewhorizons.galaxia.core.Galaxia.proxy.serverRuntime()
-                .restrictedPassenger(player.getUniqueID()) != null) return;
-            MinecraftServer server = player.mcServer;
-            WorldServer targetWorld = server.worldServerForDimension(message.dim);
-
-            if (targetWorld == null) return;
-
-            if (player.dimension == message.dim) {
-                placePlayer(message, player);
-                return;
-            }
-
-            player.mountEntity(null);
-            server.getConfigurationManager()
-                .transferPlayerToDimension(player, message.dim, new Teleporter(targetWorld) {
-
-                    /**
-                     * Overriding the method to place entity in a new location (portal)
-                     *
-                     * @param entity The entity to move
-                     * @param px     Portal x coordinate
-                     * @param py     Portal y coordinate
-                     * @param pz     Portal z coordinate
-                     * @param yaw    The desired yaw of the entity
-                     */
-                    @Override
-                    public void placeInPortal(Entity entity, double px, double py, double pz, float yaw) {
-                        entity.setLocationAndAngles(
-                            message.x,
-                            message.y,
-                            message.z,
-                            entity.rotationYaw,
-                            entity.rotationPitch);
-                    }
-
-                    /**
-                     * Can ignore - just required for override
-                     *
-                     * @param entity Entity to transport
-                     * @return true
-                     */
-                    @Override
-                    public boolean makePortal(Entity entity) {
-                        return true;
-                    }
-                });
-
-        }
-
-        private void placePlayer(TeleportRequestPacket message, EntityPlayerMP player) {
-            double landY = message.y + 0.5;
-            player.setLocationAndAngles(message.x, landY, message.z, player.rotationYaw, player.rotationPitch);
-            player.fallDistance = 0f;
-            player.motionX = player.motionY = player.motionZ = 0;
-        }
-
     }
 }

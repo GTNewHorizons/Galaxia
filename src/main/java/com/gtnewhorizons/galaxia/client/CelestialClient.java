@@ -9,7 +9,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import net.minecraftforge.event.world.WorldEvent;
+import net.minecraft.client.Minecraft;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
@@ -63,6 +63,7 @@ import com.gtnewhorizons.galaxia.registry.satellite.SatelliteNetworkClientState;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.common.network.FMLNetworkEvent;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -156,10 +157,9 @@ public final class CelestialClient {
     public static final class EventHandler {
 
         @SubscribeEvent
-        public void onClientWorldLoad(WorldEvent.Load event) {
-            if (event.world.isRemote) {
-                clear();
-            }
+        public void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
+            Minecraft.getMinecraft()
+                .func_152344_a(CelestialClient::clear);
         }
 
         @SubscribeEvent
