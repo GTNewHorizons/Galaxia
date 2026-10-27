@@ -163,6 +163,10 @@ public final class CraterExtractorGameTests {
         String crater;
 
         void build(GameTestHelper helper) {
+            build(helper, 16, 1);
+        }
+
+        void build(GameTestHelper helper, int diameter, long reserve) {
             world = helper.getWorld();
             player = (EntityPlayerMP) world.playerEntities.get(0);
             x = (((int) player.posX + 64) >> 4 << 4) + 8;
@@ -191,7 +195,7 @@ public final class CraterExtractorGameTests {
             var energy = tile(0, -1, 1);
             energy.increaseStoredEnergyUnits(energy.getEUCapacity(), true);
             crater = "qa:" + x + ":" + z;
-            deposits().register(crater, x, z, 16, CraterSize.SMALL, CraterProfile.IRON_SILICA, 1);
+            deposits().register(crater, x, z, diameter, CraterSize.SMALL, CraterProfile.IRON_SILICA, reserve);
         }
 
         void startWet() {

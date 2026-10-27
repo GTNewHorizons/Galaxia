@@ -38,12 +38,24 @@ public final class RecipeEnvironments {
         }
     };
 
+    public static final RecipeEnvironment ATMOSPHERE = new RecipeEnvironment(
+        "galaxia:atmosphere",
+        "galaxia.environment.atmosphere") {
+
+        @Override
+        public boolean isSatisfied(MetaTileEntity machine) {
+            Conditions conditions = at(machine);
+            return conditions != null && conditions.pressurePa() > 0;
+        }
+    };
+
     private RecipeEnvironments() {}
 
     /** Registers physical conditions during mod construction, before material and recipe registration. */
     public static void register() {
         RecipeEnvironment.register(MICROGRAVITY);
         RecipeEnvironment.register(NO_ATMOSPHERE);
+        RecipeEnvironment.register(ATMOSPHERE);
     }
 
     @Nullable

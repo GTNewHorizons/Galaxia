@@ -13,6 +13,7 @@ import static gregtech.api.util.GTRecipeConstants.COIL_HEAT;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
+import com.gtnewhorizons.galaxia.api.RecipeEnvironments;
 import com.gtnewhorizons.galaxia.compat.gt.crater.MTECraterExtractor;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.feature.CraterProfile;
 import com.ruling_0.materiallib.api.Material;
@@ -96,6 +97,19 @@ public final class CraterRecipes {
             .metadata(COIL_HEAT, 1814)
             .duration(12 * SECONDS)
             .eut(120)
+            .addTo(blastFurnaceRecipes);
+        GTValues.RA.stdBuilder()
+            .itemInputs(MaterialLibAPI.getStack(Materials.Scandium, Shapes.dust, 4))
+            .duration(40 * SECONDS)
+            .eut(1920)
+            .metadata(COIL_HEAT, 3650)
+            .variants(
+                variant -> variant.requiresEnvironment(RecipeEnvironments.NO_ATMOSPHERE)
+                    .itemOutputs(MaterialLibAPI.getStack(Materials.Scandium, Shapes.ingotHot, 4)),
+                variant -> variant.requiresEnvironment(RecipeEnvironments.ATMOSPHERE)
+                    .itemOutputs(
+                        MaterialLibAPI.getStack(Materials.Scandium, Shapes.ingotHot, 2),
+                        MaterialLibAPI.getStack(CraterMaterials.scandiumOxide, Shapes.dust, 5)))
             .addTo(blastFurnaceRecipes);
         GTValues.RA.stdBuilder()
             .itemInputs(MaterialLibAPI.getStack(CraterMaterials.scandiumOxide, Shapes.dust, 5))

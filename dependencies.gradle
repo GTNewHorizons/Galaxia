@@ -44,8 +44,8 @@ dependencies {
 
     compileOnly('com.github.GTNewHorizons:SC2:2.3.14:dev') {transitive=false}
     // Needed for NH ores and automation
-    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.99.99-mu6-environments.1:dev")
-    devOnlyNonPublishable("com.github.GTNewHorizons:VisualProspecting:1.5.39-craters.2:dev") {
+    devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.99.99-mu6-families.1:dev")
+    devOnlyNonPublishable("com.github.GTNewHorizons:VisualProspecting:1.5.39-craters.3:dev") {
         exclude group: "com.github.GTNewHorizons", module: "Galacticraft"
     }
     devOnlyNonPublishable(rfg.deobf("maven.modrinth:journeymap:5.2.20"))

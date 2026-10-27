@@ -1041,6 +1041,7 @@ galaxia.gui.station_device.fluid_use=Uses %s L/s
 
 galaxia.environment.microgravity=Microgravity
 galaxia.environment.no_atmosphere=No atmosphere
+galaxia.environment.atmosphere=Atmosphere
 galaxia.environment.unknown=Unknown environment condition
 galaxia.gui.station_controller.pressure=Pressure: %s%%
 
@@ -1056,9 +1057,9 @@ galaxia.material.space_grade_alloy.name=Space Grade Alloy
 item.galaxia.thin_strip_mold.name=Thin-strip Mold
 galaxia.crater.size.medium=Medium
 galaxia.crater.size.large=Large
-galaxia.crater.profile.iron_silica=Iron-silica
-galaxia.crater.profile.gold_cobalt=Gold-cobalt
-galaxia.crater.profile.scandium_bauxite=Sc-bearing bauxite
+galaxia.crater.profile.iron_silica=Iron Silica
+galaxia.crater.profile.gold_cobalt=Gold Cobalt
+galaxia.crater.profile.scandium_bauxite=Sc-Bearing Bauxite
 galaxia.crater.profile.platinum=Platinum
 galaxia.crater.scan=Crater: %1$s. Size: %6$s, diameter %7$s blocks. Reserve: %2$s/%3$s portions. Completed fracking: %4$s. Next operation: %5$s L Drilling Fluid
 

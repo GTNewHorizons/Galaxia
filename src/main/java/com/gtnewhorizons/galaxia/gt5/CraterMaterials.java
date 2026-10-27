@@ -55,6 +55,8 @@ public final class CraterMaterials {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public void registerMaterials(MaterialRegistrationEvent event) {
+        MaterialLibAPI.editMaterial("gregtech", "Scandium")
+            .setProperty(GTMaterialProperties.AUTO_BLAST_FURNACE_RECIPES, false);
         // GT declares the shared shapes at NORMAL priority before these materials use them.
         scandiumConcentrate = MaterialLibAPI
             .newMaterial("galaxia", "ScandiumConcentrate", TextureSet.of("gregtech", "DULL"))

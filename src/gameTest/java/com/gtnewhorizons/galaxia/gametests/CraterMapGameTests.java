@@ -1,6 +1,7 @@
 package com.gtnewhorizons.galaxia.gametests;
 
 import java.awt.Rectangle;
+import java.util.Random;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.init.Blocks;
@@ -35,13 +36,16 @@ public final class CraterMapGameTests {
     @GameTest(timeoutTicks = 1800)
     public static void discoveryAndAutomaticExtractionUpdates(GameTestHelper helper) {
         var fixture = new CraterExtractorGameTests.Fixture();
+        var random = new Random(0);
+        int diameter = CraterSize.SMALL.sampleDiameter(random);
+        long reserve = CraterProfile.IRON_SILICA.initialReserve(CraterSize.SMALL, diameter, random);
         ClientTest.scenario(helper)
             .defaultTimeoutTicks(400)
             .server("build an extractor and publish an undiscovered crater", () -> {
                 boolean teamSharing = com.sinthoras.visualprospecting.Config.enableTeamSharing;
                 com.sinthoras.visualprospecting.Config.enableTeamSharing = false;
                 helper.afterTest(() -> com.sinthoras.visualprospecting.Config.enableTeamSharing = teamSharing);
-                fixture.build(helper);
+                fixture.build(helper, diameter, reserve);
                 fixture.deposits()
                     .register(
                         "qa:undiscovered",
@@ -81,16 +85,19 @@ public final class CraterMapGameTests {
                 if (!used) throw new AssertionError("GT prospector did not accept the stone block");
             })
             .awaitClient("the native prospector discovers the crater on the map", client -> {
-                assertSnapshot(fixture, 1, 0, 16000);
+                assertSnapshot(fixture, reserve, 0, 16000);
                 CraterPosition crater = ClientCache.instance
                     .getCrater(fixture.world.provider.dimensionId, fixture.crater);
-                if (crater.blockX != fixture.x || crater.blockZ != fixture.z || crater.diameter != 16) {
+                if (crater.blockX != fixture.x || crater.blockZ != fixture.z
+                    || crater.diameter != diameter
+                    || crater.initialReserve != reserve) {
                     throw new AssertionError("Map marker lost the crater footprint");
                 }
                 var tooltip = new java.util.ArrayList<String>();
                 new CraterRenderStep(new CraterLocation(crater)).getTooltip(tooltip);
-                if (tooltip.size() != 5 || tooltip.stream()
-                    .anyMatch(line -> line.startsWith("visualprospecting."))) {
+                if (tooltip.size() != 3 || !"Iron Silica Crater".equals(tooltip.get(0))
+                    || tooltip.stream()
+                        .anyMatch(line -> line.startsWith("visualprospecting."))) {
                     throw new AssertionError("Incomplete or untranslated crater tooltip: " + tooltip);
                 }
             })
@@ -108,34 +115,42 @@ public final class CraterMapGameTests {
                 CraterLayerManager.instance.activateLayer();
                 minecraft.displayGuiScreen(new Fullscreen());
             })
-            .awaitClient("JourneyMap renders the discovered crater", client -> assertMapSnapshot(fixture, 1, 0, 16000))
+            .awaitClient(
+                "JourneyMap renders the discovered crater",
+                client -> assertMapSnapshot(fixture, reserve, 0, 16000))
+            .click(craterMarker(fixture))
             .capture("crater-map-discovered")
             .server("start finite wet extraction", fixture::startWet)
-            .awaitServer("native completion depletes the crater", () -> fixture.assertOutput(16000))
-            .awaitClient("reserve updates without another scan", client -> assertMapSnapshot(fixture, 0, 0, 16000))
+            .awaitServer("native completion extracts one finite portion", () -> fixture.assertOutput(16000))
+            .awaitClient(
+                "reserve updates without another scan",
+                client -> assertMapSnapshot(fixture, reserve - 1, 0, 16000))
+            .click(craterMarker(fixture))
+            .capture("crater-map-after-extraction")
+            .server("settle the remaining finite portions before testing fracking", () -> {
+                // Exercise native extraction above, then fast-forward finite accounting for the fracking check.
+                for (long portion = 1; portion < reserve; portion++) {
+                    var operation = fixture.deposits()
+                        .begin(fixture.crater, true, false);
+                    if (operation == null || operation.fracking()
+                        || !fixture.deposits()
+                            .finish(operation.id(), true)) {
+                        throw new AssertionError("Could not settle a remaining finite portion");
+                    }
+                }
+                fixture.assertReserve(0, 0);
+                VisualProspectingCompat.update(
+                    fixture.world,
+                    fixture.deposits()
+                        .inspect(fixture.crater));
+            })
+            .awaitClient("the map receives the exhausted reserve", client -> assertMapSnapshot(fixture, 0, 0, 16000))
             .server("start fracking without another scan", fixture::startWet)
             .awaitServer("native fracking commits the shared history", () -> fixture.assertOutput(32000))
             .awaitClient(
                 "map shows the new fracking price automatically",
                 client -> assertMapSnapshot(fixture, 0, 1, 16002))
-            .click(ClientTarget.of("refreshed crater marker", client -> {
-                var minecraft = Minecraft.getMinecraft();
-                var screen = minecraft.currentScreen;
-                var renderer = CraterLayerManager.instance.getLayerRenderer(SupportedMods.JourneyMap);
-                var steps = renderer.getRenderSteps();
-                if (steps.isEmpty()) return null;
-                var step = (CraterRenderStep) steps.get(0);
-                double scale = (double) screen.width / minecraft.displayWidth;
-                var bounds = new Rectangle(
-                    (int) (step.getX() * scale),
-                    (int) (step.getY() * scale),
-                    (int) Math.ceil(step.getWidth() * scale),
-                    (int) Math.ceil(step.getHeight() * scale));
-                return new ClickTarget(
-                    fixture.crater,
-                    bounds,
-                    () -> ((InteractableLayer) renderer).getTooltip() != null);
-            }))
+            .click(craterMarker(fixture))
             .awaitClient("JourneyMap tooltip shows the live price", client -> {
                 var layer = (InteractableLayer) CraterLayerManager.instance.getLayerRenderer(SupportedMods.JourneyMap);
                 var tooltip = layer.getTooltip();
@@ -167,6 +182,24 @@ public final class CraterMapGameTests {
             })
             .awaitClient("login refreshes the older saved snapshot", client -> assertMapSnapshot(fixture, 0, 2, 16004))
             .succeed();
+    }
+
+    private static ClientTarget craterMarker(CraterExtractorGameTests.Fixture fixture) {
+        return ClientTarget.of("crater marker", client -> {
+            var minecraft = Minecraft.getMinecraft();
+            var screen = minecraft.currentScreen;
+            var renderer = CraterLayerManager.instance.getLayerRenderer(SupportedMods.JourneyMap);
+            var steps = renderer.getRenderSteps();
+            if (steps.isEmpty()) return null;
+            var step = (CraterRenderStep) steps.get(0);
+            double scale = (double) screen.width / minecraft.displayWidth;
+            var bounds = new Rectangle(
+                (int) (step.getX() * scale),
+                (int) (step.getY() * scale),
+                (int) Math.ceil(step.getWidth() * scale),
+                (int) Math.ceil(step.getHeight() * scale));
+            return new ClickTarget(fixture.crater, bounds, () -> ((InteractableLayer) renderer).getTooltip() != null);
+        });
     }
 
     private static void assertSnapshot(CraterExtractorGameTests.Fixture fixture, long reserve, long fracking,
