@@ -43,6 +43,7 @@ public class CargoItemHandler implements IItemHandlerModifiable {
      * @return The slot, or null past the capacity
      */
     private HoldSlot locate(int slot) {
+        if (slot < 0 || slot >= MAX_SLOTS) return null;
         int remaining = slot;
         List<RocketPartInstance> holds = new ArrayList<>();
         for (RocketPartInstance part : silo.getBuiltBlueprint()
