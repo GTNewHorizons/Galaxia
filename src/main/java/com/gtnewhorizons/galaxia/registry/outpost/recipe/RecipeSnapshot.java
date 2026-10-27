@@ -151,6 +151,7 @@ public class RecipeSnapshot {
         List<Resource> resources = new ArrayList<>(stacks.length);
         for (int i = 0; i < stacks.length; i++) {
             ItemStack stack = stacks[i];
+            if (stack == null) continue;
             ItemStackWrapper key = ItemStackWrapper.of(stack);
             long amount = stack == null ? 0L : stack.stackSize;
             resources.add(chances == null ? new Resource(key, amount) : new Resource(key, amount, chances[i]));
@@ -164,6 +165,7 @@ public class RecipeSnapshot {
         List<Resource> resources = new ArrayList<>(stacks.length);
         for (int i = 0; i < stacks.length; i++) {
             FluidStack stack = stacks[i];
+            if (stack == null) continue;
             FluidKey key = stack == null ? null : FluidKey.of(stack);
             long amount = stack == null ? 0L : stack.amount;
             resources.add(chances == null ? new Resource(key, amount) : new Resource(key, amount, chances[i]));
@@ -319,6 +321,7 @@ public class RecipeSnapshot {
             if (!hasChance()) return true;
             if (chance == 0) return false;
             if (chance >= MAX_CHANCE) return true;
+            Objects.requireNonNull(random, "random");
             return random.nextInt(MAX_CHANCE) < chance;
         }
 

@@ -95,7 +95,7 @@ public abstract class TileStationCartridgeDevice extends TileStationDevice imple
 
     @Override
     public ItemStack decrStackSize(int slot, int amount) {
-        if (filter == null) return null;
+        if (filter == null || amount <= 0) return null;
         ItemStack taken = filter;
         filter = null;
         markDirty();
