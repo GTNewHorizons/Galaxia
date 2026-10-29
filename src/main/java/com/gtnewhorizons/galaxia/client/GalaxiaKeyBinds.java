@@ -5,6 +5,7 @@ import net.minecraft.client.settings.KeyBinding;
 import org.lwjgl.input.Keyboard;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
+import cpw.mods.fml.common.Loader;
 
 public class GalaxiaKeyBinds {
 
@@ -14,8 +15,9 @@ public class GalaxiaKeyBinds {
     public static final KeyBinding LAUNCH_ROCKET = register(
         new KeyBinding("key.galaxia.launch_rocket", Keyboard.KEY_SPACE, "key.categories.galaxia"));
 
-    public static final KeyBinding OPEN_OFFSCREEN_STARMAP = register(
-        new KeyBinding("key.galaxia.starmap_offscreen", Keyboard.KEY_G, "key.categories.galaxia"));
+    public static final KeyBinding OPEN_OFFSCREEN_STARMAP = Loader.isModLoaded("offscreen")
+        ? register(new KeyBinding("key.galaxia.starmap_offscreen", Keyboard.KEY_G, "key.categories.galaxia"))
+        : null;
 
     public static final KeyBinding END_ANDROID_CONTROL = register(
         new KeyBinding("key.galaxia.end_android_control", Keyboard.KEY_END, "key.categories.galaxia"));

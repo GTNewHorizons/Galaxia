@@ -270,9 +270,9 @@ public final class ModuleConstructionGuiGameTests {
         }
     }
 
-    private static final class Fixture {
+    static final class Fixture {
 
-        private final CelestialAsset.ID assetId = CelestialAsset.ID.create();
+        final CelestialAsset.ID assetId = CelestialAsset.ID.create();
         private final Map<ItemStackWrapper, Long> materials = new LinkedHashMap<>();
         private ModuleInstance.ID upgradeModuleId;
         private int prerequisiteModules;

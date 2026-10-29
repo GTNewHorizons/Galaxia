@@ -1,3 +1,6 @@
+import com.gtnewhorizons.gtnhgradle.tasks.RunHotswappableMinecraftTask
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
 plugins {
     id("com.gtnewhorizons.gtnhconvention")
 }
@@ -16,6 +19,21 @@ providers.gradleProperty("horizonQaJar").orNull?.let { horizonQaJar ->
     }
     dependencies {
         add("devOnlyNonPublishable", files(horizonQaJar))
+    }
+}
+
+// Opt-in native-window lane. The normal client and dedicated server do not load Offscreen.
+if (providers.gradleProperty("offscreenRuntime").map(String::toBoolean).getOrElse(false)) {
+    dependencies {
+        add("runtimeOnlyNonPublishable", files("libs/offscreen-0.3-alpha-dev.jar"))
+    }
+    configurations.configureEach {
+        resolutionStrategy.force("com.github.GTNewHorizons:lwjgl3ify:3.0.25")
+    }
+    tasks.named<RunHotswappableMinecraftTask>("runClient17") {
+        targetJvmVersion.set(25)
+        javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) })
+        enableHotswap.set(false)
     }
 }
 
