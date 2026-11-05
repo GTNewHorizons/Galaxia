@@ -2,19 +2,27 @@ package com.gtnewhorizons.galaxia.registry.interfaces;
 
 import java.util.List;
 
+import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 
 public interface IStationBehavior {
 
     String getUnlocalizedName();
 
-    IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def);
+    /**
+     * Builds the room shape check
+     *
+     * @param stationBlocks Wall blocks the dimension allows stations to be built from, empty where stations are not
+     *                      allowed at all
+     *
+     * @return The structure definition of the room
+     */
+    IStructureDefinition<TileStation> buildStructureDefinition(List<Block> stationBlocks);
 
     int getSearchRadius();
 

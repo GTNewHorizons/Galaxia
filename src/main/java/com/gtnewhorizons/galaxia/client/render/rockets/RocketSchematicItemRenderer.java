@@ -6,7 +6,6 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -17,6 +16,7 @@ import net.minecraftforge.client.IItemRenderer;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.gtnewhorizons.galaxia.registry.items.special.ItemRocketSchematic;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
@@ -33,8 +33,9 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public boolean handleRenderType(ItemStack stack, ItemRenderType type) {
+        // Held in third person it shows its icon, like a map
         return switch (type) {
-            case FIRST_PERSON_MAP, EQUIPPED, EQUIPPED_FIRST_PERSON -> true;
+            case FIRST_PERSON_MAP -> true;
             case ENTITY -> RenderItem.renderInFrame;
             default -> false;
         };
@@ -47,52 +48,19 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack stack, Object... data) {
-        // TODO fix y-flip for first person view
         switch (type) {
-            case FIRST_PERSON_MAP:
+            // The game already holds a 128 by 128 sheet in both hands, as for a map
+            case FIRST_PERSON_MAP -> renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+            case ENTITY -> {
                 GL11.glPushMatrix();
-                GL11.glRotatef(180F, 0F, 0F, 1F); // mirror
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+                renderSchematicInFrame(stack, RenderManager.instance);
                 GL11.glPopMatrix();
-                break;
-
-            case EQUIPPED_FIRST_PERSON:
-                GL11.glPushMatrix();
-                GL11.glRotatef(0F, 180F, 0F, 1F); // mirror
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
-                GL11.glPopMatrix();
-                break;
-
-            case EQUIPPED:
-                GL11.glPushMatrix();
-                GL11.glRotatef(180F, 0F, 0F, 1F);
-                GL11.glTranslatef(-1.60F, -1.0F, 0.0F);
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
-                GL11.glPopMatrix();
-                break;
-
-            case ENTITY:
-                if (RenderItem.renderInFrame) {
-                    GL11.glPushMatrix();
-                    renderSchematicInFrame(stack, RenderManager.instance);
-                    GL11.glPopMatrix();
-                }
-                break;
+            }
+            default -> {}
         }
     }
 
     private void renderSchematic(ItemStack stack, TextureManager textureManager) {
-        RocketBlueprint blueprint = ItemRocketSchematic.getBlueprint(stack);
-        if (blueprint == null || blueprint.isEmpty()) {
-            return;
-        }
-
-        RocketAssembly assembly = RocketAnalyzer.analyze(blueprint);
-        List<RocketPartInstance> parts = blueprint.getParts();
-
         GL11.glPushMatrix();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 
@@ -101,8 +69,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
 
-        // Draw background
+        // The blank sheet, also all an empty blueprint shows
         drawQuad(textureManager, SCHEMATIC_BASE, -7f, 128f + 14f, -0.01f);
+
+        RocketBlueprint blueprint = ItemRocketSchematic.getBlueprint(stack);
+        if (blueprint == null || blueprint.isEmpty()) {
+            GL11.glPopAttrib();
+            GL11.glPopMatrix();
+            return;
+        }
+
+        RocketAssembly assembly = RocketAnalyzer.analyze(blueprint);
+        List<RocketPartInstance> parts = blueprint.getParts();
 
         // Center and rotate
         GL11.glTranslatef(64f, 64f, 0f);
@@ -137,10 +115,6 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         if (pixelsPerCell < 1) pixelsPerCell = 1;
 
         for (RocketPartInstance part : parts) {
-            ResourceLocation tex = part.def()
-                .spriteLocation();
-            if (tex == null) tex = MISSING_TEXTURE;
-
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = PADDING + (usable - totalHeight * pixelsPerCell) / 2f + (part.y() - minY) * pixelsPerCell;
             float w = part.def()
@@ -148,7 +122,16 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             float h = part.def()
                 .height() * pixelsPerCell;
 
-            drawQuad(textureManager, tex, x, y, w, h, -0.02f);
+            if (part.def()
+                .modelLocation() != null) {
+                // GUI depth points at the viewer, on the sheet it points away, and the drawing lies flat on the paper
+                GL11.glPushMatrix();
+                GL11.glScalef(1f, 1f, -0.01f);
+                ModuleModelRenderer.drawInGui(part.def(), x, y, w, h, 1f);
+                GL11.glPopMatrix();
+            } else {
+                drawQuad(textureManager, MISSING_TEXTURE, x, y, w, h, -0.02f);
+            }
         }
 
         GL11.glPopAttrib();
@@ -166,26 +149,12 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
     }
 
     private static void drawQuad(TextureManager tm, ResourceLocation tex, float offset, float size, float z) {
-        tm.bindTexture(tex);
-        float end = offset + size;
-        Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
-        t.addVertexWithUV(offset, end, z, 0, 1);
-        t.addVertexWithUV(end, end, z, 1, 1);
-        t.addVertexWithUV(end, offset, z, 1, 0);
-        t.addVertexWithUV(offset, offset, z, 0, 0);
-        t.draw();
+        drawQuad(tm, tex, offset, offset, size, size, z);
     }
 
     private static void drawQuad(TextureManager tm, ResourceLocation tex, float x, float y, float w, float h, float z) {
         tm.bindTexture(tex);
-        Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
-        t.addVertexWithUV(x, y + h, z, 0, 1);
-        t.addVertexWithUV(x + w, y + h, z, 1, 1);
-        t.addVertexWithUV(x + w, y, z, 1, 0);
-        t.addVertexWithUV(x, y, z, 0, 0);
-        t.draw();
+        GuiDraw.drawTexture(x, y, x + w, y + h, 0f, 0f, 1f, 1f, z);
     }
 
     private static void drawTexts(RocketAssembly assembly, RocketBlueprint blueprint) {
@@ -196,21 +165,27 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
         String[] lines = {
             StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.name", blueprint.getName()),
-            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.stages", assembly.getStageCount()),
-            StatCollector.translateToLocalFormatted(
-                "galaxia.item.schematic.label.parts",
-                blueprint.getParts()
-                    .size()),
-            StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.delta_v", (int) assembly.getTotalDeltaV()),
-            StatCollector
-                .translateToLocalFormatted("galaxia.item.schematic.label.viable", assembly.viable() ? "YES" : "NO") };
 
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.stages", assembly.getStageCount()),
+
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.height", blueprint.getHeight()),
+
+            StatCollector.translateToLocalFormatted("galaxia.item.schematic.label.width", blueprint.getWidth()),
+
+            StatCollector
+                .translateToLocalFormatted("galaxia.item.schematic.label.weight", (int) assembly.getTotalMass()),
+
+            StatCollector
+                .translateToLocalFormatted("galaxia.item.schematic.label.thrust", (int) assembly.getTotalThrust()) };
+
+        // Text and its shadow lie in one plane, written to depth they would fight over every pixel
+        GL11.glDepthMask(false);
         float offsetY = 16f;
         for (String line : lines) {
             GL11.glTranslatef(0f, offsetY, 0f);
             fr.drawStringWithShadow(line, 0, 0, 0xFFFFFFFF);
         }
+        GL11.glDepthMask(true);
         GL11.glPopMatrix();
     }
 }

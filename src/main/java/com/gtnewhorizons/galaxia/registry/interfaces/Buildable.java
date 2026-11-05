@@ -17,9 +17,11 @@ public interface Buildable {
 
     Map<ItemStack, Long> getRequiredResources();
 
-    Map<ItemStack, Long> getConstructionInventory();
+    default Map<ItemStack, Long> getConstructionInventory() {
+        return Map.of();
+    }
 
-    void clearConsumedResources();
+    default void clearConsumedResources() {}
 
     Status status();
 
@@ -65,13 +67,9 @@ public interface Buildable {
             return true;
         }
 
-        for (Map.Entry<ItemStack, Long> entry : required.entrySet()) {
-            long available = inventory.getOrDefault(entry.getKey(), 0L);
-            if (available < entry.getValue()) {
-                return false;
-            }
-        }
-        return true;
+        return required.entrySet()
+            .stream()
+            .allMatch(entry -> inventory.getOrDefault(entry.getKey(), 0L) >= entry.getValue());
     }
 
     default void updateConstruction() {

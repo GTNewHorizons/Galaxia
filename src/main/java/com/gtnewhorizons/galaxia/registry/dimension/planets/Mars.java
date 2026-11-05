@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.biome.BiomeGenBase;
 
+import com.gtnewhorizon.gtnhlib.util.data.BlockMeta;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeGenBuilder;
@@ -11,7 +12,6 @@ import com.gtnewhorizons.galaxia.registry.dimension.biome.BiomeIdOffsetter;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShape;
 import com.gtnewhorizons.galaxia.registry.dimension.cave.CaveShapeCracks;
 import com.gtnewhorizons.galaxia.registry.dimension.provider.WorldProviderBuilder;
-import com.gtnewhorizons.galaxia.registry.dimension.worldgen.StratificationPreset;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainConfiguration;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.TerrainPreset;
 
@@ -105,13 +105,19 @@ public final class Mars {
 
     protected static BiomeGenBase createBiome(String name, TerrainConfiguration terrain, CaveShape caveShape,
         Block surfaceBlock) {
+        BlockMeta andesite = new BlockMeta(PlanetBlocks.MARS_ANDESITE);
+        BlockMeta anorthosite = new BlockMeta(PlanetBlocks.MARS_ANORTHOSITE);
+        BlockMeta bedrock = new BlockMeta(Blocks.bedrock);
+
         return new BiomeGenBuilder(BiomeIdOffsetter.getBiomeId()).name(name)
             .temperature(0.4F)
             .rainfall(0.99F)
             .topBlock(surfaceBlock)
-            .fillerBlocks(
-                new StratificationPreset(PlanetBlocks.MARS_ANDESITE).addStrataLayer(Blocks.bedrock, 0, 0)
-                    .addStrataLayer(PlanetBlocks.MARS_ANORTHOSITE, 1, 32))
+            .fillerBlocks(height -> {
+                if (height == 0) return bedrock;
+                if (height <= 32) return anorthosite;
+                return andesite;
+            })
             .snowBlock(PlanetBlocks.MARS_SNOW, 144)
             .terrain(terrain)
             .caveShape(caveShape)

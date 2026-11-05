@@ -4,7 +4,9 @@ import static com.gtnewhorizons.galaxia.core.Galaxia.GALAXIA_NETWORK;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
@@ -12,6 +14,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
@@ -23,19 +26,23 @@ import net.minecraftforge.common.MinecraftForge;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
+import com.gtnewhorizons.galaxia.registry.android.BodyState;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
+import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.hazards.HazardTemperature;
-import com.gtnewhorizons.galaxia.registry.interfaces.IZeroGMovementProvider;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenMask;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemOxygenTank;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemProtectionShield;
+import com.gtnewhorizons.galaxia.registry.items.baubles.ItemReactionControlSystem;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemSporeFilter;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemThermalProtection;
 import com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtection;
@@ -45,6 +52,9 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.CapacityCluster;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 import baubles.api.BaublesApi;
+import baubles.api.IBauble;
+import baubles.common.container.InventoryBaubles;
+import baubles.common.lib.PlayerHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
 import gregtech.api.GregTechAPI;
@@ -125,11 +135,14 @@ public final class GalaxiaAPI {
      *         bars)
      */
     public static float getPlayerOxygenLevel(EntityPlayer player) {
+        return getPlayerOxygenLevel((EntityLivingBase) player);
+    }
+
+    public static float getPlayerOxygenLevel(EntityLivingBase body) {
         float maximum = 0;
         float current = 0;
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
+            ItemStack tank = selectedBauble(body, index);
             if (tank != null && tank.getItem() instanceof ItemOxygenTank tankItem) {
                 maximum += 1;
                 current += tankItem.getPercentFull(tank);
@@ -164,12 +177,46 @@ public final class GalaxiaAPI {
         return (float) (temp - acceptableMinTemp) / (acceptableMaxTemp - acceptableMinTemp);
     }
 
-    private static boolean hasBaubleInSlots(EntityPlayer player, int[] slots, Class<?> itemClass) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return false;
+    public static ItemStack onBaubleRightClick(ItemStack stack, World world, EntityPlayer player, int[] slots) {
+        if (world.isRemote) return stack;
+        IBauble bauble = (IBauble) stack.getItem();
+        if (!bauble.canEquip(stack, player)) return stack;
 
+        boolean equipped = tryEquipBauble(player, stack, slots, bauble);
+        if (equipped && !player.capabilities.isCreativeMode) {
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+            player.inventoryContainer.detectAndSendChanges();
+            if (player.openContainer != null) player.openContainer.detectAndSendChanges();
+        }
+        return stack;
+    }
+
+    private static boolean tryEquipBauble(EntityPlayer player, ItemStack stack, int[] slots, IBauble bauble) {
+        InventoryBaubles baubles = PlayerHandler.getPlayerBaubles(player);
         for (int slot : slots) {
-            ItemStack stack = baubles.getStackInSlot(slot);
+            if (!baubles.isItemValidForSlot(slot, stack)) continue;
+            if (baubles.getStackInSlot(slot) == null) {
+                baubles.setInventorySlotContents(slot, stack.copy());
+                baubles.markDirty();
+                bauble.onEquipped(stack, player);
+                return true;
+            }
+        }
+        for (int slot : slots) {
+            if (!baubles.isItemValidForSlot(slot, stack)) continue;
+            ItemStack inSlot = baubles.getStackInSlot(slot);
+            if (!player.inventory.addItemStackToInventory(inSlot.copy())) return false;
+            baubles.setInventorySlotContents(slot, stack.copy());
+            baubles.markDirty();
+            bauble.onEquipped(stack, player);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean hasBaubleInSlots(EntityLivingBase body, int[] slots, Class<?> itemClass) {
+        for (int slot : slots) {
+            ItemStack stack = selectedBauble(body, slot);
             if (stack != null && itemClass.isInstance(stack.getItem())) {
                 return true;
             }
@@ -177,14 +224,11 @@ public final class GalaxiaAPI {
         return false;
     }
 
-    private static <T> int sumBaubleProtection(EntityPlayer player, int[] slots, Class<T> clazz,
+    private static <T> int sumBaubleProtection(EntityLivingBase body, int[] slots, Class<T> clazz,
         ToIntFunction<T> getter) {
-        IInventory baubles = BaublesApi.getBaubles(player);
-        if (baubles == null) return 0;
-
         int total = 0;
         for (int i : slots) {
-            ItemStack stack = baubles.getStackInSlot(i);
+            ItemStack stack = selectedBauble(body, i);
             if (stack != null && clazz.isInstance(stack.getItem())) {
                 T item = clazz.cast(stack.getItem());
                 total += getter.applyAsInt(item);
@@ -193,95 +237,114 @@ public final class GalaxiaAPI {
         return total;
     }
 
+    @Nullable
+    private static ItemStack selectedBauble(EntityLivingBase body, int slot) {
+        if (body instanceof EntityPlayer player) {
+            return PlayerHandler.getPlayerBaubles(player)
+                .getStackInSlot(slot);
+        }
+        if (body instanceof EntityBody physical) {
+            BodyState state = AndroidControl.stateOf(physical);
+            return state == null ? null : state.bauble(slot);
+        }
+        return null;
+    }
+
     public static boolean hasOxygenTank(@Nonnull EntityPlayer player) {
         return hasBaubleInSlots(player, Galaxia.oxygenSlots, ItemOxygenTank.class);
     }
 
     public static boolean hasOxygenmask(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
+        return hasOxygenmask((EntityLivingBase) player);
     }
 
-    public static boolean hasSporeFilter(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.sporeFilterSlots, ItemSporeFilter.class);
+    public static boolean hasOxygenmask(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.oxygenMaskSlots, ItemOxygenMask.class);
     }
 
-    public static boolean hasWitherProtection(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.witherSlots, ItemWitherProtection.class);
+    public static boolean hasSporeFilter(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.sporeFilterSlots, ItemSporeFilter.class);
     }
 
-    public static boolean hasThermalProtection(@Nonnull EntityPlayer player) {
-        return hasBaubleInSlots(player, Galaxia.thermalSlot, ItemThermalProtection.class);
+    public static boolean hasWitherProtection(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.witherSlots, ItemWitherProtection.class);
     }
 
-    public static int getRadiationProtection(@Nonnull EntityPlayer player) {
+    public static boolean hasThermalProtection(@Nonnull EntityLivingBase body) {
+        return hasBaubleInSlots(body, Galaxia.thermalSlot, ItemThermalProtection.class);
+    }
+
+    public static int getRadiationProtection(@Nonnull EntityLivingBase body) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.shieldSlots,
             ItemProtectionShield.class,
             ItemProtectionShield::getRadiationProtection);
     }
 
-    public static int getThermalProtection(@Nonnull EntityPlayer player, boolean heat) {
+    public static int getThermalProtection(@Nonnull EntityLivingBase body, boolean heat) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.thermalSlot,
             ItemThermalProtection.class,
             item -> heat ? item.getHeatProtection() : item.getColdProtection());
     }
 
-    public static int getPressureProtection(@Nonnull EntityPlayer player, boolean highPressure) {
+    public static int getPressureProtection(@Nonnull EntityLivingBase body, boolean highPressure) {
         return sumBaubleProtection(
-            player,
+            body,
             Galaxia.shieldSlots,
             ItemProtectionShield.class,
             item -> highPressure ? item.getPressureProtectionHigh() : item.getPressureProtectionLow());
     }
 
-    private static IZeroGMovementProvider getZeroGMovementProvider(EntityPlayer player) {
+    @Nullable
+    private static ItemStack getReactionControlSystem(@Nonnull EntityPlayer player) {
         IInventory baubles = BaublesApi.getBaubles(player);
         if (baubles == null) return null;
 
         for (int slot : Galaxia.rcsSlot) {
             ItemStack stack = baubles.getStackInSlot(slot);
-            if (stack != null && stack.getItem() instanceof IZeroGMovementProvider provider) {
-                return provider;
+            if (stack != null && stack.getItem() instanceof ItemReactionControlSystem) {
+                return stack;
             }
         }
         return null;
     }
 
     public static void setZeroGMovement(@Nonnull EntityPlayer player, boolean enabled) {
-        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
-        if (provider != null) provider.setEnabled(enabled);
+        ItemStack stack = getReactionControlSystem(player);
+        if (stack != null) {
+            ((ItemReactionControlSystem) stack.getItem()).setEnabled(stack, enabled);
+        }
     }
 
     public static boolean hasZeroGMovementCapability(@Nonnull EntityPlayer player) {
         if (ConfigPlayer.ConfigPlayerGlobal.applyZeroGravityMovement && player.capabilities.isCreativeMode) {
             return true;
         }
-        IZeroGMovementProvider provider = getZeroGMovementProvider(player);
-        return provider != null && provider.isEnabled();
+        ItemStack stack = getReactionControlSystem(player);
+        return stack != null && ((ItemReactionControlSystem) stack.getItem()).isEnabled(stack);
     }
 
     public static boolean checkOxygenAndDrain(@Nonnull EntityPlayer player, int oxygenPercent) {
-        boolean found = false;
+        return checkOxygenAndDrain((EntityLivingBase) player, oxygenPercent);
+    }
 
+    public static boolean checkOxygenAndDrain(@Nonnull EntityLivingBase body, int oxygenPercent) {
         for (int index : Galaxia.oxygenSlots) {
-            ItemStack tank = BaublesApi.getBaubles(player)
-                .getStackInSlot(index);
-            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) {
-                continue;
-            }
-
-            if (tankItem.drainTank(tank, (100 - oxygenPercent) / 5)) {
-                GALAXIA_NETWORK
-                    .sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), (EntityPlayerMP) player);
-
-                found = true;
-                break;
+            ItemStack tank = selectedBauble(body, index);
+            if (tank == null || !(tank.getItem() instanceof ItemOxygenTank tankItem)) continue;
+            boolean supplied = tankItem.drainTank(tank, (100 - oxygenPercent) / 5);
+            // Partial drains still consume oxygen. Physical projections expose isolated stack copies.
+            if (body instanceof EntityBody physical) physical.writeBauble(index, tank);
+            if (supplied) {
+                if (body instanceof EntityPlayerMP player)
+                    GALAXIA_NETWORK.sendTo(new OxygenSyncPacket(index, tankItem.getCurrentOxygen(tank)), player);
+                return true;
             }
         }
-        return found;
+        return false;
     }
 
     /**
@@ -353,17 +416,28 @@ public final class GalaxiaAPI {
     }
 
     /**
-     * Checks if gt is loaded (who would guess)
+     * Checks if gt5u_nh is loaded (who would guess)
      */
-    public static boolean isGregTechLoaded() {
-        return Loader.isModLoaded("gregtech");
+    public static boolean isGregTech5UnofficialNewHorizonsLoaded() {
+        return Loader.isModLoaded("gregtech_nh");
     }
 
     public static @Nullable TileStation getStationAround(@Nonnull World world, int dim, int x, int y, int z) {
-        CelestialObjectId id = GalaxiaCelestialAPI.getObjectFromDimension(dim);
-        if (id == CelestialObjectId.INVALID) return null;
+        return findStationRoom(world, dim, room -> room.isInside(x, y, z));
+    }
 
-        Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(id);
+    /** The station room a block is part of, inside the room or in one of its walls */
+    public static @Nullable TileStation getStationContaining(@Nonnull World world, int dim, int x, int y, int z) {
+        return findStationRoom(world, dim, room -> room.isInsideOrWall(x, y, z));
+    }
+
+    private static @Nullable TileStation findStationRoom(@Nonnull World world, int dim, Predicate<TileStation> holds) {
+        Optional<CelestialObject> body = GalaxiaCelestialAPI.findByDimension(dim);
+        if (body.isEmpty()) return null;
+
+        Set<CelestialAsset.ID> assets = CelestialAssetStore.getAssetsOnBody(
+            body.get()
+                .key());
         for (var assetId : assets) {
             CelestialAsset asset = CelestialAssetStore.findAsset(assetId);
             if (!(asset instanceof Station station)) continue;
@@ -372,14 +446,20 @@ public final class GalaxiaAPI {
             if (pos == null) continue;
             if (!(world.getTileEntity(pos.x(), pos.y(), pos.z()) instanceof TileStation tileStation)) continue;
 
-            if (tileStation.isInside(x, y, z)) return tileStation;
+            // Every room of the station counts, not just the one with the main controller
+            if (holds.test(tileStation)) return tileStation;
+            StationGraph graph = tileStation.getGraph();
+            if (graph == null) continue;
+            for (TileStation room : graph.iterateOver(TileStation.class)) {
+                if (room.isStructureValid() && holds.test(room)) return room;
+            }
         }
 
         return null;
     }
 
     public static boolean isMachineBlock(Block block, int blockMetadata) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.isMachineBlock(block, blockMetadata);
         }
 
@@ -396,7 +476,7 @@ public final class GalaxiaAPI {
      */
     @SuppressWarnings("UnusedReturnValue")
     public static boolean registerMachineBlock(Block aBlock, int aMeta) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.registerMachineBlock(aBlock, -1);
         }
 
@@ -413,7 +493,7 @@ public final class GalaxiaAPI {
      * @param aZ     is the Z-Coord of the update causing Block
      */
     public static boolean causeMachineUpdate(World aWorld, int aX, int aY, int aZ) {
-        if (isGregTechLoaded()) {
+        if (isGregTech5UnofficialNewHorizonsLoaded()) {
             return GregTechAPI.causeMachineUpdate(aWorld, aX, aY, aZ);
         }
 

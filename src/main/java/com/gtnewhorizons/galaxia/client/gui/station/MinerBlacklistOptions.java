@@ -16,13 +16,13 @@ final class MinerBlacklistOptions {
     private MinerBlacklistOptions() {}
 
     static List<Entry> forFacility(AutomatedFacility facility) {
-        return GalaxiaCelestialAPI.get(facility.celestialObjectId)
+        return GalaxiaCelestialAPI.get(facility.celestialObjectKey)
             .<List<Entry>>map(body -> {
                 Map<String, Entry> options = new LinkedHashMap<>();
                 addOptions(
                     options,
                     body.properties()
-                        .getResolvedGtVeinOreStacks());
+                        .getResolvedGtOreStacks());
                 return new ArrayList<>(options.values());
             })
             .orElse(List.of());

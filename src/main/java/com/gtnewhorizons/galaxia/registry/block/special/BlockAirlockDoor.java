@@ -2,7 +2,12 @@ package com.gtnewhorizons.galaxia.registry.block.special;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.IIcon;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -10,12 +15,28 @@ import com.gtnewhorizons.galaxia.compat.structure.util.IntQueue;
 import com.gtnewhorizons.galaxia.compat.structure.util.LocalCoord;
 import com.gtnewhorizons.galaxia.core.Galaxia;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockOpenable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class BlockAirlockDoor extends BlockOpenable {
+
+    public static final int ORIENT_Y = 0;
+    public static final int ORIENT_X = 1;
+    public static final int ORIENT_Z = 2;
+
+    private static final int ORIENTATION_SHIFT = 1;
+    private static final int ORIENTATION_MASK = 0b110;
+
+    @SideOnly(Side.CLIENT)
+    private IIcon edgeU;
+
+    @SideOnly(Side.CLIENT)
+    private IIcon edgeV;
 
     public BlockAirlockDoor() {
         super(Material.iron);
@@ -28,15 +49,92 @@ public class BlockAirlockDoor extends BlockOpenable {
         this.setCreativeTab(Galaxia.creativeTab);
     }
 
+    public static int encodeMeta(boolean open, int orientation) {
+        return (open ? META_OPEN : META_CLOSED) | (orientation << ORIENTATION_SHIFT);
+    }
+
+    public static int getOrientation(int meta) {
+        return (meta & ORIENTATION_MASK) >> ORIENTATION_SHIFT;
+    }
+
+    public static int orientationForAxis(ForgeDirection axis) {
+        return switch (axis) {
+            case EAST, WEST -> ORIENT_X;
+            case NORTH, SOUTH -> ORIENT_Z;
+            default -> ORIENT_Y;
+        };
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void registerBlockIcons(IIconRegister register) {
+        super.registerBlockIcons(register);
+        edgeU = register.registerIcon(getTextureName() + "_edge_u");
+        edgeV = register.registerIcon(getTextureName() + "_edge_v");
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon getIcon(int side, int meta) {
+        int faceAxis = orientationForAxis(ForgeDirection.getOrientation(side));
+        int orientation = getOrientation(meta);
+        if (faceAxis == orientation) return blockIcon;
+        // Vanilla maps X to U on Y/Z faces, Z to U on X faces, and Y to V on vertical faces.
+        return orientation == ORIENT_X || (orientation == ORIENT_Z && faceAxis == ORIENT_X) ? edgeU : edgeV;
+    }
+
+    @Override
+    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
+        int orientation;
+        if (placer == null) {
+            orientation = ORIENT_Y;
+        } else {
+            orientation = switch (PlacementHelper.placeInEveryDirection(placer)) {
+                case UP, DOWN -> ORIENT_Y;
+                case NORTH, SOUTH -> ORIENT_Z;
+                default -> ORIENT_X;
+            };
+        }
+
+        world.setBlockMetadataWithNotify(x, y, z, encodeMeta(false, orientation), 3);
+    }
+
+    @Override
+    public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
+        switch (getOrientation(world.getBlockMetadata(x, y, z))) {
+            case ORIENT_X -> setBlockBounds(0.25F, 0.0F, 0.0F, 0.75F, 1.0F, 1.0F);
+            case ORIENT_Z -> setBlockBounds(0.0F, 0.0F, 0.25F, 1.0F, 1.0F, 0.75F);
+            default -> setBlockBounds(0.0F, 0.25F, 0.0F, 1.0F, 0.75F, 1.0F);
+        }
+    }
+
+    @Override
+    public void setBlockBoundsForItemRender() {
+        setBlockBounds(0.0F, 0.25F, 0.0F, 1.0F, 0.75F, 1.0F);
+    }
+
+    @Override
+    public void setOpen(World world, int x, int y, int z, boolean open) {
+        int meta = world.getBlockMetadata(x, y, z);
+        if (world.setBlockMetadataWithNotify(x, y, z, encodeMeta(open, getOrientation(meta)), 3)) {
+            world.func_147451_t(x, y, z);
+        }
+    }
+
+    @Override
+    public boolean isOpen(IBlockAccess world, int x, int y, int z) {
+        return (world.getBlockMetadata(x, y, z) & META_OPEN) != 0;
+    }
+
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
         if (world.isRemote) return true;
-        searchAndOpenDoor(world, x, y, z);
+        searchAndOpenDoor(world, x, y, z, player);
         return false;
     }
 
-    public static void searchAndOpenDoor(World world, int x, int y, int z) {
+    public static void searchAndOpenDoor(World world, int x, int y, int z, EntityPlayer player) {
         final int searchRadius = TileEntityAirlock.MAXIMUM_RADIUS + 1;
 
         IntQueue floodBFS = new IntQueue();
@@ -67,12 +165,12 @@ public class BlockAirlockDoor extends BlockOpenable {
 
                 Block b = world.getBlock(wx, wy, wz);
 
-                if (b == GalaxiaBlocksEnum.AIRLOCK_DOOR.get() || b == GalaxiaBlocksEnum.AIRLOCK_CASING.get()) {
+                if (b == GalaxiaBlocksEnum.AIRLOCK_DOOR.get()) {
                     visited.add(np);
                     floodBFS.enqueue(np);
                 } else if (b == GalaxiaBlocksEnum.AIRLOCK_CONTROLLER.get()) {
                     BlockAirlockController controller = (BlockAirlockController) b;
-                    controller.toggleDoor(world, wx, wy, wz);
+                    controller.toggleDoor(world, wx, wy, wz, player);
                     return;
                 }
             }

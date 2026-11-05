@@ -9,12 +9,11 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
 
 import com.cleanroommc.modularui.factory.GuiFactories;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.registry.block.PlacementHelper;
+import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
 import com.gtnewhorizons.galaxia.registry.block.base.BlockUpdatable;
 import com.gtnewhorizons.galaxia.registry.celestial.station.GalaxiaBehaviors;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
@@ -23,6 +22,9 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
 
     public BlockStationController() {
         super(Material.iron);
+        setHardness(5.0F);
+        setResistance(10.0F);
+        setHarvestLevel("pickaxe", 1);
         this.setBlockName("station_controller");
         this.setBlockTextureName("galaxia:space_station/space_station_block_1");
         this.setCreativeTab(Galaxia.creativeTab);
@@ -46,16 +48,14 @@ public class BlockStationController extends BlockUpdatable implements ITileEntit
 
             sm.setOwner(teamId);
 
-            ForgeDirection facing = PlacementHelper.placeInEveryDirection(placer);
-
-            sm.setPlacedFacing(facing);
-            sm.setFacing(facing);
+            sm.onPlacedBy(placer);
         }
     }
 
     @Override
     public boolean onBlockActivated(World worldIn, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        if (GalaxiaMultiblockBase.handleWrench(worldIn, x, y, z, player, side, hitX, hitY, hitZ)) return true;
         if (worldIn.isRemote) return true;
         TileEntity te = worldIn.getTileEntity(x, y, z);
         if (!(te instanceof TileStation)) return false;

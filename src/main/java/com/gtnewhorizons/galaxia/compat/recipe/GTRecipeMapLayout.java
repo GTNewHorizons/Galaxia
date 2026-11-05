@@ -65,10 +65,6 @@ public record GTRecipeMapLayout(int width, int height, List<Slot> itemInputs, Li
             new Progress(78, 24, 20, 18, true, null, ProgressWidget.Direction.RIGHT, 20));
     }
 
-    private static List<Slot> slots(List<Pos2d> positions) {
-        return slots(positions, null, false, false);
-    }
-
     private static List<Slot> slots(List<Pos2d> positions, @Nullable BasicUIProperties ui, boolean fluid,
         boolean output) {
         if (positions == null || positions.isEmpty()) return Collections.emptyList();

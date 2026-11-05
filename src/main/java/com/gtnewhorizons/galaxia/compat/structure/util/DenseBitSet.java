@@ -47,7 +47,6 @@ public final class DenseBitSet {
 
     private final int minX, minY, minZ;
     private final int lenX, lenY, lenZ;
-    private final long strideY;
     private final long strideX;
     private final long totalBits;
 
@@ -63,7 +62,6 @@ public final class DenseBitSet {
         this.lenY = lenY;
         this.lenZ = lenZ;
 
-        this.strideY = lenZ;
         this.strideX = (long) lenY * lenZ;
         this.totalBits = (long) lenX * strideX;
 

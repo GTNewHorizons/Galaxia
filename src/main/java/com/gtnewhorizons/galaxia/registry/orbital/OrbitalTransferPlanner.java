@@ -1,8 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.orbital;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
 /**
  * Shared (non-client) utilities for interplanetary trajectory planning.
@@ -29,7 +28,7 @@ public final class OrbitalTransferPlanner {
     public static final double OSU_PER_SECOND = OSU_PER_TICK * 20.0;
     private static final double MIN_TRANSFER_ANGLE_SIN = 1e-3;
     private static final double BRANCH_TIE_DV_EPS = 1e-7;
-    private static final int MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT = 16;
+    private static final int TRAJECTORY_INTEGRATION_STEPS_PER_SAMPLE = 16;
     private static final double TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION = 0.03;
 
     private OrbitalTransferPlanner() {}
@@ -55,7 +54,7 @@ public final class OrbitalTransferPlanner {
      * @param totalDv            total delta-V (departure + capture), orbital velocity units
      * @param departureDv        departure delta-V only
      * @param captureDv          capture delta-V only
-     * @param attractorBodyId    central body used by Lambert
+     * @param attractorBodyKey   central body used by Lambert
      * @param anchorX            central body world X at departure
      * @param anchorY            central body world Y at departure
      * @param r1x                departure relative X from attractor
@@ -66,7 +65,7 @@ public final class OrbitalTransferPlanner {
      */
 
     public record TransferRoute(double tofOsu, double totalDv, double departureDv, double captureDv,
-        CelestialObjectId attractorBodyId, double anchorX, double anchorY, double r1x, double r1y,
+        CelestialObjectKey attractorBodyKey, double anchorX, double anchorY, double r1x, double r1y,
         double departureVelocityX, double departureVelocityY, boolean prograde) {
 
         public TransferRoute(double tofOsu, double totalDv, double departureDv) {
@@ -75,7 +74,7 @@ public final class OrbitalTransferPlanner {
                 totalDv,
                 departureDv,
                 Math.max(0.0, totalDv - departureDv),
-                CelestialObjectId.INVALID,
+                null,
                 Double.NaN,
                 Double.NaN,
                 Double.NaN,
@@ -96,8 +95,7 @@ public final class OrbitalTransferPlanner {
         }
 
         public boolean hasTrajectoryGeometry() {
-            return attractorBodyId != null && attractorBodyId != CelestialObjectId.INVALID
-                && Double.isFinite(anchorX)
+            return attractorBodyKey != null && Double.isFinite(anchorX)
                 && Double.isFinite(anchorY)
                 && Double.isFinite(r1x)
                 && Double.isFinite(r1y)
@@ -106,76 +104,6 @@ public final class OrbitalTransferPlanner {
                 && Double.isFinite(tofOsu)
                 && tofOsu > 0.0;
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Celestial tree helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Finds a body in the hierarchy by id, starting from {@code root}.
-     * Returns {@code null} if not found.
-     */
-    public static CelestialObject findBodyById(CelestialObject root, String id) {
-        if (root == null || id == null) return null;
-        return findBodyByIdRec(root, id);
-    }
-
-    private static CelestialObject findBodyByIdRec(CelestialObject current, String id) {
-        if (id.equals(current.id())) return current;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findBodyByIdRec(child, id);
-            if (found != null) return found;
-        }
-        return null;
-    }
-
-    /**
-     * Finds the nearest {@link CelestialObject.Class#STAR} ancestor of {@code target}.
-     * Returns {@code null} if no star is found above the target.
-     */
-    public static CelestialObject findHostStar(CelestialObject root, CelestialObject target) {
-        if (root == null || target == null) return null;
-        return findHostStarRec(root, target, null);
-    }
-
-    private static CelestialObject findHostStarRec(CelestialObject current, CelestialObject target,
-        CelestialObject currentStar) {
-        CelestialObject nextStar = current.objectClass() == CelestialObject.Class.STAR ? current : currentStar;
-        if (current == target) return nextStar;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findHostStarRec(child, target, nextStar);
-            if (found != null) return found;
-        }
-        return null;
-    }
-
-    /**
-     * Returns the "planetary anchor" for {@code target}:
-     * <ul>
-     * <li>If the target is a PLANET or GAS_GIANT → returns itself.</li>
-     * <li>If the target is a MOON (or ASTEROID, STATION, etc.) → returns the nearest
-     * PLANET/GAS_GIANT ancestor, or the target itself if none is found.</li>
-     * </ul>
-     */
-    public static CelestialObject findPlanetaryAnchor(CelestialObject root, CelestialObject target) {
-        if (root == null || target == null) return target;
-        CelestialObject anchor = findPlanetaryAnchorRec(root, target, null);
-        return anchor != null ? anchor : target;
-    }
-
-    private static CelestialObject findPlanetaryAnchorRec(CelestialObject current, CelestialObject target,
-        CelestialObject currentPlanet) {
-        CelestialObject.Class cls = current.objectClass();
-        CelestialObject nextPlanet = (cls == CelestialObject.Class.PLANET || cls == CelestialObject.Class.GAS_GIANT)
-            ? current
-            : currentPlanet;
-        if (current == target) return nextPlanet != null ? nextPlanet : current;
-        for (CelestialObject child : GalaxiaCelestialAPI.getChildren(current)) {
-            CelestialObject found = findPlanetaryAnchorRec(child, target, nextPlanet);
-            if (found != null) return found;
-        }
-        return null;
     }
 
     // -------------------------------------------------------------------------
@@ -227,7 +155,7 @@ public final class OrbitalTransferPlanner {
             if (dstState == null || attractorAtArr == null) continue;
 
             TransferRoute route = solveFixedRoute(
-                attractor.id(),
+                attractor.key(),
                 mu,
                 minPeriapsis,
                 attractorAtDep.x(),
@@ -279,7 +207,7 @@ public final class OrbitalTransferPlanner {
         if (srcStateDep == null || attractorAtDep == null || dstState == null || attractorAtArr == null) return null;
 
         return solveFixedRoute(
-            attractor.id(),
+            attractor.key(),
             mu,
             Math.max(0.05, attractor.spriteSize() * 0.5),
             attractorAtDep.x(),
@@ -295,7 +223,7 @@ public final class OrbitalTransferPlanner {
             tof);
     }
 
-    static TransferRoute solveFixedRoute(CelestialObjectId attractorBodyId, double mu, double minPeriapsis,
+    static TransferRoute solveFixedRoute(CelestialObjectKey attractorBodyKey, double mu, double minPeriapsis,
         double anchorX, double anchorY, double r1x, double r1y, double vsrcX, double vsrcY, double r2x, double r2y,
         double vdstX, double vdstY, double tof) {
         if (mu <= 0.0 || tof <= 0.0 || isDegenerateTransferGeometry(r1x, r1y, r2x, r2y)) return null;
@@ -322,7 +250,7 @@ public final class OrbitalTransferPlanner {
             best.totalDv(),
             best.depDv(),
             Math.max(0.0, best.totalDv() - best.depDv()),
-            attractorBodyId == null ? CelestialObjectId.INVALID : attractorBodyId,
+            attractorBodyKey,
             anchorX,
             anchorY,
             r1x,
@@ -370,6 +298,7 @@ public final class OrbitalTransferPlanner {
         return dvDelta < 0.0 ? prograde : retrograde;
     }
 
+    /** Samples equal-time points, returning zero if the shared integration budget cannot complete the trajectory. */
     public static int sampleTransferArcInto(double ax, double ay, double rx1, double ry1, double vx1, double vy1,
         double tof, double mu, double[] outXs, double[] outYs, int n) {
         if (outXs == null || outYs == null) return 0;
@@ -379,12 +308,17 @@ public final class OrbitalTransferPlanner {
         double segmentDt = tof / (sampleCount - 1);
         outXs[0] = ax + state.x();
         outYs[0] = ay + state.y();
+        int remainingSteps = sampleCount * TRAJECTORY_INTEGRATION_STEPS_PER_SAMPLE;
         for (int i = 1; i < sampleCount; i++) {
-            int substeps = trajectoryIntegrationSubsteps(state, mu, segmentDt);
-            double integrationDt = segmentDt / substeps;
-            for (int step = 0; step < substeps; step++) {
+            double remainingTime = segmentDt;
+            while (remainingTime != 0.0) {
+                // Re-evaluate the local orbit scale as the trajectory approaches or leaves the attractor.
+                if (remainingSteps-- <= 0) return 0;
+                int substeps = trajectoryIntegrationSubsteps(state, mu, Math.abs(remainingTime));
+                double integrationDt = remainingTime / substeps;
                 state = OrbitalMechanics.propagateTwoBodyState(state, mu, integrationDt);
                 if (state == null) return i;
+                remainingTime -= integrationDt;
             }
             outXs[i] = ax + state.x();
             outYs[i] = ay + state.y();
@@ -395,12 +329,12 @@ public final class OrbitalTransferPlanner {
     private static int trajectoryIntegrationSubsteps(OrbitalMechanics.OrbitalState state, double mu, double segmentDt) {
         if (state == null || mu <= 0.0 || segmentDt <= 0.0) return 1;
         double radius = Math.hypot(state.x(), state.y());
-        if (radius <= 1e-9) return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
+        if (radius <= 1e-9) return Integer.MAX_VALUE;
         double localTimeScale = Math.sqrt(radius * radius * radius / mu);
         if (!Double.isFinite(localTimeScale) || localTimeScale <= 1e-9) {
-            return MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT;
+            return Integer.MAX_VALUE;
         }
         int substeps = (int) Math.ceil(segmentDt / (localTimeScale * TRAJECTORY_INTEGRATION_TIME_SCALE_FRACTION));
-        return Math.max(1, Math.min(MAX_TRAJECTORY_INTEGRATION_SUBSTEPS_PER_SEGMENT, substeps));
+        return Math.max(1, substeps);
     }
 }

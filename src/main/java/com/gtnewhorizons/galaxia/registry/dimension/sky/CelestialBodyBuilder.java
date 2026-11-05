@@ -16,6 +16,8 @@ public class CelestialBodyBuilder {
     protected long orbitalPeriodTicks = 24000L;
     protected long phaseOffsetTicks = 0L;
     protected boolean isMainLightSource = false;
+    protected boolean isHorizon = false;
+    protected float solidFraction = 1f;
 
     private boolean hasPhases = false;
     private int phaseCount = 8;
@@ -58,6 +60,19 @@ public class CelestialBodyBuilder {
      */
     public CelestialBodyBuilder mainLightSource() {
         this.isMainLightSource = true;
+        return this;
+    }
+
+    /**
+     * Sets the body as the ground below, like a planet seen from its orbit. The solid body hides the sun and stars
+     * behind it, its glow lets them through
+     *
+     * @param solidFraction Part of the picture's width the solid body takes, 1 for a picture without glow
+     * @return builder
+     */
+    public CelestialBodyBuilder horizon(float solidFraction) {
+        this.isHorizon = true;
+        this.solidFraction = solidFraction;
         return this;
     }
 
@@ -164,7 +179,9 @@ public class CelestialBodyBuilder {
             hasPhases,
             hasPhases ? phaseCount : 0,
             phaseOffsetTicks,
-            isMainLightSource);
+            isMainLightSource,
+            isHorizon,
+            solidFraction);
     }
 
     protected void validate() {

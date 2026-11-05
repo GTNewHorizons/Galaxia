@@ -15,6 +15,7 @@ public enum SystemAssetFilter {
     WARNINGS;
 
     public boolean accepts(CelestialAsset asset) {
+        if (asset.kind == CelestialAsset.Kind.SATELLITE) return false;
         return switch (this) {
             case ALL -> true;
             case STATIONS -> asset.kind == CelestialAsset.Kind.STATION

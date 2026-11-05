@@ -17,6 +17,10 @@ import net.minecraftforge.fluids.FluidStack;
  */
 public record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) implements InventoryKey {
 
+    public FluidKey {
+        tag = copy(tag);
+    }
+
     /**
      * Constructs a {@code FluidKey} from an existing {@link FluidStack}.
      */
@@ -28,7 +32,12 @@ public record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) implements Inv
      * Reconstructs a {@link FluidStack} with the given volume.
      */
     public FluidStack toStack(int amount) {
-        return tag == null ? new FluidStack(fluid, amount) : new FluidStack(fluid, amount, tag);
+        return tag == null ? new FluidStack(fluid, amount) : new FluidStack(fluid, amount, copy(tag));
+    }
+
+    @Override
+    public @Nullable NBTTagCompound tag() {
+        return copy(tag);
     }
 
     /**
@@ -42,5 +51,9 @@ public record FluidKey(Fluid fluid, @Nullable NBTTagCompound tag) implements Inv
         } catch (Throwable e) {
             return null;
         }
+    }
+
+    private static @Nullable NBTTagCompound copy(@Nullable NBTTagCompound value) {
+        return value == null ? null : (NBTTagCompound) value.copy();
     }
 }

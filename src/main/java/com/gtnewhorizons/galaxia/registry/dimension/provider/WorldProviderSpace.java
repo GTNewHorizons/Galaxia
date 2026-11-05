@@ -9,21 +9,32 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraftforge.client.IRenderHandler;
 
+import org.jetbrains.annotations.Nullable;
+
+import com.cardinalstar.cubicchunks.api.worldgen.IWorldGenerator;
+import com.cardinalstar.cubicchunks.world.ICubicWorldProvider;
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionEnum;
 import com.gtnewhorizons.galaxia.registry.dimension.worldgen.ChunkProviderGalaxiaPlanet;
+import com.gtnewhorizons.galaxia.registry.dimension.worldgen.CubicChunkProviderGalaxiaPlanet;
 
+import cpw.mods.fml.common.Optional;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * An abstract version of the WorldProvider to be used on Galaxia Planets
  */
-public class WorldProviderSpace extends WorldProvider {
+@Optional.Interface(
+    modid = "cubicchunks",
+    iface = "com.cardinalstar.cubicchunks.world.ICubicWorldProvider",
+    striprefs = true)
+public class WorldProviderSpace extends WorldProvider implements ICubicWorldProvider {
 
     private static final Map<Integer, Consumer<WorldProviderBuilder>> CONFIGS = new ConcurrentHashMap<>();
 
@@ -32,6 +43,8 @@ public class WorldProviderSpace extends WorldProvider {
     protected DimensionEnum dimension;
     protected boolean hasSky = true;
     protected float cloudHeight = Integer.MIN_VALUE;
+    /** Height the sky darkens below, null for the world type's own */
+    protected Double horizon;
     protected boolean isSurface = true;
     protected int avgGround = 64;
     protected Vec3 fogColor = Vec3.createVectorHelper(0.2D, 0.1D, 0.4D);
@@ -109,6 +122,22 @@ public class WorldProviderSpace extends WorldProvider {
             return new ChunkProviderGalaxiaPlanet(worldObj, dimension);
         }
         return chunkGenSupplier.get();
+    }
+
+    @Optional.Method(modid = "cubicchunks")
+    @Override
+    public @Nullable IWorldGenerator createCubeGenerator() {
+        return new CubicChunkProviderGalaxiaPlanet(worldObj, dimension);
+    }
+
+    @Override
+    public int getOriginalActualHeight() {
+        return 256;
+    }
+
+    @Override
+    public World getWorld() {
+        return worldObj;
     }
 
     /**
@@ -249,6 +278,18 @@ public class WorldProviderSpace extends WorldProvider {
     }
 
     /**
+     * Gets the height below which the sky turns dark. The dark sky plane is drawn as far below the player as they are
+     * above this height
+     *
+     * @return The horizon height
+     */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public double getHorizon() {
+        return horizon != null ? horizon : super.getHorizon();
+    }
+
+    /**
      * Calculates the celestial angle based on world time
      *
      * @param worldTime    The current world time
@@ -354,6 +395,32 @@ public class WorldProviderSpace extends WorldProvider {
     @Override
     public boolean canRespawnHere() {
         return canRespawn;
+    }
+
+    /**
+     * Keeps the dimension without weather. Other dimensions share the overworld's rain, so without this it rains here
+     * whenever it rains there and snow piles up even in orbit
+     */
+    @Override
+    public void updateWeather() {
+        worldObj.prevRainingStrength = 0;
+        worldObj.rainingStrength = 0;
+        worldObj.prevThunderingStrength = 0;
+        worldObj.thunderingStrength = 0;
+    }
+
+    /**
+     * Gets whether snow can settle at a position
+     *
+     * @param x          X Position
+     * @param y          Y Position
+     * @param z          Z Position
+     * @param checkLight Whether the light level is checked
+     * @return Boolean : True => Snow can settle
+     */
+    @Override
+    public boolean canSnowAt(int x, int y, int z, boolean checkLight) {
+        return false;
     }
 
     /**

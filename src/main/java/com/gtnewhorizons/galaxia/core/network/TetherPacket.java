@@ -7,6 +7,8 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 
 import com.gtnewhorizons.galaxia.core.config.ConfigPlayer;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
+import com.gtnewhorizons.galaxia.registry.items.special.ItemKineticTether;
 import com.gtnewhorizons.galaxia.registry.items.tether.KineticTetherState;
 import com.gtnewhorizons.galaxia.registry.items.tether.TetherData;
 
@@ -46,39 +48,44 @@ public class TetherPacket implements IMessage {
         public IMessage onMessage(TetherPacket message, MessageContext ctx) {
 
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            TetherData data = KineticTetherState.get(player);
+            ServerTickTaskQueue.schedule(() -> {
+                if (AndroidControl.locked(player)) return;
+                boolean starting = message.action == ACTION_START_ANCHOR || message.action == ACTION_START_PROPULSION;
+                if (starting && (player.getHeldItem() == null || !(player.getHeldItem()
+                    .getItem() instanceof ItemKineticTether))) return;
+                TetherData data = KineticTetherState.get(player);
 
-            switch (message.action) {
+                switch (message.action) {
 
-                case ACTION_START_ANCHOR:
-                    MovingObjectPosition mop = raytraceAnchor(player);
+                    case ACTION_START_ANCHOR:
+                        MovingObjectPosition mop = raytraceAnchor(player);
 
-                    if (mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
-                        data.tetherActive = true;
-                        data.anchorX = mop.blockX + 0.5;
-                        data.anchorY = mop.blockY + 0.5;
-                        data.anchorZ = mop.blockZ + 0.5;
-                        data.anchorDim = player.worldObj.provider.dimensionId;
-                    }
-                    break;
+                        if (mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+                            data.tetherActive = true;
+                            data.anchorX = mop.blockX + 0.5;
+                            data.anchorY = mop.blockY + 0.5;
+                            data.anchorZ = mop.blockZ + 0.5;
+                            data.anchorDim = player.worldObj.provider.dimensionId;
+                        }
+                        break;
 
-                case ACTION_END_ANCHOR:
-                    data.tetherActive = false;
-                    data.propulsionActive = false;
-                    break;
+                    case ACTION_END_ANCHOR:
+                        KineticTetherState.release(player);
+                        break;
 
-                case ACTION_START_PROPULSION:
-                    if (data.tetherActive) {
-                        data.propulsionActive = true;
-                    }
-                    break;
+                    case ACTION_START_PROPULSION:
+                        if (data.tetherActive) {
+                            data.propulsionActive = true;
+                        }
+                        break;
 
-                case ACTION_END_PROPULSION:
-                    data.propulsionActive = false;
-                    break;
-            }
+                    case ACTION_END_PROPULSION:
+                        data.propulsionActive = false;
+                        break;
+                }
 
-            sendSyncToPlayer(player, data);
+                sendSyncToPlayer(player, data);
+            });
 
             return null;
         }

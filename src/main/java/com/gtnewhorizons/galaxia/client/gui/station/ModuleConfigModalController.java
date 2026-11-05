@@ -2,18 +2,26 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.Objects;
 
-import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.galaxia.client.gui.station.ModuleUpgradeUiModel.Selection;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaWindow;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsConfigAccessMode;
 import com.gtnewhorizons.galaxia.registry.outpost.module.HammerVariant;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
+import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleDebugDataGenerator;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 
-final class ModuleConfigModalController implements StationOverlayCoordinator.Overlay {
+final class ModuleConfigModalController {
+
+    static final String WINDOW_ID = "station.config";
 
     enum Kind {
         NONE,
@@ -21,105 +29,65 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         MODULE_UPGRADE,
         LOGISTICS,
         MINER_BLACKLIST,
-        RECIPE_CONFIG
+        RECIPE_CONFIG,
+        DEBUG_DATA_GENERATOR
     }
 
-    private final ModularPanel host;
+    private final ParentWidget<?> host;
     private final CelestialAsset.ID assetId;
     private final int x;
     private final int y;
-    private final StationEditModeController editModeController;
-    private final StationOverlayCoordinator overlayCoordinator;
+    private final StationTilePickerController tilePickerController;
 
-    private ParentWidget<?> modal;
+    private GalaxiaWindow window;
+    private boolean closingWindow;
     private Kind kind = Kind.NONE;
     private ModuleInstance.ID moduleId;
-    private int minerBlacklistPage;
-    private boolean settingsGroupMenuOpen;
     private boolean moduleOperationCancelArmed;
     private boolean hammerUpgradeReserveItems;
     private boolean hammerUpgradeVoidRefund;
     private boolean retargetQueued;
     private ModuleInstance.ID queuedRetargetModuleId;
     private LogisticsConfigAccessMode logisticsAccessMode = LogisticsConfigAccessMode.FULL;
-    private ModuleUpgradeSelection moduleUpgradeSelection = ModuleUpgradeSelection
-        .hammer(HammerVariant.BASE, ModuleTier.EV);
+    private Selection moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
 
-    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y) {
-        this(host, assetId, x, y, null, new StationOverlayCoordinator());
+    ModuleConfigModalController(ParentWidget<?> host, CelestialAsset.ID assetId, int x, int y) {
+        this(host, assetId, x, y, null);
     }
 
-    ModuleConfigModalController(ModularPanel host, CelestialAsset.ID assetId, int x, int y,
-        StationEditModeController editModeController, StationOverlayCoordinator overlayCoordinator) {
+    ModuleConfigModalController(ParentWidget<?> host, CelestialAsset.ID assetId, int x, int y,
+        StationTilePickerController tilePickerController) {
         this.host = host;
         this.assetId = assetId;
         this.x = x;
         this.y = y;
-        this.editModeController = editModeController;
-        this.overlayCoordinator = overlayCoordinator;
-        overlayCoordinator.register(this);
+        this.tilePickerController = tilePickerController;
     }
 
-    void openHammer(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.HAMMER, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.HAMMER;
-        this.moduleId = targetModuleId;
-        this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
-        this.moduleOperationCancelArmed = false;
+    void openHammer(ModuleInstance.ID moduleId) {
+        if (StationUiData.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.HAMMER, moduleId)) return;
 
-        HammerConfigModalWidget widget = new HammerConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(HammerConfigModalWidget.WIDTH)
-            .height(HammerConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        HammerConfigWindow widget = new HammerConfigWindow(assetId, this);
+        mount(widget);
     }
 
-    void openUpgrade(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
+    void openUpgrade(ModuleInstance.ID moduleId) {
+        ModuleInstance module = StationUiData.module(assetId, moduleId);
         if (module == null || !ModuleUpgradeUiModel.supports(module)) return;
-        if (closeIfSame(Kind.MODULE_UPGRADE, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MODULE_UPGRADE;
-        this.moduleId = module.id;
+        if (!prepareOpen(Kind.MODULE_UPGRADE, module.id)) return;
         this.moduleUpgradeSelection = ModuleUpgradeUiModel.defaultSelection(module);
-        this.hammerUpgradeReserveItems = false;
-        this.hammerUpgradeVoidRefund = false;
-        this.moduleOperationCancelArmed = false;
 
-        ModuleUpgradeModalWidget widget = new ModuleUpgradeModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(ModuleUpgradeModalWidget.WIDTH)
-            .height(ModuleUpgradeModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        ModuleUpgradeWindow widget = new ModuleUpgradeWindow(assetId, this, tilePickerController);
+        mount(widget);
     }
 
-    void openLogistics(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.LOGISTICS, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = targetModuleId;
-        this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
+    void openLogistics(ModuleInstance.ID moduleId) {
+        if (StationUiData.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.LOGISTICS, moduleId)) return;
 
-        LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        LogisticsConfigWindow widget = new LogisticsConfigWindow(assetId, this);
+        mount(widget);
     }
 
     void openStationLogistics() {
@@ -131,110 +99,111 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
     }
 
     private void openStationLogistics(LogisticsConfigAccessMode accessMode) {
-        if (closeIfSame(Kind.LOGISTICS, null)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.LOGISTICS;
-        this.moduleId = null;
+        if (!prepareOpen(Kind.LOGISTICS, null)) return;
         this.logisticsAccessMode = accessMode == null ? LogisticsConfigAccessMode.FULL : accessMode;
 
-        LogisticsConfigModalWidget widget = new LogisticsConfigModalWidget(assetId, this);
-        widget.left(x)
-            .top(y)
-            .width(LogisticsConfigModalWidget.WIDTH)
-            .height(LogisticsConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        LogisticsConfigWindow widget = new LogisticsConfigWindow(assetId, this);
+        mount(widget);
     }
 
-    void openMinerBlacklist(int moduleIndex) {
-        ModuleInstance.ID targetModuleId = resolveModuleId(moduleIndex);
-        if (targetModuleId == null) return;
-        if (closeIfSame(Kind.MINER_BLACKLIST, targetModuleId)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.MINER_BLACKLIST;
-        this.moduleId = targetModuleId;
-        this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
-        this.moduleOperationCancelArmed = false;
+    void openMinerBlacklist(ModuleInstance.ID moduleId) {
+        if (StationUiData.module(assetId, moduleId) == null) return;
+        if (!prepareOpen(Kind.MINER_BLACKLIST, moduleId)) return;
 
-        MinerBlacklistConfigModalWidget widget = new MinerBlacklistConfigModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(MinerBlacklistConfigModalWidget.WIDTH)
-            .height(MinerBlacklistConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        MinerConfigWindow widget = new MinerConfigWindow(assetId, this, tilePickerController);
+        mount(widget);
     }
 
-    void openRecipeConfig(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        if (module == null || !(module.component() instanceof IRecipeModule)) return;
-        if (closeIfSame(Kind.RECIPE_CONFIG, module.id)) return;
-        overlayCoordinator.closeOthers(this);
-        close();
-        this.kind = Kind.RECIPE_CONFIG;
-        this.moduleId = module.id;
+    void openRecipeConfig(ModuleInstance.ID moduleId) {
+        ModuleInstance module = StationUiData.module(assetId, moduleId);
+        AutomatedFacility facility = StationUiData.facility(assetId);
+        if (facility == null || module == null || module.recipe() == null) return;
+        if (!prepareOpen(Kind.RECIPE_CONFIG, module.id)) return;
 
-        RecipeConfigModalWidget widget = new RecipeConfigModalWidget(assetId, this, editModeController);
-        widget.left(x)
-            .top(y)
-            .width(RecipeConfigModalWidget.WIDTH)
-            .height(RecipeConfigModalWidget.HEIGHT);
-        this.modal = widget;
-        host.child(widget);
+        RecipeBookEditorModel editor = RecipeBookEditorModel.edit(module.id, facility.recipeBook(module));
+        RecipeConfigWindow widget = new RecipeConfigWindow(assetId, this, tilePickerController, editor);
+        mount(widget);
     }
 
-    private boolean closeIfSame(Kind targetKind, ModuleInstance.ID targetModuleId) {
+    void openDebugDataGenerator(ModuleInstance.ID moduleId) {
+        ModuleInstance module = StationUiData.module(assetId, moduleId);
+        if (module == null || !(module.component() instanceof ModuleDebugDataGenerator)) return;
+        if (!prepareOpen(Kind.DEBUG_DATA_GENERATOR, module.id)) return;
+
+        DebugDataGeneratorConfigWindow widget = new DebugDataGeneratorConfigWindow(assetId, this);
+        mount(widget);
+    }
+
+    private boolean prepareOpen(Kind targetKind, ModuleInstance.ID targetModuleId) {
         if (kind == targetKind && Objects.equals(moduleId, targetModuleId)) {
             close();
-            return true;
+            return false;
         }
-        return false;
+        close();
+        kind = targetKind;
+        moduleId = targetModuleId;
+        return true;
     }
 
-    @Override
-    public void close() {
-        if (modal != null) {
-            host.remove(modal);
-            modal = null;
+    /** Opens the configuration as a window over the station, beside the side panel the first time */
+    private void mount(ModuleConfigWindow content) {
+        WindowLayer layer = WindowLayer.of(host);
+        if (layer == null) return;
+        window = layer.open(
+            WindowSpec.of(WINDOW_ID, IKey.dynamic(content::title))
+                .owner(StationManagementScreen.windowId(assetId))
+                .anchor((layerWidth, layerHeight, width, height) -> {
+                    int[] at = GalaxiaUi.positionIn(host, layer);
+                    return new int[] { Math.max(0, Math.min(at[0] + x, layerWidth - width)),
+                        Math.max(0, Math.min(at[1] + y, layerHeight - height)) };
+                })
+                .onUpdate(content::update)
+                .onClose(this::windowClosed)
+                .body(content::build));
+    }
+
+    /** Rebuilds the open window, for a change of what it shows rather than of its values */
+    void rebuild() {
+        if (window != null) window.rebuildLater();
+    }
+
+    private void windowClosed() {
+        if (closingWindow) return;
+        window = null;
+        close();
+    }
+
+    void close() {
+        if (window != null) {
+            GalaxiaWindow open = window;
+            window = null;
+            closingWindow = true;
+            open.close();
+            closingWindow = false;
         }
         this.kind = Kind.NONE;
         this.moduleId = null;
-        this.minerBlacklistPage = 0;
-        this.settingsGroupMenuOpen = false;
         this.hammerUpgradeReserveItems = false;
         this.hammerUpgradeVoidRefund = false;
-        this.moduleUpgradeSelection = ModuleUpgradeSelection.hammer(HammerVariant.BASE, ModuleTier.EV);
+        this.moduleUpgradeSelection = Selection.hammer(HammerVariant.BASE, ModuleTier.EV);
         this.moduleOperationCancelArmed = false;
         this.logisticsAccessMode = LogisticsConfigAccessMode.FULL;
     }
 
-    @Override
-    public boolean isOpen() {
+    boolean isOpen() {
         return kind != Kind.NONE;
     }
 
-    @Override
-    public boolean containsMouse(int mouseX, int mouseY) {
-        if (modal == null) return false;
-        return mouseX >= modal.getArea().rx && mouseX < modal.getArea().rx + modal.getArea().width
-            && mouseY >= modal.getArea().ry
-            && mouseY < modal.getArea().ry + modal.getArea().height;
-    }
-
     void closeIfTargetMissing() {
-        if (kind != Kind.NONE && moduleId != null && moduleIndex() < 0) {
+        if (kind != Kind.NONE && moduleId != null && StationUiData.module(assetId, moduleId) == null) {
             close();
         }
     }
 
-    @Override
-    public void processDeferredActions() {
+    void processDeferredActions() {
         if (retargetQueued) {
             ModuleInstance module = queuedRetargetModuleId == null ? null
-                : ModuleConfigModalSupport.module(assetId, queuedRetargetModuleId);
+                : StationUiData.module(assetId, queuedRetargetModuleId);
             retargetQueued = false;
             queuedRetargetModuleId = null;
             retargetTo(module);
@@ -259,6 +228,7 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
             case LOGISTICS -> retargetLogistics(module);
             case MINER_BLACKLIST -> retargetMinerBlacklist(module);
             case RECIPE_CONFIG -> retargetRecipeConfig(module);
+            case DEBUG_DATA_GENERATOR -> retargetDebugDataGenerator(module);
             case NONE -> {}
         }
     }
@@ -283,9 +253,8 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         return kind == Kind.RECIPE_CONFIG;
     }
 
-    int moduleIndex() {
-        if (moduleId == null) return -1;
-        return ModuleConfigModalSupport.moduleIndex(assetId, moduleId);
+    boolean isDebugDataGeneratorOpen() {
+        return kind == Kind.DEBUG_DATA_GENERATOR;
     }
 
     ModuleInstance.ID moduleId() {
@@ -294,26 +263,6 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
 
     LogisticsConfigAccessMode logisticsAccessMode() {
         return logisticsAccessMode;
-    }
-
-    int minerBlacklistPage() {
-        return minerBlacklistPage;
-    }
-
-    void setMinerBlacklistPage(int minerBlacklistPage) {
-        this.minerBlacklistPage = Math.max(0, minerBlacklistPage);
-    }
-
-    boolean isSettingsGroupMenuOpen() {
-        return settingsGroupMenuOpen;
-    }
-
-    void toggleSettingsGroupMenu() {
-        settingsGroupMenuOpen = !settingsGroupMenuOpen;
-    }
-
-    void closeSettingsGroupMenu() {
-        settingsGroupMenuOpen = false;
     }
 
     boolean isModuleOperationCancelArmed() {
@@ -344,19 +293,14 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         hammerUpgradeVoidRefund = !hammerUpgradeVoidRefund;
     }
 
-    ModuleUpgradeSelection moduleUpgradeSelection() {
+    Selection moduleUpgradeSelection() {
         return moduleUpgradeSelection;
     }
 
     void selectModuleUpgradeOption(String groupId, String optionId) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleId);
+        ModuleInstance module = StationUiData.module(assetId, moduleId);
         if (module == null) return;
         moduleUpgradeSelection = ModuleUpgradeUiModel.selectOption(module, moduleUpgradeSelection, groupId, optionId);
-    }
-
-    private ModuleInstance.ID resolveModuleId(int moduleIndex) {
-        ModuleInstance module = ModuleConfigModalSupport.module(assetId, moduleIndex);
-        return module == null ? null : module.id;
     }
 
     private void retargetHammer(ModuleInstance module) {
@@ -392,6 +336,8 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
         hammerUpgradeReserveItems = false;
         hammerUpgradeVoidRefund = false;
         moduleOperationCancelArmed = false;
+        // Another module can offer other choices
+        rebuild();
     }
 
     private void retargetMinerBlacklist(ModuleInstance module) {
@@ -400,13 +346,21 @@ final class ModuleConfigModalController implements StationOverlayCoordinator.Ove
             return;
         }
         moduleId = module.id;
-        minerBlacklistPage = 0;
-        settingsGroupMenuOpen = false;
         moduleOperationCancelArmed = false;
     }
 
     private void retargetRecipeConfig(ModuleInstance module) {
-        if (!(module.component() instanceof IRecipeModule)) {
+        if (module.recipe() == null) {
+            close();
+            return;
+        }
+        AutomatedFacility facility = StationUiData.facility(assetId);
+        close();
+        if (facility != null && facility.moduleById(module.id) != null) openRecipeConfig(module.id);
+    }
+
+    private void retargetDebugDataGenerator(ModuleInstance module) {
+        if (!(module.component() instanceof ModuleDebugDataGenerator)) {
             close();
             return;
         }

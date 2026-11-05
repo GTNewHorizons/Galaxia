@@ -11,14 +11,18 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
+import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
+import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
-import com.gtnewhorizons.galaxia.client.gui.station.StationMapViewport;
+import com.gtnewhorizons.galaxia.client.gui.station.StationMapFrame;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureDefinition;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureKey;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
@@ -26,11 +30,45 @@ import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegist
 public final class PlanetaryFeatureOverlayRenderer {
 
     private static final TextureSize DEFAULT_TEXTURE_SIZE = new TextureSize(
-        StationMapViewport.TILE_SIZE,
-        StationMapViewport.TILE_SIZE);
-    private static final Map<String, TextureSize> textureSizeCache = new HashMap<>();
+        StationMapFrame.TILE_SIZE,
+        StationMapFrame.TILE_SIZE);
+    private static final Map<ResourceLocation, TextureSize> textureSizeCache = new HashMap<>();
 
     private PlanetaryFeatureOverlayRenderer() {}
+
+    public static final class VisibleFeatures {
+
+        private CelestialObject body;
+        private CelestialAsset.Kind kind;
+        private long salt;
+        private int registrySize;
+        private List<StationMapFrame.TilePosition> tiles = List.of();
+        private List<List<PlanetaryFeatureKey>> features = List.of();
+
+        public List<List<PlanetaryFeatureKey>> project(AutomatedFacility facility,
+            List<StationMapFrame.TilePosition> visibleTiles) {
+            CelestialObject currentBody = GalaxiaCelestialAPI.get(facility.planetaryAnchorBodyKey)
+                .orElse(null);
+            int currentRegistrySize = PlanetaryFeatureRegistry.all()
+                .size();
+            if (body == currentBody && kind == facility.kind
+                && salt == facility.stationFeatureSalt()
+                && registrySize == currentRegistrySize
+                && tiles.equals(visibleTiles)) return features;
+
+            List<List<PlanetaryFeatureKey>> projected = new ArrayList<>(visibleTiles.size());
+            for (StationMapFrame.TilePosition tile : visibleTiles) {
+                projected.add(List.copyOf(facility.planetaryFeaturesAt(tile.dx(), tile.dy())));
+            }
+            body = currentBody;
+            kind = facility.kind;
+            salt = facility.stationFeatureSalt();
+            registrySize = currentRegistrySize;
+            tiles = List.copyOf(visibleTiles);
+            features = List.copyOf(projected);
+            return features;
+        }
+    }
 
     public static void draw(int tileX, int tileY, Iterable<PlanetaryFeatureKey> features) {
         if (features == null) return;
@@ -40,12 +78,7 @@ public final class PlanetaryFeatureOverlayRenderer {
     }
 
     private static List<PlanetaryFeatureDefinition> sortedDefinitions(Iterable<PlanetaryFeatureKey> features) {
-        List<PlanetaryFeatureDefinition> definitions = new ArrayList<>();
-        for (PlanetaryFeatureKey key : features) {
-            if (key == null) continue;
-            PlanetaryFeatureDefinition definition = PlanetaryFeatureRegistry.get(key);
-            if (definition != null) definitions.add(definition);
-        }
+        List<PlanetaryFeatureDefinition> definitions = PlanetaryFeatureRegistry.definitionsFor(features);
         definitions.sort(
             Comparator.comparingInt(
                 definition -> definition.layer()
@@ -70,8 +103,8 @@ public final class PlanetaryFeatureOverlayRenderer {
     }
 
     static TileOverlay centeredOverlay(int tileX, int tileY, ResourceLocation texture, int width, int height) {
-        int x = tileX + (StationMapViewport.TILE_SIZE - width) / 2;
-        int y = tileY + (StationMapViewport.TILE_SIZE - height) / 2;
+        int x = tileX + (StationMapFrame.TILE_SIZE - width) / 2;
+        int y = tileY + (StationMapFrame.TILE_SIZE - height) / 2;
         return new TileOverlay(x, y, width, height, texture);
     }
 
@@ -93,18 +126,12 @@ public final class PlanetaryFeatureOverlayRenderer {
         GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
 
-        Tessellator tess = Tessellator.instance;
-        tess.startDrawingQuads();
-        tess.addVertexWithUV(x, y + height, 0, 0, 1);
-        tess.addVertexWithUV(x + width, y + height, 0, 1, 1);
-        tess.addVertexWithUV(x + width, y, 0, 1, 0);
-        tess.addVertexWithUV(x, y, 0, 0, 0);
-        tess.draw();
+        GuiDraw.drawTexture(x, y, x + width, y + height, 0f, 0f, 1f, 1f);
     }
 
     private static TextureSize textureSize(ResourceLocation texture) {
         if (texture == null) return DEFAULT_TEXTURE_SIZE;
-        return textureSizeCache.computeIfAbsent(texture.toString(), key -> readTextureSize(texture));
+        return textureSizeCache.computeIfAbsent(texture, PlanetaryFeatureOverlayRenderer::readTextureSize);
     }
 
     private static TextureSize readTextureSize(ResourceLocation texture) {

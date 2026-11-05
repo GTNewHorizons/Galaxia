@@ -1,20 +1,20 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.gtnewhorizons.galaxia.core.state.InventoryKeyState;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
 import com.gtnewhorizons.galaxia.registry.interfaces.WithUUID;
-import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.InventoryKey;
-import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.LogisticsDelivery;
-import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
+import cpw.mods.fml.common.network.ByteBufUtils;
 import io.netty.buffer.ByteBuf;
 
 /** Shared serialization helpers for outpost network packets. */
@@ -37,6 +37,24 @@ public final class PacketUtil {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    static int readBoundedCount(ByteBuf buf, String description, int maximum) {
+        int count = buf.readInt();
+        validateBoundedCount(count, description, maximum);
+        return count;
+    }
+
+    static void writeBoundedCount(ByteBuf buf, int count, String description, int maximum) {
+        validateBoundedCount(count, description, maximum);
+        buf.writeInt(count);
+    }
+
+    static void validateBoundedCount(int count, String description, int maximum) {
+        if (count < 0 || count > maximum) {
+            throw new IllegalStateException(
+                "[PacketUtil] Invalid " + description + " count " + count + "; expected 0.." + maximum);
+        }
+    }
+
     // ── ID helpers ──────────────────────────────────────────────────
 
     static <T extends WithUUID> void writeId(ByteBuf buf, T with) {
@@ -45,14 +63,15 @@ public final class PacketUtil {
         buf.writeLong(uuid.getLeastSignificantBits());
     }
 
-    static UUID readId(ByteBuf buf) {
+    public static void writeId(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
+    public static UUID readId(ByteBuf buf) {
         long mostSig = buf.readLong();
         long leastSig = buf.readLong();
         return new UUID(mostSig, leastSig);
-    }
-
-    static ModuleInstance.ID readModuleId(ByteBuf buf) {
-        return new ModuleInstance.ID(readId(buf));
     }
 
     static CelestialAsset.ID readAssetId(ByteBuf buf) {
@@ -115,48 +134,45 @@ public final class PacketUtil {
             "[PacketUtil] Unknown enum ordinal " + ordinal + " for " + enumClass.getSimpleName());
     }
 
-    // ── ItemStack helpers ──────────────────────────────────────────────
+    /**
+     * Wire format is a compact mirror of the typed key model: a variant flag plus
+     * only the fields needed for that variant.
+     */
+    public static void writeCelestialObjectKey(ByteBuf buf, CelestialObjectKey key) {
+        Objects.requireNonNull(key, "key");
+        buf.writeBoolean(key.isRegistered());
+        if (key.isRegistered()) {
+            writeEnum(buf, key.registeredBodyId());
+            return;
+        }
+        writeEnum(
+            buf,
+            key.minorBodyId()
+                .parentBodyId());
+        buf.writeInt(
+            key.minorBodyId()
+                .index());
+    }
+
+    public static CelestialObjectKey readCelestialObjectKey(ByteBuf buf) {
+        boolean registered = buf.readBoolean();
+        if (registered) {
+            return CelestialObjectKey.registered(readEnum(buf, CelestialObjectId.class));
+        }
+        // Minor body packets always carry their registered belt plus stable slot
+        // index; they never depend on a transient client-side object instance.
+        CelestialObjectId parentBodyId = readEnum(buf, CelestialObjectId.class);
+        int index = buf.readInt();
+        return CelestialObjectKey.minorBody(new MinorCelestialBodyId(parentBodyId, index));
+    }
+
+    // ── Inventory key helpers ─────────────────────────────────────────
 
     static void writeInventoryKey(ByteBuf buf, InventoryKey key) {
-        buf.writeBoolean(key.isItem());
-        writeString(buf, key.toKey());
+        ByteBufUtils.writeTag(buf, InventoryKeyState.encode(key));
     }
 
     static InventoryKey readInventoryKey(ByteBuf buf) {
-        final boolean item = buf.readBoolean();
-        if (item) {
-            return ItemStackWrapper.fromKey(readString(buf));
-        } else {
-            return FluidKey.fromName(readString(buf));
-        }
-    }
-
-    /**
-     * @param keys Must all be of the same type
-     */
-    static void writeInventoryKeys(ByteBuf buf, List<InventoryKey> keys) {
-        if (keys.isEmpty()) return;
-        buf.writeBoolean(
-            keys.getFirst()
-                .isItem());
-        buf.writeInt(keys.size());
-        for (InventoryKey key : keys) {
-            writeString(buf, key.toKey());
-        }
-    }
-
-    static List<InventoryKey> readInventoryKeys(ByteBuf buf) {
-        final boolean item = buf.readBoolean();
-        final int size = buf.readInt();
-        final List<InventoryKey> ret = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            if (item) {
-                ret.add(ItemStackWrapper.fromKey(readString(buf)));
-            } else {
-                ret.add(FluidKey.fromName(readString(buf)));
-            }
-        }
-
-        return ret;
+        return InventoryKeyState.decode(ByteBufUtils.readTag(buf));
     }
 }

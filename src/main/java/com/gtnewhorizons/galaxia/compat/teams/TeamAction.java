@@ -9,7 +9,8 @@ public enum TeamAction {
     MANAGE_INVENTORY(TeamRole.OFFICER),
     RENAME_ASSET(TeamRole.OFFICER),
     DESTROY_ASSET(TeamRole.OWNER),
-    DECONSTRUCT_ASSET(TeamRole.OWNER);
+    DECONSTRUCT_ASSET(TeamRole.OWNER),
+    CONTROL_ANDROID(TeamRole.MEMBER);
 
     private final TeamRole defaultRole;
 

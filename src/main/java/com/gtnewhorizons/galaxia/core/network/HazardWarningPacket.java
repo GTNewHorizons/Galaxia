@@ -30,7 +30,6 @@ public class HazardWarningPacket implements IMessage {
         this.mask = mask;
     }
 
-    private static final HazardWarnings[] values = HazardWarnings.values();
     static {
         int maxBits = Long.SIZE;
         int enumSize = HazardWarnings.values().length;

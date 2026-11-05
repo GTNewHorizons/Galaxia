@@ -17,20 +17,14 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import lombok.Setter;
 
+// TODO: Remove this completely, for now it stays since it's used in the rooms GUI
 public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncHandler> {
 
     public static final String KEY = "station_graph_sync";
     private static final int OP_FULL_SYNC = 1;
 
-    private static volatile StationGraphSyncHandler activeClientHandler;
     private volatile EnergySnapshot snapshot = new EnergySnapshot(0, 0, 0, 0, 0, 0);
-
-    private int lastSentCount = -1;
-    private long lastSentStored = -1;
-    private long lastSentCapacity = -1;
-    private long lastSentFluidStored = -1;
-    private long lastSentFluidCapacity = -1;
-    private int lastSentFluidCount = -1;
+    private EnergySnapshot lastSent;
     private int syncTicker;
 
     @Setter
@@ -42,7 +36,6 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     @Override
     public void init(String key, PanelSyncManager syncManager) {
         super.init(key, syncManager);
-        if (syncManager.isClient()) activeClientHandler = this;
     }
 
     @Override
@@ -58,7 +51,6 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
 
     @Override
     public void dispose() {
-        if (this == activeClientHandler) activeClientHandler = null;
         if (station != null) {
             station.clearActiveGraphSyncHandler(this);
             station = null;
@@ -67,18 +59,13 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
     }
 
     public void forceDirty() {
-        lastSentCount = -1;
-        lastSentStored = -1;
-        lastSentCapacity = -1;
-        lastSentFluidStored = -1;
-        lastSentFluidCapacity = -1;
-        lastSentFluidCount = -1;
+        lastSent = null;
     }
 
     public void triggerFullSync() {
-        if (getSyncManager() == null || getSyncManager().isClient() || station == null) return;
+        if (getSyncManager() == null || getSyncManager().isClient()) return;
 
-        StationGraph graph = station.getGraph();
+        StationGraph graph = station != null ? station.getGraph() : null;
         long stored = 0, capacity = 0;
         int count = 0;
         long fluidStored = 0, fluidCapacity = 0;
@@ -98,32 +85,28 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
             }
         }
 
-        if (count == lastSentCount && stored == lastSentStored
-            && capacity == lastSentCapacity
-            && fluidStored == lastSentFluidStored
-            && fluidCapacity == lastSentFluidCapacity
-            && fluidCount == lastSentFluidCount) return;
+        if (lastSent != null && count == lastSent.attachmentCount()
+            && stored == lastSent.totalStored()
+            && capacity == lastSent.totalCapacity()
+            && fluidStored == lastSent.fluidStored()
+            && fluidCapacity == lastSent.fluidCapacity()
+            && fluidCount == lastSent.fluidAttachmentCount()) return;
 
-        lastSentCount = count;
-        lastSentStored = stored;
-        lastSentCapacity = capacity;
-        lastSentFluidStored = fluidStored;
-        lastSentFluidCapacity = fluidCapacity;
-        lastSentFluidCount = fluidCount;
-
-        final int fCount = count;
-        final long fStored = stored;
-        final long fCapacity = capacity;
-        final long fFluidStored = fluidStored;
-        final long fFluidCapacity = fluidCapacity;
-        final int fFluidCount = fluidCount;
+        EnergySnapshot publication = new EnergySnapshot(
+            count,
+            stored,
+            capacity,
+            fluidStored,
+            fluidCapacity,
+            fluidCount);
+        lastSent = publication;
         syncToClient(OP_FULL_SYNC, buf -> {
-            buf.writeInt(fCount);
-            buf.writeLong(fStored);
-            buf.writeLong(fCapacity);
-            buf.writeLong(fFluidStored);
-            buf.writeLong(fFluidCapacity);
-            buf.writeInt(fFluidCount);
+            buf.writeInt(publication.attachmentCount());
+            buf.writeLong(publication.totalStored());
+            buf.writeLong(publication.totalCapacity());
+            buf.writeLong(publication.fluidStored());
+            buf.writeLong(publication.fluidCapacity());
+            buf.writeInt(publication.fluidAttachmentCount());
         });
     }
 
@@ -141,12 +124,12 @@ public final class StationGraphSyncHandler extends SyncHandler<StationGraphSyncH
         long fluidCapacity = buf.readLong();
         int fluidCount = buf.readInt();
         snapshot = new EnergySnapshot(count, stored, capacity, fluidStored, fluidCapacity, fluidCount);
+
     }
 
     @SideOnly(Side.CLIENT)
-    public static EnergySnapshot getSnapshot() {
-        StationGraphSyncHandler h = activeClientHandler;
-        return h != null ? h.snapshot : new EnergySnapshot(0, 0, 0, 0, 0, 0);
+    public EnergySnapshot getSnapshot() {
+        return snapshot;
     }
 
     private static long saturatedAdd(long accumulator, BigInteger value) {

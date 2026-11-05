@@ -1,7 +1,9 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -15,13 +17,18 @@ import net.minecraftforge.fluids.Fluid;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.PlanetaryFeatureRegistry;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
+import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPlan;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationModuleCategory;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
@@ -40,7 +47,7 @@ final class FacilityModuleRegistryTest {
 
         ModuleTierData tierData = definition.getTierData(ModuleTier.LuV);
         ModuleOperationPlan plan = new ModuleOperationPlan(
-            new HammerModuleOperation(ModuleTier.LuV, "BIG"),
+            new IModuleOperation.Hammer(ModuleTier.LuV, HammerVariant.BIG),
             tierData.buildTicks(),
             Map.of(),
             false);
@@ -49,22 +56,22 @@ final class FacilityModuleRegistryTest {
             ModuleTier.LuV,
             plan.spec()
                 .targetTier());
-        assertEquals("BIG", ((HammerModuleOperation) plan.spec()).targetVariantKey());
+        assertEquals(HammerVariant.BIG, ((IModuleOperation.Hammer) plan.spec()).targetVariant());
         assertEquals(200, plan.buildTicks());
         assertFalse(plan.reserveItems());
     }
 
     @Test
+    void moduleCreationRejectsTierNotAllowedByKind() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> FacilityModuleRegistry
+                .create(ModuleInstance.ID.create(), FacilityModuleKind.POWER, null, ModuleShape.SINGLE, ModuleTier.HV));
+    }
+
+    @Test
     void tierDataCarriesBuildTicksAndRefundPercent() {
-        ModuleTierData data = new ModuleTierData(
-            1000L,
-            0L,
-            10,
-            null,
-            null,
-            Map.of(new ItemStack(Items.diamond), 1L),
-            40,
-            50);
+        ModuleTierData data = new ModuleTierData(0L, 10, null, null, Map.of(new ItemStack(Items.diamond), 1L), 40, 50);
 
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());
@@ -75,14 +82,12 @@ final class FacilityModuleRegistryTest {
         ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(1000L)
             .powerDraw(32L)
             .cooldown(10)
             .capacity(4096L)
             .cost(Map.of(material, 2L))
             .build();
 
-        assertEquals(1000L, data.baseEnergyCapacity());
         assertEquals(32L, data.powerDrawEuPerTick());
         assertEquals(10, data.cooldownTicks());
         assertEquals(4096L, data.capacity());
@@ -103,7 +108,6 @@ final class FacilityModuleRegistryTest {
         ItemStack upkeep = new ItemStack(new Item());
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(1000L)
             .powerDraw(32L)
             .cooldown(10)
             .cost(Map.of(material, 2L))
@@ -124,16 +128,27 @@ final class FacilityModuleRegistryTest {
     }
 
     @Test
+    void tierMapBuilderDoesNotInjectImplicitUpkeep() {
+        ModuleTierData data = new FacilityModuleRegistry.TierMapBuilder()
+            .add(ModuleTier.HV, 32L, 20, Map.of(new ItemStack(Items.iron_ingot), 8L))
+            .build()
+            .get(ModuleTier.HV);
+
+        assertTrue(
+            data.upkeepDemand()
+                .isEmpty());
+    }
+
+    @Test
     void tierDataBuilderCarriesVariantCooldownsAndOperationSettings() {
         ItemStack material = new ItemStack(Items.diamond);
 
         ModuleTierData data = ModuleTierData.builder()
-            .addedEnergyCapacity(2000L)
             .powerDraw(64L)
             .cooldown(20)
-            .variantCooldowns(Map.of("BIG", 600))
+            .variantCooldowns(Map.of(HammerVariant.BIG, 600))
             .chargeTicks(400)
-            .variantChargeTicks(Map.of("BIG", 800))
+            .variantChargeTicks(Map.of(HammerVariant.BIG, 800))
             .cost(Map.of(material, 4L))
             .buildTicks(40)
             .refundPercent(50)
@@ -142,12 +157,12 @@ final class FacilityModuleRegistryTest {
         assertEquals(
             600,
             data.variantCooldowns()
-                .get("BIG"));
+                .get(HammerVariant.BIG));
         assertEquals(400, data.chargeTicks());
         assertEquals(
             800,
             data.variantChargeTicks()
-                .get("BIG"));
+                .get(HammerVariant.BIG));
         assertEquals(40, data.buildTicks());
         assertEquals(50, data.completionRefundPercent());
     }
@@ -158,12 +173,10 @@ final class FacilityModuleRegistryTest {
         ModuleTierData hvData = definition.getTierData(ModuleTier.HV);
 
         assertEquals(1024L, hvData.capacity());
-        assertEquals(500L, hvData.baseEnergyCapacity());
         assertEquals(0L, hvData.powerDrawEuPerTick());
 
         ModuleTierData ivData = definition.getTierData(ModuleTier.IV);
         assertEquals(16384L, ivData.capacity());
-        assertEquals(8000L, ivData.baseEnergyCapacity());
     }
 
     @Test
@@ -198,6 +211,42 @@ final class FacilityModuleRegistryTest {
         assertFalse(
             FacilityModuleRegistry.get(FacilityModuleKind.HAMMER)
                 .settingsGroups());
+    }
+
+    @Test
+    void facilityReportsOperationalRecipeModulesAsProduction() {
+        ModuleInstance module = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MACERATOR,
+            StationTileCoord.of(0, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.HV);
+        module.completeConstruction();
+
+        assertTrue(facilityWith(module).hasProductionCapability());
+    }
+
+    @Test
+    void facilityReportsOperationalMinerAsProduction() {
+        ModuleInstance miner = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.MINER,
+            StationTileCoord.of(0, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        miner.completeConstruction();
+
+        assertTrue(facilityWith(miner).hasProductionCapability());
+    }
+
+    private static AutomatedFacility facilityWith(ModuleInstance module) {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.OVERWORLD,
+            CelestialAsset.Kind.AUTOMATED_STATION,
+            Buildable.Status.OPERATIONAL);
+        addModule(facility, module);
+        return facility;
     }
 
     @Test

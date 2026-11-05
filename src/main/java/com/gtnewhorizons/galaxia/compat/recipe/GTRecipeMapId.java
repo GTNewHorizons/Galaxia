@@ -1,11 +1,22 @@
 package com.gtnewhorizons.galaxia.compat.recipe;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeBook;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
+
+import codechicken.nei.recipe.RecipeHandlerRef;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.GTRecipe;
+import gregtech.nei.GTNEIDefaultHandler;
 
 public enum GTRecipeMapId {
 
@@ -28,6 +39,79 @@ public enum GTRecipeMapId {
 
     public String getRecipeMapUnlocalizedName() {
         return recipeMapUnlocalizedName;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public static @Nullable RecipeHandlerRef nativeRecipe(RecipeSnapshot snapshot) {
+        int ordinal = Byte.toUnsignedInt(snapshot.recipeMapOrdinal());
+        GTRecipeMapId[] maps = values();
+        if (ordinal == 0 || ordinal >= maps.length) return null;
+        GTRecipeMapId id = maps[ordinal];
+        GTRecipe[] catalog = getRecipes(id);
+        int index = snapshot.recipeIndex();
+        if (catalog == null || index < 0 || index >= catalog.length) return null;
+        GTRecipe recipe = catalog[index];
+        if (recipe == null || recipe.mHidden
+            || recipe.mFakeRecipe
+            || !id.snapshot(index, recipe)
+                .equals(snapshot)) {
+            return null;
+        }
+        var category = recipe.getRecipeCategory();
+        if (category == null) category = findRecipeMap(id).getDefaultRecipeCategory();
+        GTNEIDefaultHandler handler = new GTNEIDefaultHandler(category);
+        for (GTNEIDefaultHandler.CachedDefaultRecipe cached : handler.getCache()) {
+            if (cached.mRecipe == recipe) {
+                handler.arecipes.add(cached);
+                return RecipeHandlerRef.of(handler, 0);
+            }
+        }
+        return null;
+    }
+
+    /** Resolves client selections against this server's catalog before they can become production settings. */
+    public RecipeBook resolveBook(RecipeBook submitted) {
+        var resolved = new ArrayList<SavedRecipe>();
+        for (SavedRecipe slot : submitted.recipes()) {
+            RecipeSnapshot requested = slot.recipe();
+            GTRecipe[] recipes = getRecipes(this);
+            int index = requested.recipeIndex();
+            if (Byte.toUnsignedInt(requested.recipeMapOrdinal()) != ordinal() || recipes == null
+                || index < 0
+                || index >= recipes.length
+                || recipes[index] == null
+                || recipes[index].mHidden
+                || recipes[index].mFakeRecipe) {
+                throw new IllegalArgumentException("Recipe does not belong to the module's visible catalog");
+            }
+            RecipeSnapshot canonical = snapshot(index, recipes[index]);
+            if (!canonical.equals(requested)) {
+                throw new IllegalArgumentException("Recipe content differs from the server catalog");
+            }
+            resolved.add(
+                new SavedRecipe(
+                    canonical,
+                    slot.enabled(),
+                    slot.requestAmount(),
+                    slot.priority(),
+                    slot.orderSize(),
+                    slot.displayName()));
+        }
+        return new RecipeBook(resolved, submitted.mode(), submitted.notDoablePolicy());
+    }
+
+    public RecipeSnapshot snapshot(int index, GTRecipe recipe) {
+        return RecipeSnapshot.resolved(
+            (byte) ordinal(),
+            index,
+            recipe.mInputs,
+            recipe.mOutputs,
+            recipe.mFluidInputs,
+            recipe.mFluidOutputs,
+            recipe.mOutputChances,
+            recipe.mFluidOutputChances,
+            recipe.mDuration,
+            recipe.mEUt);
     }
 
     @javax.annotation.Nullable

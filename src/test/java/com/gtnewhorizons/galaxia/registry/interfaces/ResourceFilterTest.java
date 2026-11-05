@@ -1,7 +1,10 @@
 package com.gtnewhorizons.galaxia.registry.interfaces;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -63,28 +66,9 @@ final class ResourceFilterTest {
     void clearEmptiesFilter() {
         ResourceFilter<ItemStackWrapper> f = ResourceFilter.forItems();
         f.add(ItemStackWrapper.of(new ItemStack(Items.diamond)));
-        f.addRegex(".*");
         f.clear();
         assertTrue(f.isEmpty());
         assertTrue(f.test(ItemStackWrapper.of(new ItemStack(Items.diamond))));
-    }
-
-    @Test
-    void regexFilterMatchesByName() {
-        ResourceFilter<FluidKey> f = ResourceFilter.forFluids();
-        f.addRegex(".*water.*");
-        assertTrue(f.test(FluidKey.of(new FluidStack(FluidRegistry.WATER, 1))));
-        assertFalse(f.test(FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1))));
-    }
-
-    @Test
-    void mixedIdentityAndRegex() {
-        ResourceFilter<FluidKey> f = ResourceFilter.forFluids();
-        FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
-        f.add(water);
-        f.addRegex(".*lava.*");
-        assertTrue(f.test(water));
-        assertTrue(f.test(FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1))));
     }
 
     @Test
@@ -92,12 +76,31 @@ final class ResourceFilterTest {
         ResourceFilter<FluidKey> f = ResourceFilter.forFluids();
         FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
         f.add(water);
-        f.addRegex(".*lava.*");
 
         ResourceFilter<FluidKey> restored = ResourceFilter.forFluids();
         restored.load(f.serialize());
 
         assertTrue(restored.test(water));
-        assertTrue(restored.test(FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1))));
+        assertFalse(restored.test(FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1))));
+    }
+
+    @Test
+    void loadingReplacesFilterWithoutChangingSavedConfiguration() {
+        ResourceFilter<FluidKey> filter = ResourceFilter.forFluids();
+        FluidKey water = FluidKey.of(new FluidStack(FluidRegistry.WATER, 1));
+        FluidKey lava = FluidKey.of(new FluidStack(FluidRegistry.LAVA, 1));
+        filter.add(water);
+        List<String> saved = filter.serialize();
+        filter.clear();
+        filter.add(lava);
+
+        filter.load(saved);
+
+        assertTrue(filter.test(water));
+        assertFalse(filter.test(lava));
+        assertEquals(saved, filter.serialize());
+        filter.remove(water);
+        filter.load(saved);
+        assertTrue(filter.test(water));
     }
 }

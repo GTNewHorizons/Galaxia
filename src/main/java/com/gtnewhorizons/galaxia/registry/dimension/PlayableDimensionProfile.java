@@ -14,10 +14,9 @@ import com.gtnewhorizons.galaxia.registry.dimension.sky.CelestialBody;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.utility.EnumTiers;
 
 public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends WorldProvider> provider,
-    boolean keepLoaded, double gravity, double airResistance, boolean removeSpeedCancelation,
-    List<CelestialBody> celestialBodies, EffectBuilder effects, double mass, double orbitalRadius, double radius,
-    EnumTiers tier, ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks,
-    WorldGenerationAdapter worldGenerationAdapter) {
+    boolean keepLoaded, double airResistance, boolean removeSpeedCancelation, List<CelestialBody> celestialBodies,
+    EffectBuilder effects, EnumTiers tier, ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks,
+    WorldGenerationAdapter worldGenerationAdapter, boolean hasOrbit, ResourceLocation orbitView) {
 
     public PlayableDimensionProfile {
         if (dimension == null) throw new IllegalStateException("Playable dimension requires a dimension enum");
@@ -44,19 +43,17 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
         private final DimensionEnum dimension;
         private Class<? extends WorldProvider> provider = WorldProviderSpace.class;
         private boolean keepLoaded = true;
-        private double gravity = 1.0;
         private double airResistance = 1.0;
         private boolean removeSpeedCancelation;
         private List<CelestialBody> celestialBodies = List.of();
         private EffectBuilder effects = EffectBuilder.builder()
             .build();
-        private double mass;
-        private double orbitalRadius;
-        private double radius;
         private EnumTiers tier = EnumTiers.TIER_1;
         private ResourceLocation[] skyboxTexture;
         private final List<Block> validSpaceStationBlocks = new ArrayList<>();
         private WorldGenerationAdapter worldGenerationAdapter;
+        private boolean hasOrbit = true;
+        private ResourceLocation orbitView;
 
         private Builder(DimensionEnum dimension) {
             this.dimension = dimension;
@@ -69,11 +66,6 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
 
         public Builder keepLoaded(boolean value) {
             this.keepLoaded = value;
-            return this;
-        }
-
-        public Builder gravity(double value) {
-            this.gravity = value;
             return this;
         }
 
@@ -97,21 +89,6 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
             return this;
         }
 
-        public Builder mass(double value) {
-            this.mass = value;
-            return this;
-        }
-
-        public Builder orbitalRadius(double value) {
-            this.orbitalRadius = value;
-            return this;
-        }
-
-        public Builder radius(double value) {
-            this.radius = value;
-            return this;
-        }
-
         public Builder tier(EnumTiers value) {
             this.tier = value;
             return this;
@@ -127,6 +104,18 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
             return this;
         }
 
+        /** Picture of the body seen from its orbit, the starmap icon when not set */
+        public Builder orbitView(ResourceLocation value) {
+            this.orbitView = value;
+            return this;
+        }
+
+        /** No orbit dimension is generated above this body */
+        public Builder forbidOrbit() {
+            this.hasOrbit = false;
+            return this;
+        }
+
         public Builder worldGeneration(WorldGenerationAdapter value) {
             this.worldGenerationAdapter = value;
             return this;
@@ -137,18 +126,16 @@ public record PlayableDimensionProfile(DimensionEnum dimension, Class<? extends 
                 dimension,
                 provider,
                 keepLoaded,
-                gravity,
                 airResistance,
                 removeSpeedCancelation,
                 celestialBodies,
                 effects,
-                mass,
-                orbitalRadius,
-                radius,
                 tier,
                 skyboxTexture,
                 validSpaceStationBlocks,
-                worldGenerationAdapter);
+                worldGenerationAdapter,
+                hasOrbit,
+                orbitView);
         }
     }
 }

@@ -1,13 +1,16 @@
 package com.gtnewhorizons.galaxia.registry.celestial.station.attachments;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
@@ -24,15 +27,18 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.TextWidget;
+import com.gtnewhorizon.structurelib.alignment.IAlignmentLimits;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaMultiblockBase;
+import com.gtnewhorizons.galaxia.registry.celestial.station.Station;
 import com.gtnewhorizons.galaxia.registry.celestial.station.StationGraph;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IAttachmentHandler;
+import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.ResourceFilter;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -47,11 +53,17 @@ import lombok.Getter;
 
 public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> implements IGuiHolder<PosGuiData> {
 
+    // Hammers work in any orientation
+    @Override
+    public IAlignmentLimits getAlignmentLimits() {
+        return IAlignmentLimits.UNLIMITED;
+    }
+
     private static final String NBT_FILTER = "filter";
     private static final String NBT_HAMMER_VARIANT = "hammerVariant";
     private static final String NBT_HAMMER_ENERGY = "hammerEnergy";
     private static final String NBT_HAMMER_COOLDOWN_SHOT = "hammerCooldownShot";
-    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownShot";
+    private static final String NBT_HAMMER_COOLDOWN_ROUTE = "hammerCooldownRoute";
 
     private final static String STRUCTURE_PIECE_MAIN = "main";
     private static final IStructureDefinition<TileHammerCannon> STRUCTURE_DEFINITION = StructureDefinition
@@ -86,9 +98,9 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         public void tick(TileHammerCannon attachment) {
             if (attachment.graph == null) return;
 
-            attachment.moduleInstance.tick(
-                attachment.graph.getController()
-                    .getBackingStation());
+            Station station = attachment.graph.getController()
+                .getBackingStation();
+            if (station != null) attachment.moduleInstance.tick(station);
         }
 
         @Override
@@ -132,6 +144,90 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
         return inventory;
     }
 
+    /** Items in the cannon's own chests */
+    public Map<ItemStackWrapper, Long> getChestItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (stack == null || stack.stackSize <= 0) continue;
+                ItemStackWrapper key = ItemStackWrapper.of(stack);
+                if (key != null) result.merge(key, (long) stack.stackSize, Long::sum);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    /** Amount of an item in the cannon's own chests */
+    public long getChestAmount(ItemStackWrapper resource) {
+        if (resource == null) return 0L;
+        return availablePackageAmount(resource, Long.MAX_VALUE);
+    }
+
+    /** Everything the cannon can load: its own chests and the shared storage of its station */
+    public Map<ItemStackWrapper, Long> getPackageItems() {
+        Map<ItemStackWrapper, Long> result = new LinkedHashMap<>(getChestItems());
+        IDistributedInventory storage = stationStorage();
+        if (storage != null) storage.aggregatedItems()
+            .forEach((key, amount) -> result.merge(key, amount, Long::sum));
+        return Map.copyOf(result);
+    }
+
+    public long getPackageAmount(ItemStackWrapper resource) {
+        if (resource == null) return 0L;
+        IDistributedInventory storage = stationStorage();
+        return getChestAmount(resource) + (storage == null ? 0L : storage.getItemAmount(resource));
+    }
+
+    /** Loads a package, from the cannon's own chests first and the station's storage for the rest */
+    public boolean tryExtractPackage(ItemStackWrapper resource, long amount) {
+        if (resource == null || amount <= 0L) return false;
+        if (getPackageAmount(resource) < amount) return false;
+        long fromChests = Math.min(amount, getChestAmount(resource));
+        extractPackage(resource, fromChests);
+        IDistributedInventory storage = stationStorage();
+        if (amount > fromChests && storage != null) storage.updateItems(resource, -(amount - fromChests));
+        markDirty();
+        return true;
+    }
+
+    /** Shared storage of the station the cannon is attached to, null while it is not */
+    private @Nullable IDistributedInventory stationStorage() {
+        if (graph == null || graph.getController() == null) return null;
+        return graph.getController()
+            .getBackingStation();
+    }
+
+    private long availablePackageAmount(ItemStackWrapper resource, long target) {
+        long available = 0L;
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                available += stack.stackSize;
+                if (available >= target) return available;
+            }
+        }
+        return available;
+    }
+
+    private void extractPackage(ItemStackWrapper resource, long amount) {
+        long remaining = amount;
+        for (IInventory chest : inventory) {
+            if (chest == null) continue;
+            for (int slot = 0; slot < chest.getSizeInventory() && remaining > 0L; slot++) {
+                ItemStack stack = chest.getStackInSlot(slot);
+                if (!resource.equals(ItemStackWrapper.of(stack))) continue;
+                int extracted = (int) Math.min(remaining, stack.stackSize);
+                chest.decrStackSize(slot, extracted);
+                remaining -= extracted;
+            }
+            if (remaining <= 0L) break;
+        }
+    }
+
     public TileHammerCannon() {
         super();
 
@@ -148,6 +244,13 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
     public void onStructureFormed() {
         super.onStructureFormed();
         here = new BlockPos(xCoord, yCoord, zCoord);
+    }
+
+    @Override
+    protected boolean checkStructure() {
+        // The chests are found again on every check
+        inventory.clear();
+        return super.checkStructure();
     }
 
     @Override
@@ -236,16 +339,17 @@ public class TileHammerCannon extends GalaxiaMultiblockBase<TileHammerCannon> im
 
         return new ModularPanel("galaxia:hammer_cannon").size(210, 130)
             .child(
-                IKey.str(StatCollector.translateToLocal("galaxia.gui.station_room.title"))
+                IKey.str(StatCollector.translateToLocal("galaxia.gui.hammer_cannon.title"))
                     .asWidget()
                     .pos(8, 8))
             .child(new TextWidget<>(IKey.dynamic(() -> {
                 boolean valid = structureValidSync.getBoolValue();
-                String structure = StatCollector.translateToLocal("galaxia.gui.station_room.structure");
                 String status = StatCollector
                     .translateToLocal(valid ? "galaxia.gui.status_valid" : "galaxia.gui.status_invalid");
                 EnumChatFormatting color = valid ? EnumChatFormatting.GREEN : EnumChatFormatting.RED;
-                return structure + ": " + color + status + EnumChatFormatting.RESET;
+                return StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station_controller.structure",
+                    color + status + EnumChatFormatting.RESET);
             })).pos(10, 30));
     }
 

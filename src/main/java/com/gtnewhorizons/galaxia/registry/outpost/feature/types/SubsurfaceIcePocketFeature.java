@@ -47,7 +47,6 @@ public final class SubsurfaceIcePocketFeature implements PlanetaryFeature {
                     (byte) context.coveredTiles(),
                     (byte) context.totalTiles(),
                     FeatureContributionFormatter.percentMultiplierDelta("Power draw", POWER_DRAW_MULTIPLIER_PERCENT)));
-            return;
         }
         if (context.module()
             .kind() == FacilityModuleKind.MINER) {

@@ -33,7 +33,7 @@ public final class StationAttachmentRegistry {
         IAttachmentHandler<?> handler = handlers.get(te.getClass());
         if (handler != null) return wrap(te, handler);
 
-        if (GalaxiaAPI.isGregTechLoaded() && te instanceof IGregTechTileEntity gtTE) {
+        if (GalaxiaAPI.isGregTech5UnofficialNewHorizonsLoaded() && te instanceof IGregTechTileEntity gtTE) {
             IMetaTileEntity mte = gtTE.getMetaTileEntity();
             if (mte != null) {
                 handler = handlers.get(mte.getClass());

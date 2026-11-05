@@ -22,7 +22,7 @@ public record DimensionDef(String name, int id, Class<? extends WorldProvider> p
     ResourceLocation[] skyboxTexture, List<Block> validSpaceStationBlocks) {
 
     public DimensionDef {
-        celestialBodies = celestialBodies == null ? null : Collections.unmodifiableList(celestialBodies);
+        celestialBodies = celestialBodies == null ? null : List.copyOf(celestialBodies);
         validSpaceStationBlocks = validSpaceStationBlocks == null ? null
             : Collections.unmodifiableList(validSpaceStationBlocks);
     }

@@ -11,9 +11,12 @@ import net.minecraftforge.common.util.Constants;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAnalyzer;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.analysis.RocketAssembly;
 
+import lombok.Getter;
+
 public class RocketBlueprint {
 
     private final List<RocketPartInstance> parts = new ArrayList<>();
+    @Getter
     private String name = "";
 
     public RocketBlueprint() {}
@@ -21,9 +24,7 @@ public class RocketBlueprint {
     public RocketBlueprint copy() {
         RocketBlueprint copy = new RocketBlueprint();
         copy.name = this.name;
-        for (RocketPartInstance part : parts) {
-            copy.parts.add(part.copy());
-        }
+        copy.parts.addAll(parts);
         return copy;
     }
 
@@ -38,28 +39,24 @@ public class RocketBlueprint {
         return true;
     }
 
+    /**
+     * Adds a part without the overlap and adjacency checks, for blueprints rebuilt from parts that were already valid
+     *
+     * @param part The part to add
+     */
+    public void addPartUnchecked(RocketPartInstance part) {
+        parts.add(part);
+    }
+
     public void removePartAt(int x, int y, int z) {
         parts.removeIf(p -> p.x() == x && p.y() == y && p.z() == z);
     }
 
     public boolean canPlacePart(RocketPartInstance candidate) {
-        for (RocketPartInstance existing : parts) {
-            if (existing.overlaps(candidate)) {
-                return false;
-            }
-        }
-
-        if (parts.isEmpty()) {
-            return true;
-        }
-
-        for (RocketPartInstance existing : parts) {
-            if (candidate.isAdjacentTo(existing)) {
-                return true;
-            }
-        }
-
-        return false;
+        return parts.stream()
+            .noneMatch(existing -> existing.overlaps(candidate))
+            && (parts.isEmpty() || parts.stream()
+                .anyMatch(candidate::isAdjacentTo));
     }
 
     public NBTTagCompound serializeNBT() {
@@ -92,34 +89,42 @@ public class RocketBlueprint {
         return Collections.unmodifiableList(parts);
     }
 
-    public String getName() {
-        return name;
-    }
-
     public void setName(String name) {
         this.name = name == null ? "" : name.trim();
     }
 
     public int getWidth() {
-        int max = 0;
+        if (parts.isEmpty()) return 0;
+
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+
         for (RocketPartInstance part : parts) {
+            min = Math.min(min, part.x());
             max = Math.max(
                 max,
                 part.x() + part.def()
                     .width());
         }
-        return max;
+
+        return max - min;
     }
 
     public int getHeight() {
-        int max = 0;
+        if (parts.isEmpty()) return 0;
+
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+
         for (RocketPartInstance part : parts) {
+            min = Math.min(min, part.y());
             max = Math.max(
                 max,
                 part.y() + part.def()
                     .height());
         }
-        return max;
+
+        return max - min;
     }
 
     public RocketAssembly analyze() {

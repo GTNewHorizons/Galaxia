@@ -14,11 +14,10 @@ import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
 import com.gtnewhorizons.galaxia.registry.outpost.LogisticsResourceConfig;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IRecipeModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
-import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeConfig;
+import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.SavedRecipe;
 import com.gtnewhorizons.galaxia.registry.outpost.station.settings.SettingsGroup;
 import com.gtnewhorizons.galaxia.registry.outpost.upkeep.UpkeepAmount;
@@ -40,7 +39,7 @@ final class StationItemInteractionModel {
     }
 
     record Entry(Section section, Role role, String label, @Nullable FacilityModuleKind kind, int count,
-        @Nullable ModuleInstance.ID targetModuleId, short groupId, int reserve, int orderSize,
+        @Nullable ModuleInstance.ID targetModuleId, @Nullable SettingsGroup.ID groupId, int reserve, int orderSize,
         @Nullable UpkeepAmount amountPerMinute) {}
 
     private StationItemInteractionModel() {}
@@ -66,7 +65,7 @@ final class StationItemInteractionModel {
                     null,
                     1,
                     null,
-                    (short) 0,
+                    null,
                     config.minReserve(),
                     config.orderSize(),
                     null));
@@ -82,7 +81,7 @@ final class StationItemInteractionModel {
                         FacilityModuleKind.HAMMER,
                         1,
                         hammer.id,
-                        (short) 0,
+                        null,
                         config.minReserve(),
                         config.orderSize(),
                         null));
@@ -96,20 +95,18 @@ final class StationItemInteractionModel {
             boolean consumes = false;
             boolean produces = module.component() instanceof ModuleMiner
                 && contains(ModuleMiner.possibleOutputs(module, facility), item);
-            if (module.component() instanceof IRecipeModule recipeModule) {
-                RecipeConfig config = recipeModule.getRecipeConfig();
-                if (config != null) {
-                    for (SavedRecipe saved : config.savedRecipes()) {
-                        if (!saved.enabled()) continue;
-                        consumes |= contains(
-                            saved.recipe()
-                                .inputs(),
-                            item);
-                        produces |= contains(
-                            saved.recipe()
-                                .outputs(),
-                            item);
-                    }
+            if (module.recipe() != null) {
+                for (SavedRecipe saved : facility.recipeBook(module)
+                    .recipes()) {
+                    if (!saved.enabled()) continue;
+                    consumes |= containsRecipeResource(
+                        saved.recipe()
+                            .itemInputs(),
+                        item);
+                    produces |= containsRecipeResource(
+                        saved.recipe()
+                            .itemOutputs(),
+                        item);
                 }
             }
             if (consumes) aggregate(aggregated, facility, Section.MACHINES, Role.CONSUMES, module, null);
@@ -138,7 +135,7 @@ final class StationItemInteractionModel {
             Section.UPKEEP,
             Role.UPKEEP,
             module.kind(),
-            (short) 0,
+            null,
             null,
             amountPerMinute.microUnitsPerMinute());
         AggregatedEntry entry = aggregated.computeIfAbsent(
@@ -150,15 +147,15 @@ final class StationItemInteractionModel {
                     .getDisplayName(),
                 module.kind(),
                 module.id,
-                (short) 0));
+                null));
         entry.add(amountPerMinute);
     }
 
     private static void aggregate(Map<Key, AggregatedEntry> aggregated, AutomatedFacility facility, Section section,
         Role role, ModuleInstance module, @Nullable UpkeepAmount amountPerMinute) {
         SettingsGroup group = sharedGroup(facility, module);
-        short groupId = group == null ? 0 : group.id();
-        Key key = new Key(section, role, module.kind(), groupId, groupId == 0 ? module.id : null, 0L);
+        SettingsGroup.ID groupId = group == null ? null : group.id();
+        Key key = new Key(section, role, module.kind(), groupId, groupId == null ? module.id : null, 0L);
         AggregatedEntry entry = aggregated.computeIfAbsent(
             key,
             ignored -> new AggregatedEntry(
@@ -173,24 +170,14 @@ final class StationItemInteractionModel {
     }
 
     private static @Nullable SettingsGroup sharedGroup(AutomatedFacility facility, ModuleInstance module) {
-        if (module.groupId() == 0) return null;
-        SettingsGroup group = facility.settingsGroups()
-            .groups()
-            .get(module.groupId());
-        if (group == null || group.members()
-            .size() < 2) {
-            return null;
-        }
-        return group;
+        if (!(module.settingsBinding() instanceof ModuleInstance.SettingsBinding.Shared shared)) return null;
+        SettingsGroup group = facility.settingsGroup(shared.groupId());
+        return group != null && facility.settingsGroupMembers(shared.groupId())
+            .size() >= 2 ? group : null;
     }
 
-    private static boolean contains(ItemStack[] stacks, ItemStackWrapper item) {
-        if (stacks == null) return false;
-        for (ItemStack stack : stacks) {
-            if (stack != null && stack.getItem() != null && item.equals(ItemStackWrapper.of(stack))) {
-                return true;
-            }
-        }
+    private static boolean containsRecipeResource(List<Resource> resources, ItemStackWrapper item) {
+        for (Resource resource : resources) if (item.equals(resource.key())) return true;
         return false;
     }
 
@@ -210,7 +197,7 @@ final class StationItemInteractionModel {
         return null;
     }
 
-    private record Key(Section section, Role role, FacilityModuleKind kind, short groupId,
+    private record Key(Section section, Role role, FacilityModuleKind kind, @Nullable SettingsGroup.ID groupId,
         @Nullable ModuleInstance.ID moduleId, long upkeepMicroUnitsPerMinute) {}
 
     private static final class AggregatedEntry {
@@ -220,12 +207,12 @@ final class StationItemInteractionModel {
         private final String label;
         private final FacilityModuleKind kind;
         private final ModuleInstance.ID targetModuleId;
-        private final short groupId;
+        private final SettingsGroup.ID groupId;
         private int count;
         private UpkeepAmount amountPerMinute = UpkeepAmount.ZERO;
 
         private AggregatedEntry(Section section, Role role, String label, FacilityModuleKind kind,
-            ModuleInstance.ID targetModuleId, short groupId) {
+            ModuleInstance.ID targetModuleId, @Nullable SettingsGroup.ID groupId) {
             this.section = section;
             this.role = role;
             this.label = label;

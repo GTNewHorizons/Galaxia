@@ -1,0 +1,4 @@
+capture assembler-default
+move-widget 0/0/4
+click left
+capture lander-selected

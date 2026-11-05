@@ -1,13 +1,19 @@
 package com.gtnewhorizons.galaxia.compat;
 
+import java.util.function.BiPredicate;
+import java.util.function.ToIntFunction;
+
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.gtnewhorizon.structurelib.StructureLibAPI;
+import com.gtnewhorizon.structurelib.structure.AutoPlaceEnvironment;
+import com.gtnewhorizon.structurelib.structure.IStructureElement;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizon.structurelib.structure.adders.ITileAdder;
+import com.gtnewhorizon.structurelib.util.ItemStackPredicate.NBTMode;
 import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 
 public class GalaxiaStructureUtility {
@@ -94,6 +100,69 @@ public class GalaxiaStructureUtility {
 
     public static <T> IExtendedStructureElement<T> ofBlockAnyMeta(Block block) {
         return IExtendedStructureElement.extend(block, StructureUtility.ofBlockAnyMeta(block));
+    }
+
+    /**
+     * Structure element for a block whose meta must both validate against the tile entity and be recomputed for
+     * placement (hints and construction). {@code validMeta} decides whether an already-placed meta is acceptable;
+     * {@code placeMeta} computes the meta to place when (re)building the structure.
+     * {@code itemMeta} identifies the inventory item consumed during survival construction.
+     */
+    public static <T> IExtendedStructureElement<T> ofBlockWithMeta(Block block, int itemMeta,
+        BiPredicate<T, Integer> validMeta, ToIntFunction<T> placeMeta) {
+        if (block == null || validMeta == null || placeMeta == null) {
+            throw new IllegalArgumentException();
+        }
+        return new IExtendedStructureElement<>() {
+
+            @Override
+            public Block getValidBlock() {
+                return block;
+            }
+
+            @Override
+            public boolean check(T t, World world, int x, int y, int z) {
+                return block == world.getBlock(x, y, z) && validMeta.test(t, world.getBlockMetadata(x, y, z));
+            }
+
+            @Override
+            public boolean couldBeValid(T t, World world, int x, int y, int z, ItemStack trigger) {
+                return block == world.getBlock(x, y, z);
+            }
+
+            @Override
+            public boolean spawnHint(T t, World world, int x, int y, int z, ItemStack trigger) {
+                StructureLibAPI.hintParticle(world, x, y, z, block, placeMeta.applyAsInt(t));
+                return true;
+            }
+
+            @Override
+            public boolean placeBlock(T t, World world, int x, int y, int z, ItemStack trigger) {
+                return world.setBlock(x, y, z, block, placeMeta.applyAsInt(t), 2);
+            }
+
+            @Override
+            public IStructureElement.PlaceResult survivalPlaceBlock(T t, World world, int x, int y, int z,
+                ItemStack trigger, AutoPlaceEnvironment env) {
+                if (check(t, world, x, y, z)) return PlaceResult.SKIP;
+                PlaceResult result = StructureUtility.survivalPlaceBlock(
+                    new ItemStack(block, 1, itemMeta),
+                    NBTMode.EXACT,
+                    null,
+                    false,
+                    world,
+                    x,
+                    y,
+                    z,
+                    env.getSource(),
+                    env.getActor(),
+                    env.getChatter());
+                if (result == PlaceResult.ACCEPT && world.getBlock(x, y, z) == block) {
+                    world.setBlockMetadataWithNotify(x, y, z, placeMeta.applyAsInt(t), 3);
+                }
+                return result;
+            }
+        };
     }
 
     @FunctionalInterface

@@ -17,6 +17,8 @@ import cpw.mods.fml.common.Optional;
 import gregtech.api.interfaces.tileentity.IColoredTileEntity;
 import gregtech.api.interfaces.tileentity.IEnergyConnected;
 
+// these APIs exist in GT6. don't change to gregtech_nh !
+// still use gregtech_nh for stuff that depends on gt5u_nh though
 @Optional.InterfaceList({
     @Optional.Interface(iface = "gregtech.api.interfaces.tileentity.IEnergyConnected", modid = "gregtech"),
     @Optional.Interface(iface = "cofh.api.energy.IEnergyReceiver", modid = "CoFHCore"),
@@ -50,7 +52,7 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
         storedEnergy = Math.max(0, storedEnergy - getEuPerOperation());
     }
 
-    // GT EU
+    // GT EU (don't change to gregtech_nh)
     @Override
     @Optional.Method(modid = "gregtech")
     public long injectEnergyUnits(ForgeDirection direction, long voltage, long amperage) {
@@ -63,12 +65,14 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
         return euToAdd > 0 ? amperage : 0;
     }
 
+    // dont change to gregtech_nh
     @Override
     @Optional.Method(modid = "gregtech")
     public boolean inputEnergyFrom(ForgeDirection side) {
         return useEU();
     }
 
+    // dont change to gregtech_nh
     @Override
     @Optional.Method(modid = "gregtech")
     public boolean outputsEnergyTo(ForgeDirection side) {

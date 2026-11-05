@@ -13,16 +13,6 @@ import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationA
 
 public interface IStationBehaviorWithAttachments extends IStationBehavior {
 
-    default void onAttachmentsChanged(TileStation station, BlockPos pos, boolean added) {
-        if (!added) return;
-        StationGraph graph = station.getGraph();
-        if (graph == null) return;
-        ResolvedAttachment<?> ra = resolveAttachment(station, pos);
-        if (ra != null) {
-            graph.registerAttachment(station.getHere(), pos, ra);
-        }
-    }
-
     default void registerAttachments(TileStation station, StationGraph graph) {
         for (BlockPos pos : station.getAttachments()) {
             ResolvedAttachment<?> ra = resolveAttachment(station, pos);

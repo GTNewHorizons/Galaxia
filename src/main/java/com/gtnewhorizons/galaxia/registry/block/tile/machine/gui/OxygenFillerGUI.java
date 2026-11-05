@@ -1,66 +1,47 @@
 package com.gtnewhorizons.galaxia.registry.block.tile.machine.gui;
 
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.StatCollector;
-
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandler;
 import com.cleanroommc.modularui.value.sync.IntSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.registry.block.tile.machine.TileEntityOxygenFiller;
 
 public class OxygenFillerGUI {
 
     public static ModularPanel build(TileEntityOxygenFiller tile, PosGuiData guiData, PanelSyncManager syncManager) {
-        IntSyncValue energySync = new IntSyncValue(() -> (int) Math.min(tile.storedEnergy, Integer.MAX_VALUE), _ -> {});
-        IntSyncValue maxEnergySync = new IntSyncValue(
-            () -> (int) Math.min(tile.getMaxEnergyBuffer(), Integer.MAX_VALUE),
-            _ -> {});
-        IntSyncValue oxygenSync = new IntSyncValue(tile::getStoredOxygen, _ -> {});
-        IntSyncValue maxOxygenSync = new IntSyncValue(tile::getMaxOxygenBuffer, _ -> {});
+        ModularPanel panel = GUIHelper.panel(
+            "oxygen_filler",
+            "galaxia.gui.oxygen_filler.title",
+            tile,
+            new IntSyncValue(() -> (int) Math.min(tile.storedEnergy, Integer.MAX_VALUE)),
+            new IntSyncValue(() -> (int) Math.min(tile.getMaxEnergyBuffer(), Integer.MAX_VALUE)),
+            new IntSyncValue(tile::getStoredOxygen),
+            new IntSyncValue(tile::getMaxOxygenBuffer),
+            syncManager,
+            18);
 
-        syncManager.syncValue("energy", energySync);
-        syncManager.syncValue("maxEnergy", maxEnergySync);
-        syncManager.syncValue("oxygen", oxygenSync);
-        syncManager.syncValue("maxOxygen", maxOxygenSync);
-
-        return ModularPanel.defaultPanel("oxygen_filler", 176, 220)
-            .bindPlayerInventory()
-            .child(
-                IKey.lang("galaxia.gui.oxygen_filler.title")
-                    .color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                    .asWidget()
-                    .top(6)
-                    .left(8)
-                    .horizontalCenter())
-            .child(GUIHelper.createEnergyBar(energySync, maxEnergySync, 8, 20))
-            .child(GUIHelper.createOxygenBar(oxygenSync, maxOxygenSync, 8, 35))
-            .child(createMachineSlots(tile.getItemHandler(), 0, 0).center())
-            .child(
-                IKey.dynamic(
-                    () -> tile.active
-                        ? EnumChatFormatting.GREEN + StatCollector.translateToLocal("galaxia.gui.common.filling")
-                        : EnumChatFormatting.GRAY + StatCollector.translateToLocal("galaxia.gui.common.idle"))
-                    .asWidget()
-                    .bottom(90)
-                    .left(8));
-    }
-
-    private static Flow createMachineSlots(IItemHandler handler, int x, int y) {
-        return Flow.row()
-            .top(y)
-            .left(x)
-            .childPadding(6)
-            .crossAxisAlignment(Alignment.CrossAxis.CENTER)
-            .child(new ItemSlot().slot(new ModularSlot(handler, 0)))
-            .child(new ItemSlot().slot(new ModularSlot(handler, 1)))
-            .coverChildren();
+        // Tank to fill, and where it comes out full
+        IItemHandler items = tile.getItemHandler();
+        panel.child(
+            new ItemSlot().slot(new ModularSlot(items, 0))
+                .background(EnumTextures.GUI_SLOT.getImage())
+                .pos(8, GUIHelper.CONTENT_Y));
+        panel.child(
+            EnumTextures.GUI_ARROW.getImage()
+                .asWidget()
+                .size(8)
+                .pos(30, GUIHelper.CONTENT_Y + 5));
+        panel.child(
+            new ItemSlot().slot(new ModularSlot(items, 1))
+                .background(EnumTextures.GUI_SLOT.getImage())
+                .pos(42, GUIHelper.CONTENT_Y));
+        panel.child(
+            GUIHelper.status(syncManager, "galaxia.gui.common.filling")
+                .pos(68, GUIHelper.CONTENT_Y + 5));
+        return panel;
     }
 }

@@ -34,7 +34,7 @@ public final class UpkeepSettlement {
         AutomatedFacility facility, boolean consume) {
         Objects.requireNonNull(moduleDemands, "moduleDemands");
         Objects.requireNonNull(facility, "facility");
-        Credits currentCredits = credits == null ? Credits.empty() : credits;
+        Map<InventoryKey, UpkeepAmount> currentCredits = (credits == null ? Credits.empty() : credits).allCredits();
         List<UpkeepLedger.ModuleDemand> ordered = new ArrayList<>(moduleDemands);
         ordered.sort((a, b) -> Integer.compare(priorityRank(b.priority()), priorityRank(a.priority())));
 
@@ -52,10 +52,14 @@ public final class UpkeepSettlement {
                 payment.consumes()
                     .forEach((key, amount) -> previewConsumes.merge(key, amount, Long::sum));
             }
-            currentCredits = payment.creditsAfter();
+            payment.creditsAfter()
+                .forEach((key, amount) -> {
+                    if (amount.isZero()) currentCredits.remove(key);
+                    else currentCredits.put(key, amount);
+                });
             results.add(new ModuleResult(moduleDemand.moduleId(), true));
         }
-        return new Result(results, currentCredits);
+        return new Result(results, Credits.fromInventoryCredits(currentCredits));
     }
 
     private static int priorityRank(ModulePriority priority) {
@@ -67,24 +71,26 @@ public final class UpkeepSettlement {
         };
     }
 
-    private static Payment tryPlanPayment(UpkeepDemand demand, Credits credits, AutomatedFacility facility,
-        Map<InventoryKey, Long> previewConsumes) {
-        Map<InventoryKey, UpkeepAmount> nextCredits = credits.allCredits();
+    private static Payment tryPlanPayment(UpkeepDemand demand, Map<InventoryKey, UpkeepAmount> credits,
+        AutomatedFacility facility, Map<InventoryKey, Long> previewConsumes) {
+        Map<InventoryKey, UpkeepAmount> nextCredits = new LinkedHashMap<>();
         Map<InventoryKey, Long> consumes = new LinkedHashMap<>();
 
-        if (!tryPlanResources(demand.itemsPerMinute(), nextCredits, consumes, facility, previewConsumes)) return null;
-        if (!tryPlanResources(demand.fluidsPerMinute(), nextCredits, consumes, facility, previewConsumes)) return null;
+        if (!tryPlanResources(demand.itemsPerMinute(), credits, nextCredits, consumes, facility, previewConsumes))
+            return null;
+        if (!tryPlanResources(demand.fluidsPerMinute(), credits, nextCredits, consumes, facility, previewConsumes))
+            return null;
 
-        return new Payment(Credits.fromInventoryCredits(nextCredits), consumes);
+        return new Payment(nextCredits, consumes);
     }
 
     private static <T extends InventoryKey> boolean tryPlanResources(Map<T, UpkeepAmount> demands,
-        Map<InventoryKey, UpkeepAmount> nextCredits, Map<InventoryKey, Long> consumes, AutomatedFacility facility,
-        Map<InventoryKey, Long> previewConsumes) {
+        Map<InventoryKey, UpkeepAmount> credits, Map<InventoryKey, UpkeepAmount> nextCredits,
+        Map<InventoryKey, Long> consumes, AutomatedFacility facility, Map<InventoryKey, Long> previewConsumes) {
         for (Map.Entry<T, UpkeepAmount> entry : demands.entrySet()) {
             InventoryKey key = entry.getKey();
             UpkeepAmount demandAmount = entry.getValue();
-            UpkeepAmount availableCredit = nextCredits.getOrDefault(key, UpkeepAmount.ZERO);
+            UpkeepAmount availableCredit = credits.getOrDefault(key, UpkeepAmount.ZERO);
             if (availableCredit.compareTo(demandAmount) >= 0) {
                 nextCredits.put(key, availableCredit.minus(demandAmount));
                 continue;
@@ -104,8 +110,8 @@ public final class UpkeepSettlement {
     }
 
     private static long available(AutomatedFacility facility, InventoryKey key) {
-        if (key instanceof ItemStackWrapper item) return facility.getItemAmount(item);
-        return facility.getFluidAmount((FluidKey) key);
+        if (key instanceof ItemStackWrapper item) return facility.itemAmount(item);
+        return facility.fluidAmount((FluidKey) key);
     }
 
     private static boolean consume(AutomatedFacility facility, InventoryKey key, long amount) {
@@ -205,7 +211,7 @@ public final class UpkeepSettlement {
         }
     }
 
-    private record Payment(Credits creditsAfter, Map<InventoryKey, Long> consumes) {
+    private record Payment(Map<InventoryKey, UpkeepAmount> creditsAfter, Map<InventoryKey, Long> consumes) {
 
         private void consume(AutomatedFacility facility) {
             consumes.forEach((key, amount) -> UpkeepSettlement.consume(facility, key, amount));

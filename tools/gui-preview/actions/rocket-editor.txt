@@ -1,0 +1,7 @@
+capture rocket-valid
+move-widget 0/0/0/1
+click left
+capture fuel-tanks-selected
+move-widget 0/4/4
+click left
+capture stage-count-increased

@@ -106,39 +106,51 @@ public final class GalaxiaSkyBootstrap {
 
             .billboardLayer(
                 new BillboardLayer(
-                    LocationGalaxia("textures/environment/galaxy/spiral_galaxy.png"),
+                    LocationGalaxia("textures/environment/galaxy/spiral.png"),
                     2,
-                    4.5f,
-                    7.5f,
+                    3.5f,
+                    5.5f,
                     0.55f,
                     0.0f,
                     0.70f,
                     true,
-                    0x23456789L))
+                    0x1837162AL))
             .billboardLayer(
                 new BillboardLayer(
-                    LocationGalaxia("textures/environment/galaxy/elliptical_galaxy.png"),
+                    LocationGalaxia("textures/environment/galaxy/lenticular.png"),
+                    1,
+                    3.5f,
+                    5.0f,
+                    0.50f,
+                    0.0f,
+                    0.65f,
+                    true,
+                    0x1354231AL))
+            .billboardLayer(
+                new BillboardLayer(
+                    LocationGalaxia("textures/environment/galaxy/elliptical.png"),
                     2,
                     3.5f,
                     5.5f,
-                    0.50f,
+                    0.5f,
                     0.0f,
-                    0.65f,
-                    true,
-                    0x3456789AL))
-            .billboardLayer(
-                new BillboardLayer(
-                    LocationGalaxia("textures/environment/galaxy/lenticular_galaxy.png"),
-                    1,
-                    4.0f,
-                    6.0f,
-                    0.50f,
-                    0.0f,
-                    0.65f,
+                    0.55f,
                     true,
                     0x456789ABL))
+            .billboardLayer(
+                new BillboardLayer(
+                    LocationGalaxia("textures/environment/galaxy/bar_galaxy.png"),
+                    3,
+                    4.5f,
+                    6.0f,
+                    0.5f,
+                    0.0f,
+                    0.55f,
+                    true,
+                    0x56789ABCL))
 
-            .domeLayer(new DomeLayer(LocationGalaxia("textures/environment/galaxy/img.png"), 1.0f, 0.0f, 0.55f));
+            .domeLayer(
+                new DomeLayer(LocationGalaxia("textures/environment/galaxy/large_galaxy.png"), 1.0f, 0.0f, 0.55f));
 
         EnhancedSkyRender.registerPreset(milkyWayPreset, 0, DimensionEnum.MOON.getId());
     }

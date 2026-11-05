@@ -19,7 +19,6 @@ public class FluidFiniteBuilder {
     private int density = 1000; // same as water
     private int viscosity = 1000;
     private int temperature = 300;
-    private boolean gaseous = false;
     private int luminosity = 0;
 
     // Block

@@ -1,6 +1,8 @@
 package com.gtnewhorizons.galaxia.registry.outpost.module;
 
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Set;
 
 import net.minecraft.util.StatCollector;
 
@@ -13,20 +15,29 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 public enum FacilityModuleKind {
 
-    HAMMER,
-    MINER,
-    POWER,
-    STORAGE,
-    TANK,
-    BATTERY,
-    MAINTENANCE_BAY,
-    MACERATOR,
-    CENTRIFUGE,
-    ELECTROLYZER,
-    CHEMICAL_REACTOR,
-    ASSEMBLER,
-    DISTILLERY,
-    GEOTHERMAL_GENERATOR;
+    HAMMER(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV),
+    MINER(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV),
+    POWER(ModuleTier.NONE),
+    STORAGE(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    TANK(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    BATTERY(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    MAINTENANCE_BAY(ModuleTier.NONE),
+    MACERATOR(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    CENTRIFUGE(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    ELECTROLYZER(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    CHEMICAL_REACTOR(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    ASSEMBLER(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    DISTILLERY(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV),
+    GEOTHERMAL_GENERATOR(ModuleTier.HV),
+    DEBUG_DATA_GENERATOR(ModuleTier.HV);
+
+    private final ModuleTier defaultTier;
+    private final Set<ModuleTier> allowedTiers;
+
+    FacilityModuleKind(ModuleTier defaultTier, ModuleTier... additionalTiers) {
+        this.defaultTier = defaultTier;
+        this.allowedTiers = Collections.unmodifiableSet(EnumSet.of(defaultTier, additionalTiers));
+    }
 
     private static final EnumSet<FacilityModuleKind> CAPACITY_KINDS = EnumSet.noneOf(FacilityModuleKind.class);
 
@@ -47,6 +58,7 @@ public enum FacilityModuleKind {
             case HAMMER -> StationModuleCategory.LOGISTICS;
             case MINER -> StationModuleCategory.MINING_SUPPORT;
             case POWER, GEOTHERMAL_GENERATOR -> StationModuleCategory.POWER;
+            case DEBUG_DATA_GENERATOR -> StationModuleCategory.SUPPORT;
             case STORAGE, TANK, BATTERY -> StationModuleCategory.INFRASTRUCTURE;
             case MAINTENANCE_BAY -> StationModuleCategory.SUPPORT;
             case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> StationModuleCategory.PROCESSING;
@@ -76,48 +88,21 @@ public enum FacilityModuleKind {
     }
 
     public ModuleInstance create(StationTileCoord anchor, ModuleShape shape, ModuleTier tier) {
-        FacilityModuleRegistry.Definition def = FacilityModuleRegistry.get(this);
-        if (def == null) {
-            throw new IllegalArgumentException("Unknown module kind: " + this);
-        }
-        if (shape == null) {
-            throw new IllegalArgumentException("FacilityModuleKind.create: shape must not be null for kind " + this);
-        }
-        if (tier == null) {
-            throw new IllegalArgumentException("FacilityModuleKind.create: tier must not be null for kind " + this);
-        }
-        ModuleInstance instance = new ModuleInstance(ModuleInstance.ID.create(), def, anchor, shape, tier);
-        instance.setComponent(FacilityModuleRegistry.createComponent(this));
-        return instance;
+        return FacilityModuleRegistry.create(ModuleInstance.ID.create(), this, anchor, shape, tier);
     }
 
-    public EnumSet<ModuleTier> allowedTiers() {
-        return switch (this) {
-            case HAMMER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV, ModuleTier.ZPM, ModuleTier.UV);
-            case MINER -> EnumSet.of(ModuleTier.EV, ModuleTier.IV, ModuleTier.LuV);
-            case POWER -> EnumSet.of(ModuleTier.NONE);
-            case GEOTHERMAL_GENERATOR -> EnumSet.of(ModuleTier.HV);
-            case STORAGE, TANK, BATTERY -> EnumSet.of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
-            case MAINTENANCE_BAY -> EnumSet.of(ModuleTier.NONE);
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> EnumSet
-                .of(ModuleTier.HV, ModuleTier.EV, ModuleTier.IV);
-        };
+    public Set<ModuleTier> allowedTiers() {
+        return allowedTiers;
     }
 
     public ModuleTier defaultTier() {
-        return switch (this) {
-            case HAMMER, MINER -> ModuleTier.EV;
-            case POWER -> ModuleTier.NONE;
-            case GEOTHERMAL_GENERATOR -> ModuleTier.HV;
-            case STORAGE, TANK, BATTERY -> ModuleTier.HV;
-            case MAINTENANCE_BAY -> ModuleTier.NONE;
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModuleTier.HV;
-        };
+        return defaultTier;
     }
 
     public ModuleShape defaultShape() {
         return switch (this) {
             case MINER -> ModuleShape.QUAD_2x2;
+            case MACERATOR -> ModuleShape.L_2x2;
             case GEOTHERMAL_GENERATOR -> ModuleShape.BLOCK_3x3;
             default -> ModuleShape.SINGLE;
         };
@@ -128,7 +113,7 @@ public enum FacilityModuleKind {
             case HAMMER, MINER -> ModulePriority.NORMAL;
             case POWER, GEOTHERMAL_GENERATOR -> ModulePriority.HIGH;
             case STORAGE, TANK, BATTERY -> ModulePriority.NORMAL;
-            case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> ModulePriority.NORMAL;
+            case MAINTENANCE_BAY, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY, DEBUG_DATA_GENERATOR -> ModulePriority.NORMAL;
         };
     }
 
@@ -142,12 +127,20 @@ public enum FacilityModuleKind {
 
     public boolean isProductionModule() {
         return switch (this) {
-            case MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> true;
+            case HAMMER, MINER, MACERATOR, CENTRIFUGE, ELECTROLYZER, CHEMICAL_REACTOR, ASSEMBLER, DISTILLERY -> true;
             default -> false;
         };
     }
 
+    public boolean supportsParallel() {
+        return this != MAINTENANCE_BAY && this != DEBUG_DATA_GENERATOR;
+    }
+
+    public boolean isDebugOnly() {
+        return this == DEBUG_DATA_GENERATOR;
+    }
+
     public boolean isDirectlyConfigurable() {
-        return this == HAMMER || this == MINER || this == POWER || isProductionModule();
+        return this == HAMMER || this == MINER || this == POWER || isProductionModule() || isDebugOnly();
     }
 }

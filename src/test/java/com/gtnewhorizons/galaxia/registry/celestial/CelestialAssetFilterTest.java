@@ -37,10 +37,8 @@ final class CelestialAssetFilterTest {
 
     @BeforeEach
     void clearFilters() {
-        facility.getItemFilter()
-            .clear();
-        facility.getFluidFilter()
-            .clear();
+        facility.clearFilters(true);
+        facility.clearFilters(false);
     }
 
     @Test
@@ -50,8 +48,7 @@ final class CelestialAssetFilterTest {
             key.toItemStack()
                 .getUnlocalizedName(),
             true);
-        List<String> filters = facility.getItemFilter()
-            .serialize();
+        List<String> filters = facility.filtersSnapshot(true);
         assertEquals(1, filters.size());
     }
 
@@ -63,7 +60,7 @@ final class CelestialAssetFilterTest {
         facility.addFilter(name, true);
         facility.removeFilter(name, true);
         assertTrue(
-            facility.getItemFilter()
+            facility.filtersSnapshot(true)
                 .isEmpty());
     }
 
@@ -75,12 +72,11 @@ final class CelestialAssetFilterTest {
                 .getUnlocalizedName(),
             true);
         assertFalse(
-            facility.getItemFilter()
+            facility.filtersSnapshot(true)
                 .isEmpty());
-        facility.getItemFilter()
-            .clear();
+        facility.clearFilters(true);
         assertTrue(
-            facility.getItemFilter()
+            facility.filtersSnapshot(true)
                 .isEmpty());
     }
 
@@ -93,9 +89,8 @@ final class CelestialAssetFilterTest {
         String bName = b.toItemStack()
             .getUnlocalizedName();
         facility.addFilter(aName, true);
-        facility.setFilters(List.of(bName), true);
-        List<String> filters = facility.getItemFilter()
-            .serialize();
+        facility.restoreFilters(List.of(bName), true);
+        List<String> filters = facility.filtersSnapshot(true);
         assertEquals(1, filters.size());
         assertEquals(bName, filters.get(0));
     }
@@ -107,19 +102,13 @@ final class CelestialAssetFilterTest {
         String name = key.toItemStack()
             .getUnlocalizedName();
         facility.addFilter(name, true);
-        assertTrue(
-            facility.getItemFilter()
-                .test(key));
-        assertFalse(
-            facility.getItemFilter()
-                .test(ItemStackWrapper.of(new ItemStack(Items.stick))));
+        assertTrue(facility.allowsInsertion(key));
+        assertFalse(facility.allowsInsertion(ItemStackWrapper.of(new ItemStack(Items.stick))));
     }
 
     @Test
     void getItemFilterAcceptsAllWhenNoFilters() {
-        assertTrue(
-            facility.getItemFilter()
-                .test(ItemStackWrapper.of(new ItemStack(Items.diamond))));
+        assertTrue(facility.allowsInsertion(ItemStackWrapper.of(new ItemStack(Items.diamond))));
     }
 
     @Test
@@ -129,9 +118,8 @@ final class CelestialAssetFilterTest {
             key.toItemStack()
                 .getUnlocalizedName(),
             true);
-        var snapshot = facility.filtersSnapshot();
+        var snapshot = facility.filtersSnapshot(true);
         assertFalse(snapshot.isEmpty());
-        assertTrue(snapshot.containsKey(true));
     }
 
     @Test
@@ -143,14 +131,10 @@ final class CelestialAssetFilterTest {
             false);
         assertEquals(
             1,
-            facility.getFluidFilter()
-                .serialize()
+            facility.filtersSnapshot(false)
                 .size());
-        assertTrue(
-            facility.getFluidFilter()
-                .test(water));
-        facility.getFluidFilter()
-            .clear();
+        assertTrue(facility.allowsInsertion(water));
+        facility.clearFilters(false);
     }
 
     @Test
@@ -161,20 +145,13 @@ final class CelestialAssetFilterTest {
             water.fluid()
                 .getName(),
             false);
-        assertTrue(
-            facility.getFluidFilter()
-                .test(water));
-        assertFalse(
-            facility.getFluidFilter()
-                .test(lava));
-        facility.getFluidFilter()
-            .clear();
+        assertTrue(facility.allowsInsertion(water));
+        assertFalse(facility.allowsInsertion(lava));
+        facility.clearFilters(false);
     }
 
     @Test
     void fluidFilterAcceptsAllWhenNoFilters() {
-        assertTrue(
-            facility.getFluidFilter()
-                .test(FluidKey.of(new FluidStack(FluidRegistry.WATER, 1))));
+        assertTrue(facility.allowsInsertion(FluidKey.of(new FluidStack(FluidRegistry.WATER, 1))));
     }
 }

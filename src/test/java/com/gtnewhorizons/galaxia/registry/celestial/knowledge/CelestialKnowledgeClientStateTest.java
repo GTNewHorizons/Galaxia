@@ -1,0 +1,121 @@
+package com.gtnewhorizons.galaxia.registry.celestial.knowledge;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
+import com.gtnewhorizons.galaxia.registry.celestial.asteroid.MinorCelestialBodyId;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeClientState.CelestialDiscoveryView;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.CelestialResourceKnowledgeState;
+import com.gtnewhorizons.galaxia.registry.celestial.knowledge.CelestialKnowledgeFacts.DiscoveryState;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
+
+final class CelestialKnowledgeClientStateTest {
+
+    @BeforeAll
+    static void init() {
+        GalaxiaTestBootstrap.ensureCelestialRegistry();
+    }
+
+    @AfterEach
+    void clearState() {
+        CelestialKnowledgeClientState.clear();
+        CelestialDiscoveryClientState.clear();
+    }
+
+    @Test
+    void exposesSyncedDiscoveryThroughGenericClientView() {
+        CelestialObjectKey asteroidKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2000));
+        CelestialKnowledgeClientState.apply(
+            Map.of(
+                asteroidKey,
+                CelestialKnowledgeFacts.of(DiscoveryState.DISCOVERED, CelestialResourceKnowledgeState.UNKNOWN)));
+
+        CelestialDiscoveryView view = CelestialKnowledgeClientState.discoveryView();
+
+        assertEquals(Optional.of(DiscoveryState.DISCOVERED), view.discoveryState(asteroidKey));
+        assertTrue(view.isVisible(asteroidKey, DiscoveryState.HIDDEN));
+        assertEquals(
+            Optional.of(CelestialResourceKnowledgeState.UNKNOWN),
+            CelestialKnowledgeClientState.resourceKnowledge(asteroidKey));
+        assertEquals(Optional.empty(), view.discoveryState(CelestialObjectKey.registered(CelestialObjectId.MARS)));
+    }
+
+    @Test
+    void hiddenSyncedStateStaysHiddenEvenWhenInitialStateWouldBeVisible() {
+        CelestialObjectKey asteroidKey = CelestialObjectKey
+            .minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2001));
+        CelestialKnowledgeClientState.apply(Map.of(asteroidKey, CelestialKnowledgeFacts.hidden()));
+
+        CelestialDiscoveryView view = CelestialKnowledgeClientState.discoveryView();
+
+        assertEquals(Optional.of(DiscoveryState.HIDDEN), view.discoveryState(asteroidKey));
+        assertFalse(view.isVisible(asteroidKey, DiscoveryState.DISCOVERED));
+    }
+
+    @Test
+    void effectiveDiscoveryFallsBackToRegisteredDefault() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        assertEquals(DiscoveryState.DISCOVERED, CelestialKnowledgeClientState.effectiveDiscoveryState(mars));
+    }
+
+    @Test
+    void unchangedSyncedKnowledgeDoesNotInvalidateClientViews() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        Map<CelestialObjectKey, CelestialKnowledgeFacts> facts = Map
+            .of(mars, CelestialKnowledgeFacts.discoveredUnknown());
+        CelestialKnowledgeClientState.apply(facts);
+        CelestialDiscoveryClientState.update(List.of());
+        int knowledgeRevision = CelestialKnowledgeClientState.revision();
+        int discoveryRevision = CelestialDiscoveryClientState.revision();
+
+        CelestialKnowledgeClientState.apply(facts);
+        CelestialDiscoveryClientState.update(List.of());
+
+        assertEquals(knowledgeRevision, CelestialKnowledgeClientState.revision());
+        assertEquals(discoveryRevision, CelestialDiscoveryClientState.revision());
+    }
+
+    @Test
+    void elapsedScanProgressRefreshesSnapshotWithoutInvalidatingVisibility() {
+        CelestialDiscoveryScanSnapshot initial = activeScan(4L);
+        CelestialDiscoveryClientState.update(List.of(initial));
+        int contentRevision = CelestialDiscoveryClientState.revision();
+        int visibilityRevision = CelestialDiscoveryClientState.visibilityRevision();
+
+        CelestialDiscoveryClientState.update(List.of(activeScan(5L)));
+
+        assertEquals(contentRevision + 1, CelestialDiscoveryClientState.revision());
+        assertEquals(visibilityRevision, CelestialDiscoveryClientState.visibilityRevision());
+        assertEquals(
+            5L,
+            CelestialDiscoveryClientState.snapshots()
+                .get(0)
+                .elapsedTicks());
+    }
+
+    private static CelestialDiscoveryScanSnapshot activeScan(long elapsedTicks) {
+        return new CelestialDiscoveryScanSnapshot(
+            new UUID(1L, 2L),
+            CelestialObjectKey.registered(CelestialObjectId.FROZEN_BELT),
+            2.0,
+            1L,
+            CelestialDiscoveryCapability.PROSPECTING,
+            CelestialDiscoveryScanSnapshot.Status.ACTIVE,
+            CelestialObjectKey.minorBody(new MinorCelestialBodyId(CelestialObjectId.FROZEN_BELT, 2000)),
+            CelestialDiscoveryStep.DETECTION,
+            elapsedTicks);
+    }
+}

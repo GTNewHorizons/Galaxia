@@ -2,7 +2,7 @@ package com.gtnewhorizons.galaxia.registry.items.tether;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 
@@ -31,13 +31,15 @@ public class TetherRenderer {
 
         double torsoY = py - player.height * 0.2;
 
+        EntityLivingBase view = mc.renderViewEntity != null ? mc.renderViewEntity : player;
+        double vx = view.prevPosX + (view.posX - view.prevPosX) * event.partialTicks;
+        double vy = view.prevPosY + (view.posY - view.prevPosY) * event.partialTicks;
+        double vz = view.prevPosZ + (view.posZ - view.prevPosZ) * event.partialTicks;
+
         Tessellator tess = Tessellator.instance;
 
         GL11.glPushMatrix();
-        GL11.glTranslated(
-            -RenderManager.instance.viewerPosX,
-            -RenderManager.instance.viewerPosY,
-            -RenderManager.instance.viewerPosZ);
+        GL11.glTranslated(-vx, -vy, -vz);
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_LIGHTING);

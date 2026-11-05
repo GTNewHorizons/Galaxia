@@ -37,7 +37,7 @@ public class RocketLaunchPacket implements IMessage, IMessageHandler<RocketLaunc
 
         Entity entity = player.worldObj.getEntityByID(message.rocketId);
         if (entity instanceof EntityRocket rocket) {
-            if (rocket.riddenByEntity == player) {
+            if (rocket.isPlayerAboard(player)) {
                 rocket.launch();
             }
         }

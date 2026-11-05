@@ -2,8 +2,10 @@ package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -12,7 +14,12 @@ import java.util.function.UnaryOperator;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.util.StatCollector;
+
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
+import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
+import com.gtnewhorizons.galaxia.registry.outpost.station.ModulePlacement;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
@@ -24,17 +31,17 @@ final class StationTilePickerController {
     }
 
     private String title = "";
-    private String confirmLabel = "Confirm";
+    private String confirmLabel = "";
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
-    private Consumer<List<StationTileCoord>> confirmHandler = selected -> {};
+    private Consumer<List<ModulePlacement>> confirmHandler = selected -> {};
     private ModuleShape selectionFootprint = ModuleShape.SINGLE;
     private @Nullable FacilityModuleKind previewModuleKind;
     private VisualStyle visualStyle = VisualStyle.BUILD;
     private boolean footprintRotationEnabled;
     private int footprintRotation;
-    private final Set<StationTileCoord> selected = new LinkedHashSet<>();
+    private final LinkedHashMap<StationTileCoord, Integer> selected = new LinkedHashMap<>();
     private boolean active;
 
     void start(String title, String confirmLabel, Predicate<StationTileCoord> compatibility,
@@ -55,8 +62,20 @@ final class StationTilePickerController {
     void start(String title, String confirmLabel, BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility,
         UnaryOperator<StationTileCoord> normalizer, Consumer<List<StationTileCoord>> confirmHandler,
         UnaryOperator<List<StationTileCoord>> selectionPruner) {
+        startWithPlacements(
+            title,
+            confirmLabel,
+            compatibility,
+            normalizer,
+            selections -> { if (confirmHandler != null) confirmHandler.accept(coords(selections)); },
+            selectionPruner);
+    }
+
+    void startWithPlacements(String title, String confirmLabel,
+        BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
+        Consumer<List<ModulePlacement>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
         this.title = title == null ? "" : title;
-        this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
+        this.confirmLabel = confirmLabel == null ? "" : confirmLabel;
         this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
         this.normalizer = normalizer == null ? coord -> coord : normalizer;
         this.confirmHandler = confirmHandler == null ? selected -> {} : confirmHandler;
@@ -85,7 +104,6 @@ final class StationTilePickerController {
     boolean rotateSelectionFootprint() {
         if (!active || !footprintRotationEnabled) return false;
         footprintRotation = (footprintRotation + 1) & 3;
-        pruneSelection();
         return true;
     }
 
@@ -98,7 +116,7 @@ final class StationTilePickerController {
     }
 
     String confirmLabel() {
-        return confirmLabel;
+        return confirmLabel.isBlank() ? StatCollector.translateToLocal("galaxia.gui.common.confirm") : confirmLabel;
     }
 
     int selectedCount() {
@@ -109,33 +127,25 @@ final class StationTilePickerController {
         return active && !selected.isEmpty();
     }
 
-    boolean isCompatible(StationTileCoord coord) {
-        if (!active || coord == null) return false;
-        return isCompatibleNormalized(normalize(coord));
-    }
-
     boolean isCompatibleNormalized(StationTileCoord normalized) {
         return active && normalized != null
-            && (selected.contains(normalized) || compatibility.test(normalized, Collections.unmodifiableSet(selected)));
+            && (selected.containsKey(normalized)
+                || compatibility.test(normalized, Collections.unmodifiableSet(selected.keySet())));
     }
 
     boolean isSelected(StationTileCoord coord) {
         if (!active || coord == null) return false;
         StationTileCoord normalized = normalize(coord);
-        return normalized != null && selected.contains(normalized);
-    }
-
-    boolean toggle(StationTileCoord coord) {
-        return toggleNormalized(normalize(coord));
+        return normalized != null && selected.containsKey(normalized);
     }
 
     boolean toggleNormalized(StationTileCoord normalized) {
         if (normalized == null) return false;
-        if (selected.contains(normalized)) {
+        if (selected.containsKey(normalized)) {
             selected.remove(normalized);
         } else {
             if (!isCompatibleNormalized(normalized)) return false;
-            selected.add(normalized);
+            selected.put(normalized, ModuleShape.normalizeRotation(footprintRotation));
         }
         pruneSelection();
         return true;
@@ -157,6 +167,11 @@ final class StationTilePickerController {
         return footprintRotation;
     }
 
+    int selectedTargetRotation(StationTileCoord coord) {
+        if (coord == null) return ModuleShape.normalizeRotation(footprintRotation);
+        return selected.getOrDefault(coord, ModuleShape.normalizeRotation(footprintRotation));
+    }
+
     @Nullable
     FacilityModuleKind previewModuleKind() {
         return previewModuleKind;
@@ -167,13 +182,13 @@ final class StationTilePickerController {
     }
 
     Set<StationTileCoord> selectedTargets() {
-        return Collections.unmodifiableSet(selected);
+        return Collections.unmodifiableSet(selected.keySet());
     }
 
     void confirm() {
         if (!canConfirm()) return;
-        List<StationTileCoord> confirmed = new ArrayList<>(selected);
-        Consumer<List<StationTileCoord>> handler = confirmHandler;
+        List<ModulePlacement> confirmed = placements();
+        Consumer<List<ModulePlacement>> handler = confirmHandler;
         clear();
         handler.accept(confirmed);
     }
@@ -182,11 +197,30 @@ final class StationTilePickerController {
         clear();
     }
 
+    static StationTileCoord normalizeModuleTarget(AutomatedFacility facility, StationTileCoord coord) {
+        if (facility == null || coord == null || facility.stationLayout() == null) return coord;
+        ModuleInstance module = facility.stationLayout()
+            .moduleAt(coord);
+        return module == null ? coord : module.anchor();
+    }
+
+    static List<ModuleInstance.ID> moduleIds(AutomatedFacility facility, List<StationTileCoord> coords) {
+        if (facility == null || facility.stationLayout() == null || coords == null) return List.of();
+        Set<ModuleInstance.ID> ids = new LinkedHashSet<>();
+        for (StationTileCoord coord : coords) {
+            ModuleInstance module = coord == null ? null
+                : facility.stationLayout()
+                    .moduleAt(coord);
+            if (module != null) ids.add(module.id);
+        }
+        return List.copyOf(ids);
+    }
+
     private void clear() {
         active = false;
         selected.clear();
         title = "";
-        confirmLabel = "Confirm";
+        confirmLabel = "";
         compatibility = (coord, selected) -> false;
         normalizer = coord -> coord;
         selectionPruner = targets -> targets;
@@ -199,10 +233,31 @@ final class StationTilePickerController {
     }
 
     private void pruneSelection() {
-        List<StationTileCoord> current = new ArrayList<>(selected);
+        LinkedHashMap<StationTileCoord, Integer> currentRotations = new LinkedHashMap<>(selected);
+        List<StationTileCoord> current = new ArrayList<>(selected.keySet());
         List<StationTileCoord> pruned = selectionPruner.apply(Collections.unmodifiableList(current));
         selected.clear();
         if (pruned == null) return;
-        selected.addAll(pruned);
+        for (StationTileCoord coord : pruned) {
+            if (currentRotations.containsKey(coord)) {
+                selected.put(coord, currentRotations.get(coord));
+            }
+        }
+    }
+
+    private List<ModulePlacement> placements() {
+        List<ModulePlacement> result = new ArrayList<>(selected.size());
+        for (Map.Entry<StationTileCoord, Integer> entry : selected.entrySet()) {
+            result.add(new ModulePlacement(entry.getKey(), entry.getValue()));
+        }
+        return result;
+    }
+
+    private static List<StationTileCoord> coords(List<ModulePlacement> placements) {
+        List<StationTileCoord> result = new ArrayList<>(placements.size());
+        for (ModulePlacement placement : placements) {
+            result.add(placement.anchor());
+        }
+        return result;
     }
 }

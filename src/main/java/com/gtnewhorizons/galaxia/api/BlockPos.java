@@ -16,6 +16,19 @@ public record BlockPos(int x, int y, int z) {
         return (T) world.getTileEntity(x, y, z);
     }
 
+    /**
+     * Tile entity at this position if it is of the given type
+     *
+     * @param world The world to look in
+     * @param type  The expected tile entity class
+     *
+     * @return The tile entity, or null when there is none or it has another type
+     */
+    public <T> T getTE(World world, Class<T> type) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        return type.isInstance(te) ? type.cast(te) : null;
+    }
+
     public Block getBlock(World world) {
         return world.getBlock(x, y, z);
     }

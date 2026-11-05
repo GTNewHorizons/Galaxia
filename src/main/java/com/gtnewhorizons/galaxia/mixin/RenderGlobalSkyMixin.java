@@ -3,7 +3,10 @@ package com.gtnewhorizons.galaxia.mixin;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.LocationGalaxia;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -47,6 +50,20 @@ public abstract class RenderGlobalSkyMixin {
 
     @Unique
     private static final ResourceLocation GALAXIA_EMPTY_SKY = LocationGalaxia("textures/sky/empty.png");
+
+    @Unique
+    private List<CelestialBody> galaxia$sourceBodies;
+
+    @Unique
+    private List<CelestialBody> galaxia$drawBodies;
+
+    @Unique
+    @Nullable
+    private CelestialBody galaxia$primaryLightSource;
+
+    /** Bodies of the current sky that fill the ground below */
+    @Unique
+    private List<CelestialBody> galaxia$horizonBodies = List.of();
 
     private static final List<CelestialBody> DEFAULT_OVERWORLD_BODIES = SkyBuilder.builder()
         .addBody(
@@ -124,15 +141,9 @@ public abstract class RenderGlobalSkyMixin {
             opcode = Opcodes.GETSTATIC))
     private void galaxia$renderCustomBodies(float partialTicks, CallbackInfo ci) {
         World world = mc.theWorld;
-        int dimId = world.provider.dimensionId;
-        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(dimId)
+        DimensionDef def = CelestialDimensionMaterializer.findDefinitionById(world.provider.dimensionId)
             .orElse(null);
-
-        if (dimId != 0 && def == null) {
-            return; // non-galaxia dim that isn't overworld
-        }
-
-        List<CelestialBody> bodies = (dimId == 0) ? DEFAULT_OVERWORLD_BODIES : def.celestialBodies();
+        List<CelestialBody> bodies = galaxia$currentBodies();
         if (bodies.isEmpty()) {
             return;
         }
@@ -154,40 +165,104 @@ public abstract class RenderGlobalSkyMixin {
         GL11.glRotatef(-90F, 0F, 1F, 0F);
         OpenGlHelper.glBlendFunc(775, 1, 1, 0);
 
-        List<Float> angles = new ArrayList<>();
-        for (CelestialBody body : bodies) {
-            float angle = (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
-                / (double) body.orbitalPeriodTicks());
-            angles.add(angle);
-        }
-
-        float primarySunAngle = 0.0f;
-        for (int i = 0; i < bodies.size(); i++) {
-            if (bodies.get(i)
-                .isMainLightSource()) {
-                primarySunAngle = angles.get(i);
-                break;
-            }
-        }
-
-        // sorting for eclipses
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < bodies.size(); i++) indices.add(i);
-        indices.sort(
-            (i1, i2) -> Double.compare(
-                bodies.get(i2)
-                    .distance(),
-                bodies.get(i1)
-                    .distance()));
-
-        for (int idx : indices) {
-            drawCelestialBody(t, bodies.get(idx), angles.get(idx), primarySunAngle);
+        galaxia$prepareBodies(bodies);
+        float primarySunAngle = galaxia$primaryLightSource == null ? 0.0f
+            : galaxia$orbitalAngle(galaxia$primaryLightSource, timeWithPartial);
+        for (CelestialBody body : galaxia$drawBodies) {
+            drawCelestialBody(t, body, galaxia$orbitalAngle(body, timeWithPartial), primarySunAngle);
         }
 
         GL11.glPopMatrix(); // base | sky
         GL11.glPushMatrix(); // base | sky | dummy
         // Vanilla will glPopMatrix() after drawing its invisible moon quad,
         // consuming this dummy push and leaving the stack correct.
+    }
+
+    /** Bodies in the sky of the current dimension, empty for dimensions that are not Galaxia's or the Overworld */
+    @Unique
+    private List<CelestialBody> galaxia$currentBodies() {
+        int dimId = mc.theWorld.provider.dimensionId;
+        if (dimId == 0) return DEFAULT_OVERWORLD_BODIES;
+        return CelestialDimensionMaterializer.findDefinitionById(dimId)
+            .map(DimensionDef::celestialBodies)
+            .orElse(List.of());
+    }
+
+    @Unique
+    private void galaxia$prepareBodies(List<CelestialBody> bodies) {
+        if (galaxia$sourceBodies == bodies) return;
+        galaxia$sourceBodies = bodies;
+        galaxia$primaryLightSource = null;
+        for (CelestialBody body : bodies) {
+            if (body.isMainLightSource()) {
+                galaxia$primaryLightSource = body;
+                break;
+            }
+        }
+        galaxia$horizonBodies = bodies.stream()
+            .filter(CelestialBody::isHorizon)
+            .toList();
+        galaxia$drawBodies = new ArrayList<>(bodies);
+        galaxia$drawBodies.sort(
+            Comparator.comparingDouble(CelestialBody::distance)
+                .reversed());
+    }
+
+    @Unique
+    private static float galaxia$orbitalAngle(CelestialBody body, double timeWithPartial) {
+        return (float) (((timeWithPartial + body.phaseOffsetTicks()) % body.orbitalPeriodTicks())
+            / (double) body.orbitalPeriodTicks());
+    }
+
+    /**
+     * Draws the solid part of bodies filling the ground below over the stars, so they hide the sun and stars behind
+     * them while their glow lets them through. Runs once vanilla has drawn the stars, before it darkens the sky
+     * below the horizon
+     *
+     * @param partialTicks How far through the current tick
+     * @param ci           Callback info
+     */
+    @Inject(
+        method = "renderSky",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/WorldClient;getHorizon()D"))
+    private void galaxia$renderSolidHorizon(float partialTicks, CallbackInfo ci) {
+        List<CelestialBody> bodies = galaxia$currentBodies();
+        if (bodies.isEmpty()) return;
+        galaxia$prepareBodies(bodies);
+        if (galaxia$horizonBodies.isEmpty()) return;
+        double timeWithPartial = mc.theWorld.getWorldTime() + partialTicks;
+        Tessellator t = Tessellator.instance;
+
+        GL11.glPushMatrix();
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_FOG);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        GL11.glRotatef(-90F, 0F, 1F, 0F);
+        for (CelestialBody body : galaxia$horizonBodies) {
+            GL11.glPushMatrix();
+            GL11.glRotatef(body.inclination(), 0F, 0F, 1F);
+            GL11.glRotatef(galaxia$orbitalAngle(body, timeWithPartial) * 360.0F, 1F, 0F, 0F);
+            mc.getTextureManager()
+                .bindTexture(body.texture());
+            float size = body.size() * body.solidFraction();
+            double height = body.distance();
+            double low = 0.5 - body.solidFraction() / 2, high = 0.5 + body.solidFraction() / 2;
+            t.startDrawingQuads();
+            t.addVertexWithUV(-size, height, size, low, high);
+            t.addVertexWithUV(size, height, size, high, high);
+            t.addVertexWithUV(size, height, -size, high, low);
+            t.addVertexWithUV(-size, height, -size, low, low);
+            t.draw();
+            GL11.glPopMatrix();
+        }
+        // Leave the state as vanilla had it for the dark sky below
+        GL11.glColor3f(0F, 0F, 0F);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_FOG);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glPopMatrix();
     }
 
     /**
@@ -232,6 +307,14 @@ public abstract class RenderGlobalSkyMixin {
             t.addVertexWithUV(size, height, size, u0, v1);
             t.addVertexWithUV(size, height, -size, u0, v0);
             t.addVertexWithUV(-size, height, -size, u1, v0);
+            t.draw();
+        } else if (height < 0) {
+            // Bodies below the horizon face up, the other winding would be culled when seen from above
+            t.startDrawingQuads();
+            t.addVertexWithUV(-size, height, size, 0.0D, 1.0D);
+            t.addVertexWithUV(size, height, size, 1.0D, 1.0D);
+            t.addVertexWithUV(size, height, -size, 1.0D, 0.0D);
+            t.addVertexWithUV(-size, height, -size, 0.0D, 0.0D);
             t.draw();
         } else {
             t.startDrawingQuads();

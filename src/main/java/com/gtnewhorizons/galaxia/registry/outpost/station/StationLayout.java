@@ -102,8 +102,7 @@ public final class StationLayout {
         PlacedTile tile = tiles.get(anyTile);
         if (tile == null || tile.module() == null) return false;
         ModuleInstance module = tile.module();
-        for (StationTileCoord coord : module.shape()
-            .tiles(module.anchor())) {
+        for (StationTileCoord coord : module.tiles()) {
             tiles.remove(coord);
         }
         version++;
@@ -112,8 +111,7 @@ public final class StationLayout {
 
     public void place(ModuleInstance module) {
         StationTileState state = StationTileState.fromModuleStatus(module.status());
-        StationTileCoord[] footprint = module.shape()
-            .tiles(module.anchor());
+        StationTileCoord[] footprint = module.tiles();
         // Validate no overlap with a different module (silent overwrite is data corruption)
         for (StationTileCoord coord : footprint) {
             PlacedTile existing = tiles.get(coord);
@@ -202,6 +200,11 @@ public final class StationLayout {
      * Counts orthogonal same-kind neighbors of a module at the given coordinate.
      */
     public static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind) {
+        return countOrthogonalNeighbors(layout, coord, kind, null);
+    }
+
+    static int countOrthogonalNeighbors(StationLayout layout, StationTileCoord coord, FacilityModuleKind kind,
+        @Nullable ModuleInstance.ID excludedModuleId) {
         int count = 0;
         for (int i = 0; i < DX.length; i++) {
             int ndx = coord.dx() + DX[i];
@@ -213,7 +216,8 @@ public final class StationLayout {
             }
             StationTileCoord ncoord = StationTileCoord.of(ndx, ndy);
             ModuleInstance neighborModule = layout.moduleAt(ncoord);
-            if (neighborModule != null && neighborModule.kind() == kind) {
+            if (neighborModule != null && neighborModule.kind() == kind
+                && !neighborModule.id.equals(excludedModuleId)) {
                 count++;
             }
         }

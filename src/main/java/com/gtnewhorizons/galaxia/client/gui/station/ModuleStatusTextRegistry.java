@@ -1,79 +1,66 @@
 package com.gtnewhorizons.galaxia.client.gui.station;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.client.CelestialClient;
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.logistics.HammerDispatchStatus;
 import com.gtnewhorizons.galaxia.registry.outpost.module.BlockingReason;
 import com.gtnewhorizons.galaxia.registry.outpost.module.MinerFocusTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.HammerModuleOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.IModuleOperation;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.MinerFocusOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationPhase;
 import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleOperationState;
-import com.gtnewhorizons.galaxia.registry.outpost.module.operation.ModuleTierOperation;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleHammer;
 import com.gtnewhorizons.galaxia.registry.outpost.module.types.ModuleMiner;
 import com.gtnewhorizons.galaxia.registry.outpost.station.PlacedTile;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileState;
 
 final class ModuleStatusTextRegistry {
 
-    private static final List<Provider> PROVIDERS = new ArrayList<>();
-
-    static {
-        register(ModuleStatusTextRegistry::appendSelectedTileText);
-        register(ModuleStatusTextRegistry::appendModuleRuntimeText);
-        register(ModuleStatusTextRegistry::appendMinerStatusText);
-        register(ModuleStatusTextRegistry::appendHammerStatusText);
-        register(ModuleStatusTextRegistry::appendOperationStatusText);
-    }
-
     private ModuleStatusTextRegistry() {}
-
-    static void register(Provider provider) {
-        if (provider == null) throw new IllegalArgumentException("Module status text provider must not be null");
-        PROVIDERS.add(provider);
-    }
 
     static Lines collect(Context context) {
         Lines lines = new Lines();
-        for (Provider provider : PROVIDERS) {
-            provider.append(context, lines);
-        }
+        appendSelectedTileText(context, lines);
+        appendModuleRuntimeText(context, lines);
+        appendMinerStatusText(context, lines);
+        appendHammerStatusText(context, lines);
+        appendOperationStatusText(context, lines);
         return lines;
     }
 
-    static List<Provider> providers() {
-        return Collections.unmodifiableList(PROVIDERS);
-    }
-
     private static void appendSelectedTileText(Context context, Lines lines) {
-        StationTileCoord selected = context.selected();
-        lines.line("Selected " + selected.dx() + ", " + selected.dy(), EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-
         PlacedTile tile = context.tile();
         if (tile == null) {
-            lines.line("Expansion slot", EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            lines.line(
+                StatCollector.translateToLocal("galaxia.gui.station.status.expansion_slot"),
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
             return;
         }
 
         ModuleInstance module = tile.module();
         if (module == null) {
-            lines.line("Station Core", EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            lines.line(
+                StatCollector.translateToLocal("galaxia.gui.station.status.core"),
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         } else {
             lines.line(moduleDisplayName(module), EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
-        lines.line(
-            tile.state()
-                .name(),
-            EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+        // A working module needs no word about it, anything else says what is going on
+        if (tile.state() != StationTileState.OCCUPIED_OPERATIONAL) {
+            lines.line(
+                StatCollector.translateToLocal(
+                    "galaxia.gui.station.tile_state." + tile.state()
+                        .name()
+                        .toLowerCase()),
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+        }
     }
 
     private static void appendHammerStatusText(Context context, Lines lines) {
@@ -81,18 +68,18 @@ final class ModuleStatusTextRegistry {
         if (module == null || !(module.component() instanceof ModuleHammer hammer)) return;
 
         lines.line(
-            "Buffer: " + formatEu(hammer.energyStored()) + "/" + formatEu(hammer.energyCapacity()) + " EU",
+            StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.buffer",
+                formatEu(hammer.energyStored()),
+                formatEu(hammer.energyCapacity())),
             EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         lines.line(
-            "Cooldown: " + cooldownText(hammer.shotCooldownTicks()),
+            cooldownText(hammer.shotCooldownTicks()),
             hammer.shotCooldownTicks() > 0 ? EnumColors.MAP_COLOR_TEXT_WARNING.getColor()
                 : EnumColors.MAP_COLOR_TEXT_BODY.getColor());
 
-        HammerDispatchStatus.Status status = HammerDispatchStatus.evaluate(
-            context.facility(),
-            module,
-            CelestialClient.allOutposts(),
-            GalaxiaCelestialAPI.currentOrbitalTime());
+        HammerDispatchStatus.Status status = context.hammerDispatchStatus();
+        if (status == null) return;
         lines.line(
             hammerDispatchStatusLine(status),
             status.code() == HammerDispatchStatus.Code.READY ? EnumColors.MAP_COLOR_TEXT_BODY.getColor()
@@ -107,21 +94,27 @@ final class ModuleStatusTextRegistry {
         if (basePower > 0L) {
             long effectivePower = context.facility()
                 .effectivePowerDrawEuPerTick(module);
-            String powerLine = "Power draw: " + formatEu(effectivePower) + " EU/t";
-            if (effectivePower != basePower) {
-                powerLine += " (base " + formatEu(basePower) + ")";
-            }
+            String powerLine = effectivePower == basePower
+                ? StatCollector.translateToLocalFormatted("galaxia.gui.station.status.power", formatEu(effectivePower))
+                : StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station.status.power_base",
+                    formatEu(effectivePower),
+                    formatEu(basePower));
             lines.line(powerLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
 
         if (!module.enabled()) {
-            lines.line("Runtime: disabled", EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            lines.line(
+                StatCollector.translateToLocal("galaxia.gui.station.blocking.player_disabled"),
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             return;
         }
         if (module.blocking() != BlockingReason.NONE) {
             lines.line(
-                "Blocked: " + module.blocking()
-                    .name(),
+                StatCollector.translateToLocal(
+                    "galaxia.gui.station.blocking." + module.blocking()
+                        .name()
+                        .toLowerCase()),
                 EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
         }
     }
@@ -130,15 +123,23 @@ final class ModuleStatusTextRegistry {
         ModuleInstance module = context.module();
         if (module == null || !(module.component() instanceof ModuleMiner miner)) return;
 
-        String focusLine = "Focus: " + miner.focusTier()
-            .name();
-        if (miner.focusOreKeyOrNull() != null) {
-            focusLine += " " + miner.focusOreKeyOrNull();
-            focusLine += " (+" + currentFocusBonusPercent(miner) + "%)";
-        }
+        String focusLine = miner.focusOreKeyOrNull() == null
+            ? StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.focus",
+                miner.focusTier()
+                    .name())
+            : StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.focus_ore",
+                miner.focusTier()
+                    .name(),
+                miner.focusOreKeyOrNull(),
+                currentFocusBonusPercent(miner));
         lines.line(focusLine, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         if (miner.focusOreKeyOrNull() != null) {
-            lines.line("Alignment: " + focusAlignmentPercent(miner) + "%", EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+            lines.line(
+                StatCollector
+                    .translateToLocalFormatted("galaxia.gui.station.status.alignment", focusAlignmentPercent(miner)),
+                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
         }
     }
 
@@ -153,9 +154,15 @@ final class ModuleStatusTextRegistry {
         }
 
         String operationLine = context.facility()
-            .isItemInventoryFull() && operation.phase() == ModuleOperationPhase.REFUNDING ? "Operation: refund paused"
-                : "Operation: " + operation.phase()
-                    .name();
+            .isItemInventoryFull() && operation.phase() == ModuleOperationPhase.REFUNDING
+                ? StatCollector.translateToLocal("galaxia.gui.station.operation.refund_paused")
+                : StatCollector.translateToLocal("galaxia.gui.station.upgrade.state." + switch (operation.phase()) {
+                case WAITING_FOR_MATERIALS -> "waiting";
+                case BUILDING -> "building";
+                case REFUNDING -> "refunding";
+                case COMPLETE -> "complete";
+                case CANCELLED -> "cancelled";
+                });
         lines.line(operationLine, EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
 
         lines.line(
@@ -167,10 +174,12 @@ final class ModuleStatusTextRegistry {
 
     private static String moduleDisplayName(ModuleInstance module) {
         if (module.component() instanceof ModuleHammer hammer) {
-            return hammer.variant()
-                .name() + " Hammer "
-                + module.tier()
-                    .name();
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.hammer_name",
+                hammer.variant()
+                    .name(),
+                module.tier()
+                    .name());
         }
         return module.kind()
             .getDisplayName();
@@ -183,8 +192,8 @@ final class ModuleStatusTextRegistry {
     }
 
     private static String cooldownText(int ticks) {
-        if (ticks <= 0) return "ready";
-        return ((ticks + 19) / 20) + "s";
+        if (ticks <= 0) return StatCollector.translateToLocal("galaxia.gui.station.status.cooldown_ready");
+        return StatCollector.translateToLocalFormatted("galaxia.gui.station.status.cooldown", (ticks + 19) / 20);
     }
 
     private static int focusAlignmentPercent(ModuleMiner miner) {
@@ -198,53 +207,53 @@ final class ModuleStatusTextRegistry {
     }
 
     private static String operationTargetLine(IModuleOperation spec) {
-        if (spec instanceof HammerModuleOperation hammerSpec) {
-            return "Target: " + hammerSpec.targetVariantKey()
-                + " "
-                + hammerSpec.targetTier()
-                    .name();
+        if (spec instanceof IModuleOperation.Hammer hammerSpec) {
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.target_hammer",
+                hammerSpec.targetVariant(),
+                hammerSpec.targetTier()
+                    .name());
         }
-        if (spec instanceof MinerFocusOperation minerSpec) {
-            String line = "Target focus: " + minerSpec.targetFocusTierKey();
-            if (minerSpec.targetFocusOreKey() != null) {
-                line += " " + minerSpec.targetFocusOreKey();
-            }
-            return line;
+        if (spec instanceof IModuleOperation.MinerFocus minerSpec) {
+            return minerSpec.targetFocusOreKey() == null
+                ? StatCollector
+                    .translateToLocalFormatted("galaxia.gui.station.status.target_focus", minerSpec.targetFocusTier())
+                : StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station.status.target_focus_ore",
+                    minerSpec.targetFocusTier(),
+                    minerSpec.targetFocusOreKey());
         }
-        if (spec instanceof ModuleTierOperation tierSpec) {
-            return "Target tier: " + tierSpec.targetTier()
-                .name();
+        if (spec instanceof IModuleOperation.Tier tierSpec) {
+            return StatCollector.translateToLocalFormatted(
+                "galaxia.gui.station.status.target_tier",
+                tierSpec.targetTier()
+                    .name());
         }
-        return "Target tier: " + spec.targetTier()
-            .name();
+        if (spec == IModuleOperation.DECONSTRUCTION) {
+            return StatCollector.translateToLocal("galaxia.module.operation.deconstruction_pending");
+        }
+        if (spec == IModuleOperation.CONSTRUCTION) {
+            return StatCollector.translateToLocal("galaxia.module.operation.construction_pending");
+        }
+        return StatCollector.translateToLocal("galaxia.gui.station.status.operation_pending");
     }
 
-    private static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
+    static String hammerDispatchStatusLine(HammerDispatchStatus.Status status) {
+        String key = "galaxia.gui.station.dispatch." + status.code()
+            .name()
+            .toLowerCase();
         return switch (status.code()) {
-            case READY -> "Dispatch: ready";
-            case WAITING_FOR_REQUEST -> "Dispatch: waiting for request";
-            case NO_EXPORT_CONFIG -> "Dispatch: export disabled";
-            case NO_SURPLUS_AFTER_RESERVE -> "Dispatch: no surplus after reserve";
-            case DESTINATION_LACKS_PACKAGE_SPACE -> "Dispatch: destination lacks package space " + status.sendAmount()
-                + "/"
-                + status.orderSize();
-            case DESTINATION_CAPACITY_BLOCKED -> "Dispatch: destination full, " + status.sendAmount() + " arrived";
-            case NEED_BIG_HAMMER -> "Dispatch: need BIG Hammer";
-            case ROUTE_UNAVAILABLE -> "Dispatch: route unavailable";
-            case BLOCKED_BY_DV_LIMIT -> "Dispatch: blocked by dV limit";
-            case BLOCKED_BY_TOF_LIMIT -> "Dispatch: blocked by TOF limit";
-            case NEED_ENERGY -> "Dispatch: need " + formatEu(status.requiredEnergy())
-                + " EU, buffer "
-                + formatEu(status.storedEnergy());
+            case DESTINATION_LACKS_PACKAGE_SPACE -> StatCollector
+                .translateToLocalFormatted(key, status.sendAmount(), status.orderSize());
+            case DESTINATION_CAPACITY_BLOCKED -> StatCollector.translateToLocalFormatted(key, status.sendAmount());
+            case NEED_ENERGY -> StatCollector
+                .translateToLocalFormatted(key, formatEu(status.requiredEnergy()), formatEu(status.storedEnergy()));
+            default -> StatCollector.translateToLocal(key);
         };
     }
 
-    interface Provider {
-
-        void append(Context context, Lines lines);
-    }
-
-    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module) {}
+    record Context(AutomatedFacility facility, StationTileCoord selected, PlacedTile tile, ModuleInstance module,
+        @javax.annotation.Nullable HammerDispatchStatus.Status hammerDispatchStatus) {}
 
     static final class Lines {
 
@@ -255,12 +264,10 @@ final class ModuleStatusTextRegistry {
             entries.add(new TextEntry(text, color));
         }
 
-        int draw(int x, int y) {
-            int lineY = y;
-            for (TextEntry entry : entries) {
-                lineY = ModuleConfigModalSupport.drawLine(entry.text(), x, lineY, entry.color());
-            }
-            return lineY;
+        List<GalaxiaUi.Line> lines() {
+            List<GalaxiaUi.Line> lines = new ArrayList<>(entries.size());
+            for (TextEntry entry : entries) lines.add(new GalaxiaUi.Line(entry.text(), entry.color()));
+            return lines;
         }
     }
 

@@ -57,6 +57,17 @@ public class WorldProviderBuilder {
     }
 
     /**
+     * Sets the height below which the sky turns dark
+     *
+     * @param height The required horizon height
+     * @return Configured builder
+     */
+    public WorldProviderBuilder horizon(double height) {
+        provider.horizon = height;
+        return this;
+    }
+
+    /**
      * Sets whether the world provider should have a surface (planets vs. asteroid belts etc.)
      *
      * @param surface Boolean : True => Has a surface

@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.dimension.sky;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -27,6 +26,6 @@ public class SkyBuilder {
     }
 
     public List<CelestialBody> build() {
-        return Collections.unmodifiableList(bodies);
+        return List.copyOf(bodies);
     }
 }

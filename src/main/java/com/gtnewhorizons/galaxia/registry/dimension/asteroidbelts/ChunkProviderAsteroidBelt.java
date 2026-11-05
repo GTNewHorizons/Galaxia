@@ -111,7 +111,7 @@ public class ChunkProviderAsteroidBelt implements IChunkProvider {
     @Override
     public List<BiomeGenBase.SpawnListEntry> getPossibleCreatures(EnumCreatureType enumCreatureType, int x, int y,
         int z) {
-        return null;
+        return List.of();
     }
 
     // Unused but needs implementation from interface

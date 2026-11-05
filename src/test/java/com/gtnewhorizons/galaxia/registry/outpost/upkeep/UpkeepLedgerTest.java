@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.registry.outpost.upkeep;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
-import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.TieredModuleComponent;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -30,6 +30,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTierData;
 import com.gtnewhorizons.galaxia.registry.outpost.station.ModuleShape;
 import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
+import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class UpkeepLedgerTest {
 
@@ -37,8 +38,7 @@ final class UpkeepLedgerTest {
 
     @BeforeAll
     static void initRegistries() {
-        CelestialRegistry.freezeAndBake();
-        FacilityModuleRegistry.init();
+        GalaxiaTestBootstrap.ensureFacilityModules();
     }
 
     @Test
@@ -62,6 +62,27 @@ final class UpkeepLedgerTest {
             1,
             summary.moduleDemands()
                 .size());
+    }
+
+    @Test
+    void summaryExcludesHammerWithoutExplicitTierUpkeep() {
+        ModuleInstance hammer = FacilityModuleRegistry.create(
+            ModuleInstance.ID.create(),
+            FacilityModuleKind.HAMMER,
+            StationTileCoord.of(1, 0),
+            ModuleShape.SINGLE,
+            ModuleTier.EV);
+        hammer.completeConstruction();
+        AutomatedFacility facility = facilityWithModule(hammer);
+
+        UpkeepLedger.UpkeepSummary summary = facility.upkeepSummary();
+
+        assertTrue(
+            hammer.currentTierUpkeepDemand()
+                .isEmpty());
+        assertTrue(
+            summary.moduleDemands()
+                .isEmpty());
     }
 
     @Test
@@ -114,7 +135,7 @@ final class UpkeepLedgerTest {
             CelestialAsset.Kind.AUTOMATED_STATION,
             Buildable.Status.OPERATIONAL);
         for (ModuleInstance module : modules) {
-            facility.addModule(module);
+            addModule(facility, module);
         }
         facility.setStationFeatureSalt(neutralFeatureSalt(facility, modules));
         return facility;
@@ -144,7 +165,6 @@ final class UpkeepLedgerTest {
     private static ModuleInstance moduleWithUpkeep(ItemStack upkeepItem, long itemAmount, FluidKey fluid,
         long fluidAmount) {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))
@@ -154,11 +174,11 @@ final class UpkeepLedgerTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.POWER,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of());
+            List.of(),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,
@@ -172,7 +192,6 @@ final class UpkeepLedgerTest {
 
     private static ModuleInstance moduleWithAreaEffect() {
         ModuleTierData tierData = ModuleTierData.builder()
-            .addedEnergyCapacity(0L)
             .powerDraw(0L)
             .cooldown(20)
             .cost(Map.of(new ItemStack(new Item()), 1L))
@@ -180,11 +199,11 @@ final class UpkeepLedgerTest {
         FacilityModuleRegistry.Definition definition = new FacilityModuleRegistry.Definition(
             FacilityModuleKind.MAINTENANCE_BAY,
             Map.of(ModuleTier.NONE, tierData),
-            (module, facility) -> {},
             TestTieredModule::new,
             List.<ModulePanelAction>of(),
             false,
-            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)));
+            List.of(ModuleAreaEffect.adjacentUpkeepMultiplier(80)),
+            null);
         ModuleInstance module = new ModuleInstance(
             ModuleInstance.ID.create(),
             definition,

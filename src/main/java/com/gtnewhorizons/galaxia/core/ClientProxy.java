@@ -3,11 +3,19 @@ package com.gtnewhorizons.galaxia.core;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.FMLBusRegister;
 import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.ForgeBusRegister;
 
+import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.MinecraftForgeClient;
 
+import com.cleanroommc.modularui.api.IMuiScreen;
+import com.gtnewhorizons.galaxia.client.AndroidClient;
+import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.GalaxiaKeyBinds;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.GalacticMapWidget;
+import com.gtnewhorizons.galaxia.client.render.elevator.RenderElevatorCable;
+import com.gtnewhorizons.galaxia.client.render.elevator.RenderElevatorDock;
+import com.gtnewhorizons.galaxia.client.render.gear.PlayerGearRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryItemRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryPlacementPreviewHandler;
 import com.gtnewhorizons.galaxia.client.render.rockets.GantryRenderer;
@@ -16,13 +24,16 @@ import com.gtnewhorizons.galaxia.client.render.rockets.RocketSchematicItemRender
 import com.gtnewhorizons.galaxia.client.render.rockets.RocketTrophyRenderer;
 import com.gtnewhorizons.galaxia.client.render.rockets.SiloRenderer;
 import com.gtnewhorizons.galaxia.client.render.sky.GalaxiaSkyBootstrap;
-import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.nei.GalaxiaMultiblockHandler;
 import com.gtnewhorizons.galaxia.core.nei.IMCForNEI;
 import com.gtnewhorizons.galaxia.handlers.GalaxiaOverlayHandler;
 import com.gtnewhorizons.galaxia.handlers.KeyHandler;
 import com.gtnewhorizons.galaxia.handlers.SkyUpdateHandler;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
+import com.gtnewhorizons.galaxia.registry.block.special.BlockElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorCable;
+import com.gtnewhorizons.galaxia.registry.block.special.TileElevatorDock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileEntityAirlock;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -34,7 +45,9 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntityR
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.TileEntitySilo;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.TileEntityGantry;
 
+import codechicken.nei.VisiblityData;
 import codechicken.nei.api.API;
+import codechicken.nei.api.INEIGuiAdapter;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -47,9 +60,12 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
-        ConfigMain.RegisterGalaxiaConfig();
         ForgeBusRegister(new ItemKineticTether.ClientEventHandler());
+        FMLBusRegister(new CelestialClient.EventHandler());
         FMLBusRegister(new KeyHandler());
+        AndroidClient androidClient = new AndroidClient();
+        ForgeBusRegister(androidClient);
+        FMLBusRegister(androidClient);
     }
 
     @Override
@@ -65,6 +81,7 @@ public class ClientProxy extends CommonProxy {
         // Handlers
         ForgeBusRegister(new GalaxiaOverlayHandler());
         ForgeBusRegister(new GantryPlacementPreviewHandler());
+        ForgeBusRegister(new PlayerGearRenderer());
         FMLBusRegister(new SkyUpdateHandler());
 
         // Keys
@@ -74,9 +91,15 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySilo.class, new SiloRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityRocketTrophy.class, new RocketTrophyRenderer());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGantry.class, new GantryRenderer());
+        RenderElevatorCable cableRenderer = new RenderElevatorCable();
+        BlockElevatorCable.renderID = RenderingRegistry.getNextAvailableRenderId();
+        RenderingRegistry.registerBlockHandler(cableRenderer);
+        ClientRegistry.bindTileEntitySpecialRenderer(TileElevatorCable.class, cableRenderer);
+        ClientRegistry.bindTileEntitySpecialRenderer(TileElevatorDock.class, new RenderElevatorDock());
 
         // Entities
         RenderingRegistry.registerEntityRenderingHandler(EntityRocket.class, new RocketRenderer());
+        RenderingRegistry.registerEntityRenderingHandler(EntityBody.class, new AndroidClient.BodyRenderer());
 
         // Items
         MinecraftForgeClient
@@ -103,6 +126,23 @@ public class ClientProxy extends CommonProxy {
         GalaxiaMultiblockHandler handler = new GalaxiaMultiblockHandler();
         API.registerRecipeHandler(handler);
         API.registerUsageHandler(handler);
+        API.registerNEIGuiHandler(new INEIGuiAdapter() {
+
+            @Override
+            public VisiblityData modifyVisiblity(GuiContainer gui, VisiblityData visibility) {
+                if (gui instanceof IMuiScreen modular) {
+                    var screen = modular.getScreen();
+                    if (screen.getPanelManager()
+                        .getOpenPanels()
+                        .stream()
+                        .anyMatch(panel -> GalacticMapWidget.SCREEN_NAME.equals(panel.getName()))
+                        || Galaxia.MODID.equals(screen.getOwner())
+                            && (!visibility.showWidgets || !visibility.showItemSection || !visibility.showItemPanel))
+                        visibility.showNEI = false;
+                }
+                return visibility;
+            }
+        });
     }
 
     @Override

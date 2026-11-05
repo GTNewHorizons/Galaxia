@@ -16,6 +16,9 @@ public class BlockRocketTrophy extends BlockContainer {
 
     public BlockRocketTrophy() {
         super(Material.iron);
+        setHardness(2.0F);
+        setResistance(10.0F);
+        setHarvestLevel("pickaxe", 0);
         setBlockTextureName("diamond_block");
     }
 

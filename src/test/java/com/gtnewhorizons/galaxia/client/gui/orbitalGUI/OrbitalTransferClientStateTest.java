@@ -82,30 +82,37 @@ final class OrbitalTransferClientStateTest {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
         InterplanetaryTransferSystem.OrbitalTransferSupport support = new InterplanetaryTransferSystem.OrbitalTransferSupport();
-        CelestialObject source = GalaxiaCelestialAPI.get(CelestialObjectId.EGORA)
-            .orElseThrow();
-        CelestialObject destination = GalaxiaCelestialAPI.get(CelestialObjectId.OVERWORLD)
-            .orElseThrow();
-        CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
         double departureTime = 8850.0;
-        double hohmannTof = star.getHohmannTof(source, destination, root, departureTime);
 
-        for (int i = 0; i < 64; i++) {
-            double tof = hohmannTof * (0.1 + (3.0 - 0.1) * i / 63.0);
-            double expectedDepartureAngularMomentum = cheapestDepartureAngularMomentum(
-                root,
-                star,
-                source,
-                destination,
-                departureTime,
-                tof);
-            if (!Double.isFinite(expectedDepartureAngularMomentum) || expectedDepartureAngularMomentum >= 0.0) continue;
+        for (CelestialObject source : GalaxiaCelestialAPI.getAllBodies()
+            .values()) {
+            CelestialObject star = GalaxiaCelestialAPI.findStar(root, source);
+            if (star == null) continue;
+            for (CelestialObject destination : GalaxiaCelestialAPI.getAllBodies()
+                .values()) {
+                if (source.key() == destination.key()) continue;
+                if (GalaxiaCelestialAPI.findStar(root, destination) != star) continue;
+                double hohmannTof = star.getHohmannTof(source, destination, root, departureTime);
 
-            InterplanetaryTransferJob rendered = support
-                .createTransferJob(root, source, destination, "Package", "Cargo", departureTime, tof);
-            assertNotNull(rendered);
-            assertTrue(initialPathAngularMomentum(rendered) < 0.0);
-            return;
+                for (int i = 0; i < 64; i++) {
+                    double tof = hohmannTof * (0.1 + (3.0 - 0.1) * i / 63.0);
+                    double expectedDepartureAngularMomentum = cheapestDepartureAngularMomentum(
+                        root,
+                        star,
+                        source,
+                        destination,
+                        departureTime,
+                        tof);
+                    if (!Double.isFinite(expectedDepartureAngularMomentum) || expectedDepartureAngularMomentum >= 0.0)
+                        continue;
+
+                    InterplanetaryTransferJob rendered = support
+                        .createTransferJob(root, source, destination, "Package", "Cargo", departureTime, tof);
+                    assertNotNull(rendered);
+                    assertTrue(initialPathAngularMomentum(rendered) < 0.0);
+                    return;
+                }
+            }
         }
 
         fail("Expected at least one fixed-time default transfer where the cheapest Lambert branch is retrograde");
@@ -129,7 +136,7 @@ final class OrbitalTransferClientStateTest {
     void lambertStressReportAcceptsFirstValidTransferCandidate() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
         CelestialObject root = GalaxiaCelestialAPI.getPrimaryRoot();
-        CelestialObject star = GalaxiaCelestialAPI.get(CelestialObjectId.VAEL)
+        CelestialObject star = GalaxiaCelestialAPI.get(CelestialObjectId.SOL)
             .orElseThrow();
 
         InterplanetaryTransferSystem.LambertStressReport report = InterplanetaryTransferSystem
@@ -270,23 +277,8 @@ final class OrbitalTransferClientStateTest {
         return new InterplanetaryTransferSystem.OrbitalTransferRenderer.Callbacks() {
 
             @Override
-            public float worldToScreenX(double worldX) {
-                return (float) worldX;
-            }
-
-            @Override
-            public float worldToScreenY(double worldY) {
-                return (float) worldY;
-            }
-
-            @Override
             public double[] getWorldPosition(CelestialObject body) {
                 return null;
-            }
-
-            @Override
-            public double getServerOrbitalTime() {
-                return 0.0;
             }
 
             @Override
@@ -301,7 +293,7 @@ final class OrbitalTransferClientStateTest {
 
     private static CelestialObject star(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.STAR)
             .build();
@@ -309,7 +301,7 @@ final class OrbitalTransferClientStateTest {
 
     private static CelestialObject planet(CelestialObjectId id, String name) {
         return CelestialObject.builder()
-            .id(id)
+            .key(id)
             .name(name)
             .objectClass(CelestialObject.Class.PLANET)
             .build();

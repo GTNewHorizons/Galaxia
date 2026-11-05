@@ -54,7 +54,7 @@ public class WorldGenAsteroid extends WorldGenerator {
         if (random.nextInt(rarity) > 0) return false;
 
         // Calculate relevant size values
-        int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
+        int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize + 1) : 0);
         int diameter = size + 4;
         int halfDiameter = diameter / 2;
 
@@ -218,9 +218,9 @@ public class WorldGenAsteroid extends WorldGenerator {
         int cz = z >> 4;
         if (!world.getChunkProvider()
             .chunkExists(cx, cz)) {
-            ChunkProviderGalaxiaPlanet provider = ChunkProviderGalaxiaPlanet.of(world);
+            GalaxiaPlanetGenerator provider = GalaxiaPlanetGenerator.of(world);
             if (provider != null) {
-                provider.queueDeferredWrite(cx, cz, x & 15, y, z & 15, block, meta);
+                provider.queueDeferredWrite(x, y, z, block, meta);
             }
             return;
         }

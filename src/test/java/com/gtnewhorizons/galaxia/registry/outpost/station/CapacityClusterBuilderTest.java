@@ -1,7 +1,7 @@
 package com.gtnewhorizons.galaxia.registry.outpost.station;
 
+import static com.gtnewhorizons.galaxia.registry.outpost.FacilityTestFixtures.addModule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,16 +11,19 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
+import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
+import com.gtnewhorizons.galaxia.registry.interfaces.Buildable;
 import com.gtnewhorizons.galaxia.registry.interfaces.IModuleComponent;
+import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
-import com.gtnewhorizons.galaxia.registry.outpost.module.IParallelModule;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleTier;
 import com.gtnewhorizons.galaxia.testing.GalaxiaTestBootstrap;
 
 final class CapacityClusterBuilderTest {
 
-    private static final long HV_STORAGE_BASE = 1024L; // From ModuleStorage.baseCapacityForTier(HV)
+    private static final long HV_STORAGE_BASE = 1024L;
 
     @BeforeAll
     static void init() {
@@ -234,13 +237,22 @@ final class CapacityClusterBuilderTest {
     }
 
     @Test
-    void maintenanceBayDoesNotImplementIParallelModule() {
-        ModuleInstance bay = FacilityModuleKind.MAINTENANCE_BAY
-            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.NONE);
-        IModuleComponent comp = bay.component();
-        assertFalse(
-            comp instanceof IParallelModule,
-            "MaintenanceBay must not implement IParallelModule — it has no parallel mechanic");
+    void batteryClustersIncreaseFacilityEnergyCapacity() {
+        AutomatedFacility facility = new AutomatedFacility(
+            CelestialAsset.ID.create(),
+            CelestialObjectId.MARS,
+            CelestialAsset.Kind.AUTOMATED_OUTPOST,
+            Buildable.Status.OPERATIONAL);
+        ModuleInstance battery = FacilityModuleKind.BATTERY
+            .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
+        battery.completeConstruction();
+        addModule(facility, battery);
+        facility.stationLayout()
+            .place(battery);
+
+        assertEquals(AutomatedFacility.BASE_ENERGY_CAPACITY + 100_000L, facility.energyCapacity());
+        facility.setEnergyStored(Long.MAX_VALUE);
+        assertEquals(facility.energyCapacity(), facility.getEnergyStored());
     }
 
     @Test
@@ -250,7 +262,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.EV);
         layout.place(hammer);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(hammer));
         assertTrue(
             cache.getCapacityClusters(FacilityModuleKind.HAMMER)
                 .isEmpty(),
@@ -264,7 +276,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(5, 5), ModuleShape.SINGLE, ModuleTier.NONE);
         layout.place(bay);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(bay));
         Set<StationTileCoord> coverage = cache.getMaintenanceCoverage();
         assertEquals(8, coverage.size(), "Enabled bay should cover 8 surrounding tiles");
         assertTrue(coverage.contains(StationTileCoord.of(6, 5))); // E
@@ -272,7 +284,7 @@ final class CapacityClusterBuilderTest {
 
         // Disable bay, coverage should shrink
         bay.setEnabled(false);
-        cache.applyMutation(MutationKind.SET_ENABLED, FacilityModuleKind.MAINTENANCE_BAY);
+        cache.invalidate();
         assertTrue(
             cache.getMaintenanceCoverage()
                 .isEmpty(),
@@ -294,7 +306,7 @@ final class CapacityClusterBuilderTest {
         layout.place(s2);
         layout.place(t1);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(s1, s2, t1));
         List<CapacityCluster> storageClusters = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         List<CapacityCluster> tankClusters = cache.getCapacityClusters(FacilityModuleKind.TANK);
 
@@ -319,7 +331,7 @@ final class CapacityClusterBuilderTest {
             .create(StationTileCoord.of(1, 0), ModuleShape.SINGLE, ModuleTier.HV);
         layout.place(storage);
 
-        LayoutCacheBundle cache = new LayoutCacheBundle(layout);
+        LayoutCacheBundle cache = new LayoutCacheBundle(layout, List.of(storage));
         List<CapacityCluster> first = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         List<CapacityCluster> second = cache.getCapacityClusters(FacilityModuleKind.STORAGE);
         // Same reference — cache was not rebuilt

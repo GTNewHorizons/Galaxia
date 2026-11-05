@@ -13,6 +13,8 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketB
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartInstance;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 
+import lombok.Getter;
+
 /**
  * Immutable snapshot of a rocket build order created from a design blueprint.
  * Tracks delivery state per part. The parts list is sorted once at creation and
@@ -20,6 +22,7 @@ import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketP
  */
 public class RocketBuildOrder {
 
+    @Getter
     private final List<RocketPartInstance> parts;
     private final BitSet delivered;
 
@@ -27,7 +30,6 @@ public class RocketBuildOrder {
     public RocketBuildOrder(RocketBlueprint design) {
         this.parts = design.getParts()
             .stream()
-            .map(RocketPartInstance::copy)
             .sorted(
                 Comparator.comparingInt(RocketPartInstance::y)
                     .thenComparingInt(RocketPartInstance::x))
@@ -91,16 +93,10 @@ public class RocketBuildOrder {
         RocketBlueprint bp = new RocketBlueprint();
         for (int i = 0; i < parts.size(); i++) {
             if (delivered.get(i)) {
-                bp.addPart(
-                    parts.get(i)
-                        .copy());
+                bp.addPartUnchecked(parts.get(i));
             }
         }
         return bp;
-    }
-
-    public List<RocketPartInstance> getParts() {
-        return parts;
     }
 
     public NBTTagCompound serializeNBT() {

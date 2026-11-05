@@ -1,0 +1,3 @@
+capture module-picker-default
+move-widget 0/4/7
+capture module-hovered
