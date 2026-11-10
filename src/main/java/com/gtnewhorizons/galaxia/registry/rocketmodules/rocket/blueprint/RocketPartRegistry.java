@@ -1,61 +1,73 @@
 package com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.FuelTankFrame;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuel;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.fuel.RocketFuels;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.CapsulePartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.DecouplerPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.EnginePartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FuelTankPartDef;
-import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.FunctionalPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.IRocketPartDef;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.LanderPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.ModuleRecipe;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RiderPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.RocketPartDef;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.modules.StoragePartDef;
 
 /**
  * Registers rocket modules and their properties from {@link IRocketPartDef} implementations.
+ * <p>
+ * Engines and fuel tanks are generated from {@link RocketFuels} and {@link FuelTankFrame}, so new fuels and frames
+ * should be added there rather than here
  */
 public class RocketPartRegistry {
 
     private static final RocketPartRegistry INSTANCE = new RocketPartRegistry();
-    private final Map<Integer, IRocketPartDef> parts = new HashMap<>();
-    private final Map<RocketPartCategory, List<IRocketPartDef>> categoryMap = new HashMap<>();
 
-    public static CapsulePartDef CAPSULE_T1;
-    public static FuelTankPartDef FUEL_TANK_T1;
-    public static EnginePartDef ENGINE_T1;
-    public static DecouplerPartDef DECOUPLER_T1;
-    public static LanderPartDef LANDER_T1;
-    public static RiderPartDef RIDER_T1;
-    public static FunctionalPartDef STORAGE_T1;
+    private final List<IRocketPartDef> parts = new ArrayList<>();
+    private final Map<String, IRocketPartDef> byKey = new HashMap<>();
+    private final Map<RocketPartCategory, List<IRocketPartDef>> categoryMap = new EnumMap<>(RocketPartCategory.class);
+
+    public static CapsulePartDef CAPSULE;
+    public static DecouplerPartDef DECOUPLER;
+    public static LanderPartDef LANDER;
+    public static RiderPartDef RIDER;
+    public static StoragePartDef STORAGE;
 
     public static RocketPartRegistry instance() {
         return INSTANCE;
     }
 
-    public void register(IRocketPartDef def, RocketPartCategory cat) {
-        parts.put(def.id(), def);
-        categoryMap.computeIfAbsent(cat, k -> new ArrayList<>())
+    public <T extends RocketPartDef> T register(T def) {
+        if (byKey.containsKey(def.key())) throw new IllegalStateException("Duplicate rocket part " + def.key());
+        def.assignId(parts.size());
+        parts.add(def);
+        byKey.put(def.key(), def);
+        categoryMap.computeIfAbsent(def.category(), k -> new ArrayList<>())
             .add(def);
+        return def;
     }
 
     public IRocketPartDef get(int id) {
-        return parts.get(id);
+        return id >= 0 && id < parts.size() ? parts.get(id) : null;
     }
 
-    public IRocketPartDef getByName(String name) {
-        for (IRocketPartDef def : parts.values()) {
-            if (def.name()
-                .equals(name)) return def;
-        }
-        return null;
+    public IRocketPartDef getByKey(String key) {
+        return key == null ? null : byKey.get(key);
     }
 
     public <T extends IRocketPartDef> List<T> getByClass(Class<T> clazz) {
         List<T> result = new ArrayList<>();
-        for (IRocketPartDef def : parts.values()) {
+        for (IRocketPartDef def : parts) {
             if (clazz.isInstance(def)) {
                 result.add(clazz.cast(def));
             }
@@ -68,31 +80,64 @@ public class RocketPartRegistry {
     }
 
     public List<IRocketPartDef> getAll() {
-        return new ArrayList<>(parts.values());
+        return new ArrayList<>(parts);
+    }
+
+    /**
+     * Finds the tank module for a frame filled with a fuel
+     *
+     * @param frame The tank frame
+     * @param fuel  The fuel of the core
+     *
+     * @return The module, or null if the frame cannot hold that fuel
+     */
+    public FuelTankPartDef getFuelTank(FuelTankFrame frame, RocketFuel fuel) {
+        IRocketPartDef def = getByKey(FuelTankPartDef.keyOf(frame, fuel));
+        return def instanceof FuelTankPartDef tank ? tank : null;
+    }
+
+    /** All fuels a frame can hold, in registration order */
+    public List<RocketFuel> getFuelsFor(FuelTankFrame frame) {
+        List<RocketFuel> result = new ArrayList<>();
+        for (RocketFuel fuel : RocketFuels.all()) {
+            if (frame.canHold(fuel)) result.add(fuel);
+        }
+        return result;
     }
 
     public void registerAll() {
-        int id = 0;
+        if (!parts.isEmpty()) return;
 
-        CAPSULE_T1 = new CapsulePartDef(id++, "Basic Capsule", 3, 3, 450, "capsule_1");
-        register(CAPSULE_T1, RocketPartCategory.CAPSULES);
+        // spotless:off
+        CAPSULE = register(new CapsulePartDef("capsule", 3, 3, 450, "capsule_1"));
+        CAPSULE.withRecipe(ModuleRecipe.builder()
+            .ore("plateSteel", 24).ore("paneGlass", 4).ore("circuitBasic", 4).duration(400).build());
 
-        FUEL_TANK_T1 = new FuelTankPartDef(id++, "Basic Fuel Tank", 3, 5, 1200, 8000.0, "fuel_tank_1");
-        register(FUEL_TANK_T1, RocketPartCategory.FUEL_TANKS);
+        for (RocketFuel fuel : RocketFuels.all()) {
+            register(new EnginePartDef(fuel));
+        }
 
-        ENGINE_T1 = new EnginePartDef(id++, "Basic Engine", 3, 4, 250, 6000.0, "engine_1");
-        register(ENGINE_T1, RocketPartCategory.LIQUID_ENGINES);
+        for (FuelTankFrame frame : FuelTankFrame.values()) {
+            for (RocketFuel fuel : getFuelsFor(frame)) {
+                register(new FuelTankPartDef(frame, fuel));
+            }
+        }
 
-        DECOUPLER_T1 = new DecouplerPartDef(id++, "Basic Decoupler", 3, 1, 100, 1, "decoupler_1");
-        register(DECOUPLER_T1, RocketPartCategory.DECOUPLERS);
+        DECOUPLER = register(new DecouplerPartDef("decoupler", 3, 1, 100, "decoupler_1"));
+        DECOUPLER.withRecipe(ModuleRecipe.builder()
+            .ore("plateSteel", 8).ore("screwSteel", 8).duration(120).build());
 
-        LANDER_T1 = new LanderPartDef(id++, "Basic Lander", 3, 3, 250, null);
-        register(LANDER_T1, RocketPartCategory.CABINS);
+        LANDER = register(new LanderPartDef("lander", 3, 3, 250, null));
+        LANDER.withRecipe(ModuleRecipe.builder()
+            .ore("plateAluminium", 16).ore("circuitGood", 2).duration(300).build());
 
-        RIDER_T1 = new RiderPartDef(id++, "Basic Rider", 3, 5, 250, 6, null);
-        register(RIDER_T1, RocketPartCategory.CABINS);
+        RIDER = register(new RiderPartDef("rider", 3, 5, 250, 6, null));
+        RIDER.withRecipe(ModuleRecipe.builder()
+            .ore("plateSteel", 20).ore("plateRubber", 6).duration(300).build());
 
-        STORAGE_T1 = new FunctionalPartDef(id++, "Basic Storage", 3, 4, 900, "storage_unit_1");
-        register(STORAGE_T1, RocketPartCategory.STRUCTURAL);
+        STORAGE = register(new StoragePartDef("storage", 3, 4, 900, 27, "storage_unit_1"));
+        STORAGE.withRecipe(ModuleRecipe.builder()
+            .ore("plateSteel", 16).item(new ItemStack(Blocks.chest), 2).duration(200).build());
+        // spotless:on
     }
 }

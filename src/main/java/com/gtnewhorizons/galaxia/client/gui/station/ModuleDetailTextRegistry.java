@@ -9,8 +9,11 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.api.GalaxiaAPI;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.feature.FeatureContribution;
@@ -23,7 +26,6 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 
 final class ModuleDetailTextRegistry {
 
-    private static final int SECTION_GAP = 4;
     private static final String FEATURE_LINE_PREFIX = "  ";
     private static final String FEATURE_EFFECT_PREFIX = "    ";
 
@@ -31,20 +33,11 @@ final class ModuleDetailTextRegistry {
 
     static Lines collect(Context context) {
         Lines lines = new Lines();
-        appendBaseModuleText(context, lines);
         appendCapacityText(context, lines);
         appendMaintenanceText(context, lines);
         appendPlanetaryFeatureText(context, lines);
         appendRecipeText(context, lines);
         return lines;
-    }
-
-    private static void appendBaseModuleText(Context context, Lines lines) {
-        lines.line(
-            "Module: " + context.module()
-                .kind()
-                .name(),
-            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     private static void appendCapacityText(Context context, Lines lines) {
@@ -54,8 +47,15 @@ final class ModuleDetailTextRegistry {
         long baseCapacity = module.baseCapacity();
         int neighborCount = StationLayout.countOrthogonalNeighbors(context.layout(), module.anchor(), module.kind());
         long effectiveCapacity = Math.round(baseCapacity * (1.0 + 0.5 * neighborCount));
-        lines.sectionLine("Base: " + baseCapacity, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
-        lines.line("Capacity: " + effectiveCapacity, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        lines.sectionLine(
+            effectiveCapacity == baseCapacity
+                ? net.minecraft.util.StatCollector
+                    .translateToLocalFormatted("galaxia.gui.station.detail.capacity", effectiveCapacity)
+                : net.minecraft.util.StatCollector.translateToLocalFormatted(
+                    "galaxia.gui.station.detail.capacity_bonus",
+                    effectiveCapacity,
+                    baseCapacity),
+            EnumColors.MAP_COLOR_TEXT_BODY.getColor());
     }
 
     private static void appendMaintenanceText(Context context, Lines lines) {
@@ -67,7 +67,9 @@ final class ModuleDetailTextRegistry {
                 context.module()
                     .anchor())) {
             if (!coverage.contains(coord)) continue;
-            lines.sectionLine("Maintenance Bay: -20% upkeep", EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
+            lines.sectionLine(
+                StatCollector.translateToLocal("galaxia.gui.station.detail.maintenance"),
+                EnumColors.MAP_COLOR_TEXT_WARNING.getColor());
             return;
         }
     }
@@ -106,7 +108,9 @@ final class ModuleDetailTextRegistry {
         keys.addAll(contributionsByFeature.keySet());
         if (keys.isEmpty()) return;
 
-        lines.sectionLine("Features:", EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lines.sectionLine(
+            StatCollector.translateToLocal("galaxia.gui.station.detail.features"),
+            EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
         for (PlanetaryFeatureKey key : keys) {
             List<FeatureContribution> featureContributions = contributionsByFeature.getOrDefault(key, List.of());
             int covered = coveredFeatures.getOrDefault(
@@ -123,10 +127,16 @@ final class ModuleDetailTextRegistry {
                     contribution -> !contribution.effectLine()
                         .isBlank());
 
-            lines.line(
-                FEATURE_LINE_PREFIX + featureDisplayName(
-                    key) + " " + covered + "/" + total + (hasEffect ? "" : " (no current effect)"),
-                hasEffect ? EnumColors.MAP_COLOR_TEXT_SECTION.getColor() : EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
+            lines
+                .line(
+                    FEATURE_LINE_PREFIX + StatCollector.translateToLocalFormatted(
+                        hasEffect ? "galaxia.gui.station.detail.feature"
+                            : "galaxia.gui.station.detail.feature_no_effect",
+                        featureDisplayName(key),
+                        covered,
+                        total),
+                    hasEffect ? EnumColors.MAP_COLOR_TEXT_SECTION.getColor()
+                        : EnumColors.MAP_COLOR_TEXT_MUTED.getColor());
             for (FeatureContribution contribution : featureContributions) {
                 if (contribution.effectLine()
                     .isBlank()) continue;
@@ -149,7 +159,9 @@ final class ModuleDetailTextRegistry {
             .recipeBook(context.module())
             .recipes()
             .size();
-        lines.sectionLine("Recipes: " + slots, EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
+        lines.sectionLine(
+            StatCollector.translateToLocalFormatted("galaxia.gui.station.detail.recipes", slots),
+            EnumColors.MAP_COLOR_TEXT_SECTION.getColor());
     }
 
     record Context(AutomatedFacility facility, StationLayout layout, ModuleInstance module,
@@ -169,17 +181,15 @@ final class ModuleDetailTextRegistry {
             line(text, color);
         }
 
-        int draw(int x, int y) {
-            int lineY = y;
+        /** The lines in order, a section gap as a blank line */
+        List<GalaxiaUi.Line> lines() {
+            List<GalaxiaUi.Line> lines = new ArrayList<>(entries.size());
             for (Entry entry : entries) {
-                if (entry == SectionGap.INSTANCE) {
-                    lineY += SECTION_GAP;
-                    continue;
-                }
-                TextEntry text = (TextEntry) entry;
-                lineY = ModuleConfigModalSupport.drawLine(text.text(), x, lineY, text.color());
+                lines.add(
+                    entry instanceof TextEntry text ? new GalaxiaUi.Line(text.text(), text.color())
+                        : new GalaxiaUi.Line("", 0));
             }
-            return lineY;
+            return lines;
         }
 
         private void section() {

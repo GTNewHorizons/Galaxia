@@ -33,8 +33,9 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
 
     @Override
     public boolean handleRenderType(ItemStack stack, ItemRenderType type) {
+        // Held in third person it shows its icon, like a map
         return switch (type) {
-            case FIRST_PERSON_MAP, EQUIPPED, EQUIPPED_FIRST_PERSON -> true;
+            case FIRST_PERSON_MAP -> true;
             case ENTITY -> RenderItem.renderInFrame;
             default -> false;
         };
@@ -48,45 +49,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
     @Override
     public void renderItem(ItemRenderType type, ItemStack stack, Object... data) {
         switch (type) {
-            case FIRST_PERSON_MAP:
-            case EQUIPPED_FIRST_PERSON:
+            // The game already holds a 128 by 128 sheet in both hands, as for a map
+            case FIRST_PERSON_MAP -> renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+            case ENTITY -> {
                 GL11.glPushMatrix();
-                GL11.glRotatef(90F, 0F, 1F, 0F);
-                GL11.glRotatef(180F, 0F, 0F, 1F);
-                GL11.glTranslatef(-1.60F, -1.4F, 0.7F);
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
+                renderSchematicInFrame(stack, RenderManager.instance);
                 GL11.glPopMatrix();
-                break;
-
-            case EQUIPPED:
-                GL11.glPushMatrix();
-                GL11.glRotatef(180F, 0F, 0F, 1F);
-                GL11.glTranslatef(-1.60F, -1.0F, 0.0F);
-                GL11.glScalef(0.01F, 0.01F, 0.01F);
-                renderSchematic(stack, Minecraft.getMinecraft().renderEngine);
-                GL11.glPopMatrix();
-                break;
-
-            case ENTITY:
-                if (RenderItem.renderInFrame) {
-                    GL11.glPushMatrix();
-                    renderSchematicInFrame(stack, RenderManager.instance);
-                    GL11.glPopMatrix();
-                }
-                break;
+            }
+            default -> {}
         }
     }
 
     private void renderSchematic(ItemStack stack, TextureManager textureManager) {
-        RocketBlueprint blueprint = ItemRocketSchematic.getBlueprint(stack);
-        if (blueprint == null || blueprint.isEmpty()) {
-            return;
-        }
-
-        RocketAssembly assembly = RocketAnalyzer.analyze(blueprint);
-        List<RocketPartInstance> parts = blueprint.getParts();
-
         GL11.glPushMatrix();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 
@@ -95,8 +69,18 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(1f, 1f, 1f, 1f);
 
-        // Draw background
+        // The blank sheet, also all an empty blueprint shows
         drawQuad(textureManager, SCHEMATIC_BASE, -7f, 128f + 14f, -0.01f);
+
+        RocketBlueprint blueprint = ItemRocketSchematic.getBlueprint(stack);
+        if (blueprint == null || blueprint.isEmpty()) {
+            GL11.glPopAttrib();
+            GL11.glPopMatrix();
+            return;
+        }
+
+        RocketAssembly assembly = RocketAnalyzer.analyze(blueprint);
+        List<RocketPartInstance> parts = blueprint.getParts();
 
         // Center and rotate
         GL11.glTranslatef(64f, 64f, 0f);
@@ -131,10 +115,6 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
         if (pixelsPerCell < 1) pixelsPerCell = 1;
 
         for (RocketPartInstance part : parts) {
-            ResourceLocation tex = part.def()
-                .spriteLocation();
-            if (tex == null) tex = MISSING_TEXTURE;
-
             float x = PADDING + (usable - totalWidth * pixelsPerCell) / 2f + (part.x() - minX) * pixelsPerCell;
             float y = PADDING + (usable - totalHeight * pixelsPerCell) / 2f + (part.y() - minY) * pixelsPerCell;
             float w = part.def()
@@ -142,7 +122,16 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             float h = part.def()
                 .height() * pixelsPerCell;
 
-            drawQuad(textureManager, tex, x, y, w, h, -0.02f);
+            if (part.def()
+                .modelLocation() != null) {
+                // GUI depth points at the viewer, on the sheet it points away, and the drawing lies flat on the paper
+                GL11.glPushMatrix();
+                GL11.glScalef(1f, 1f, -0.01f);
+                ModuleModelRenderer.drawInGui(part.def(), x, y, w, h, 1f);
+                GL11.glPopMatrix();
+            } else {
+                drawQuad(textureManager, MISSING_TEXTURE, x, y, w, h, -0.02f);
+            }
         }
 
         GL11.glPopAttrib();
@@ -189,11 +178,14 @@ public class RocketSchematicItemRenderer implements IItemRenderer {
             StatCollector
                 .translateToLocalFormatted("galaxia.item.schematic.label.thrust", (int) assembly.getTotalThrust()) };
 
+        // Text and its shadow lie in one plane, written to depth they would fight over every pixel
+        GL11.glDepthMask(false);
         float offsetY = 16f;
         for (String line : lines) {
             GL11.glTranslatef(0f, offsetY, 0f);
             fr.drawStringWithShadow(line, 0, 0, 0xFFFFFFFF);
         }
+        GL11.glDepthMask(true);
         GL11.glPopMatrix();
     }
 }

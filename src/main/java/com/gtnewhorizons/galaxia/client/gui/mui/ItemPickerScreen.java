@@ -1,25 +1,27 @@
 package com.gtnewhorizons.galaxia.client.gui.mui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.SimpleGuiFactory;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 
 /**
@@ -43,6 +45,10 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
     }
 
     public static final SimpleGuiFactory FACTORY = new SimpleGuiFactory("galaxia_item_picker", ItemPickerScreen::new);
+
+    private static final int WIDTH = 160;
+    private static final int HEIGHT = 64;
+    private static final int PADDING = 6;
 
     /** Set on the client when the user places an item in the slot; consumed by its opening UI. */
     private static volatile ItemStack pendingPick = null;
@@ -152,7 +158,8 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
                 if (hasPendingPicker()) cancelPendingPick();
                 super.onClose();
             }
-        }.size(176, 96);
+        }.size(WIDTH, HEIGHT)
+            .background(EnumTextures.GUI_PANEL.getImage());
 
         ItemStackHandler handler = new ItemStackHandler(1);
         ModularSlot slot = new ModularSlot(handler, 0).changeListener((stack, onlyAmountChanged, client, init) -> {
@@ -167,55 +174,36 @@ public final class ItemPickerScreen implements IGuiHolder<GuiData> {
         });
 
         panel.child(
-            IKey.str("Pick item")
-                .asWidget()
-                .pos(8, 8)
-                .size(100, 12));
-        panel.child(
-            IKey.str("Drag item from NEI")
-                .asWidget()
-                .pos(8, 24)
-                .size(160, 12));
-        panel.child(
-            IKey.str("into the ghost slot")
-                .asWidget()
-                .pos(8, 38)
-                .size(160, 12));
-        panel.child(
-            new PhantomItemSlot().slot(slot)
-                .pos(78, 56)
-                .size(20, 20));
-        panel.child(
-            cancelButton().pos(116, 8)
-                .size(52, 18));
+            Flow.column()
+                .sizeRel(1f)
+                .padding(PADDING)
+                .childPadding(GalaxiaUi.GAP * 2)
+                .crossAxisAlignment(Alignment.CrossAxis.START)
+                .child(
+                    Flow.row()
+                        .widthRel(1f)
+                        .height(GalaxiaUi.BUTTON_H)
+                        .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                        .crossAxisAlignment(Alignment.CrossAxis.CENTER)
+                        .child(GalaxiaGuiStyle.title("galaxia.gui.item_picker.title"))
+                        .child(cancelButton()))
+                .child(GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.item_picker.hint")))
+                .child(
+                    new PhantomItemSlot().slot(slot)
+                        .background(EnumTextures.GUI_SLOT.getImage())
+                        .alignX(0.5f)));
 
         return panel;
     }
 
     private static ButtonWidget<?> cancelButton() {
-        return new ButtonWidget<>()
-            .background(
-                (ctx, x, y, w, h, theme) -> Gui
-                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor()))
-            .hoverBackground(
-                (ctx, x, y, w, h, theme) -> Gui
-                    .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor()))
-            .overlay((ctx, x, y, w, h, theme) -> {
-                FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-                String text = "Cancel";
-                int textW = fr.getStringWidth(text);
-                fr.drawStringWithShadow(
-                    text,
-                    x + (w - textW) / 2,
-                    y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                    EnumColors.MAP_COLOR_TEXT_BTN_ENABLED.getColor());
-            })
-            .onMousePressed(mouseButton -> {
-                if (mouseButton != 0) return false;
-                Minecraft.getMinecraft()
-                    .displayGuiScreen(cancelPendingPick());
-                return true;
-            })
-            .tooltipDynamic(t -> t.addLine("Return without picking an item"));
+        return GalaxiaUi
+            .button(
+                StatCollector.translateToLocal("galaxia.gui.common.cancel"),
+                () -> {
+                    Minecraft.getMinecraft()
+                        .displayGuiScreen(cancelPendingPick());
+                })
+            .tooltip(t -> t.addLine(StatCollector.translateToLocal("galaxia.gui.item_picker.cancel")));
     }
 }

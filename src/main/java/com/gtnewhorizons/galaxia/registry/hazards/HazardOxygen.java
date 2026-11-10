@@ -4,11 +4,14 @@ import static com.gtnewhorizons.galaxia.api.GalaxiaAPI.*;
 
 import java.util.Optional;
 
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 
 import com.gtnewhorizons.galaxia.core.GalaxiaPlayerProperties;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
 import com.gtnewhorizons.galaxia.registry.celestial.station.TileStation;
 import com.gtnewhorizons.galaxia.registry.dimension.builder.EffectBuilder;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
@@ -23,13 +26,15 @@ public class HazardOxygen implements IEnvironmentalHazard {
      * Applies the effects of low oxygen to the player
      *
      * @param def     The EffectDef of the dimension
-     * @param player  The player entity
+     * @param body    The body entity
      * @param station
      * @return warning
      */
     @Override
-    public HazardWarnings apply(EffectBuilder def, EntityPlayer player, Optional<TileStation> station) {
-        final int oxygenPercent = def.getOxygenPercent(player.worldObj);
+    public HazardWarnings apply(EffectBuilder def, EntityLivingBase body, Optional<TileStation> station) {
+        if (AndroidControl.isAndroid(body) || !(body instanceof EntityPlayer || body instanceof EntityBody))
+            return HazardWarnings.FINE;
+        final int oxygenPercent = def.getOxygenPercent(body.worldObj);
         if (oxygenPercent >= 100) return HazardWarnings.FINE;
 
         if (station.filter(TileStation::isOxygenated)
@@ -37,15 +42,18 @@ public class HazardOxygen implements IEnvironmentalHazard {
             return HazardWarnings.FINE;
         }
 
-        final boolean hasMask = hasOxygenmask(player);
-        final boolean hasOxygenToDrain = hasMask && checkOxygenAndDrain(player, oxygenPercent);
-        GalaxiaPlayerProperties playerProperties = GalaxiaPlayerProperties.get(player);
-
-        final float oxygenLevel = getPlayerOxygenLevel(player);
+        final boolean hasMask = hasOxygenmask(body);
+        final boolean hasOxygenToDrain = hasMask && checkOxygenAndDrain(body, oxygenPercent);
+        int lowOxygenDuration = body instanceof EntityPlayer player
+            ? GalaxiaPlayerProperties.get(player).lowOxygenDuration
+            : ((EntityBody) body).lowOxygenDuration();
+        final float oxygenLevel = getPlayerOxygenLevel(body);
         if (oxygenLevel > 0.1 && hasOxygenToDrain) {
-            playerProperties.lowOxygenDuration = 0;
+            setLowOxygenDuration(body, 0);
             return HazardWarnings.FINE;
-        } else playerProperties.lowOxygenDuration++;
+        }
+        lowOxygenDuration++;
+        setLowOxygenDuration(body, lowOxygenDuration);
 
         int harshness = -1;
 
@@ -62,14 +70,20 @@ public class HazardOxygen implements IEnvironmentalHazard {
         }
 
         if (harshness >= 0) {
-            player.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, harshness));
+            body.addPotionEffect(new PotionEffect(GalaxiaEffects.lowOxygen.getId(), BASE_EFFECT_DURATION, harshness));
         }
 
         if (hasOxygenToDrain) return HazardWarnings.LOW_OXYGEN;
         // Apply damage if no tank could be drained (tank is empty or no tanks
         // available)
         // damage scaled linearly so it can't be bypassed long-term by most of armors
-        player.attackEntityFrom(noOxygenDamage, playerProperties.lowOxygenDuration * 2);
+        body.attackEntityFrom(noOxygenDamage, lowOxygenDuration * 2);
         return HazardWarnings.NO_OXYGEN;
     }
+
+    private static void setLowOxygenDuration(EntityLivingBase body, int duration) {
+        if (body instanceof EntityPlayer player) GalaxiaPlayerProperties.get(player).lowOxygenDuration = duration;
+        else((EntityBody) body).setLowOxygenDuration(duration);
+    }
+
 }

@@ -63,12 +63,12 @@ public final class PacketUtil {
         buf.writeLong(uuid.getLeastSignificantBits());
     }
 
-    static void writeId(ByteBuf buf, UUID uuid) {
+    public static void writeId(ByteBuf buf, UUID uuid) {
         buf.writeLong(uuid.getMostSignificantBits());
         buf.writeLong(uuid.getLeastSignificantBits());
     }
 
-    static UUID readId(ByteBuf buf) {
+    public static UUID readId(ByteBuf buf) {
         long mostSig = buf.readLong();
         long leastSig = buf.readLong();
         return new UUID(mostSig, leastSig);
@@ -138,7 +138,7 @@ public final class PacketUtil {
      * Wire format is a compact mirror of the typed key model: a variant flag plus
      * only the fields needed for that variant.
      */
-    static void writeCelestialObjectKey(ByteBuf buf, CelestialObjectKey key) {
+    public static void writeCelestialObjectKey(ByteBuf buf, CelestialObjectKey key) {
         Objects.requireNonNull(key, "key");
         buf.writeBoolean(key.isRegistered());
         if (key.isRegistered()) {
@@ -154,7 +154,7 @@ public final class PacketUtil {
                 .index());
     }
 
-    static CelestialObjectKey readCelestialObjectKey(ByteBuf buf) {
+    public static CelestialObjectKey readCelestialObjectKey(ByteBuf buf) {
         boolean registered = buf.readBoolean();
         if (registered) {
             return CelestialObjectKey.registered(readEnum(buf, CelestialObjectId.class));

@@ -14,24 +14,31 @@ import static com.gtnewhorizons.galaxia.registry.items.baubles.ItemWitherProtect
 import java.util.List;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.ForgeChunkManager;
 
 import com.gtnewhorizon.gtnhlib.teams.TeamDataRegistry;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
-import com.gtnewhorizons.galaxia.client.gui.TeamPermissionScreen;
 import com.gtnewhorizons.galaxia.client.gui.mui.ItemPickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.ModulePickerScreen;
-import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
+import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.OffscreenStarmapGui;
 import com.gtnewhorizons.galaxia.compat.GTCompat;
+import com.gtnewhorizons.galaxia.compat.ae2.QuantumLinkRules;
+import com.gtnewhorizons.galaxia.compat.gt.GalaxiaCasingTextures;
 import com.gtnewhorizons.galaxia.compat.gt.GalaxiaGTAttachmentRegistration;
 import com.gtnewhorizons.galaxia.compat.teams.GalaxiaTeamData;
+import com.gtnewhorizons.galaxia.core.config.ConfigMain;
 import com.gtnewhorizons.galaxia.core.network.ServerTickTaskQueue;
 import com.gtnewhorizons.galaxia.core.persistence.FacilityPersistenceManager;
+import com.gtnewhorizons.galaxia.gt5.AndroidRecipes;
 import com.gtnewhorizons.galaxia.handlers.CelestialEventHandler;
 import com.gtnewhorizons.galaxia.handlers.DimensionEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
 import com.gtnewhorizons.galaxia.handlers.TetherEventHandler;
+import com.gtnewhorizons.galaxia.registry.android.AndroidControl;
+import com.gtnewhorizons.galaxia.registry.android.EntityBody;
+import com.gtnewhorizons.galaxia.registry.android.TileEntityBodyStation;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.block.PlanetBlocks;
+import com.gtnewhorizons.galaxia.registry.block.special.TileStationItemVault;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialServerRuntime;
@@ -39,6 +46,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.GalaxiaAtmosphereFluids;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerTarget;
+import com.gtnewhorizons.galaxia.registry.celestial.station.gui.StationGuiFactory;
 import com.gtnewhorizons.galaxia.registry.dimension.CelestialDimensionMaterializer;
 import com.gtnewhorizons.galaxia.registry.effects.GalaxiaEffects;
 import com.gtnewhorizons.galaxia.registry.items.GalaxiaItemList;
@@ -47,6 +55,8 @@ import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.blueprint.RocketPartRegistry;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocket;
 import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.entities.EntityRocketSeat;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.rocket.flight.RocketFlights;
+import com.gtnewhorizons.galaxia.registry.rocketmodules.tileentities.gantry.GantryJumpHandler;
 
 import baubles.api.expanded.BaubleExpandedSlots;
 import cpw.mods.fml.common.Loader;
@@ -62,15 +72,27 @@ public class CommonProxy {
     // etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
+        // Dimension ids come from the config, so it is read before anything is registered, on servers too
+        ConfigMain.RegisterGalaxiaConfig();
+        StationGuiFactory.init();
         CelestialServerRuntime celestialRuntime = CelestialServerRuntime.create();
         TeamEventHandler teamEventHandler = new TeamEventHandler(celestialRuntime);
+        AndroidControl androidControl = new AndroidControl();
+        ForgeChunkManager.setForcedChunkLoadingCallback(Galaxia.instance, androidControl);
+        FMLBusRegister(androidControl);
+        ForgeBusRegister(androidControl);
         GalaxiaAtmosphereFluids.init();
         CelestialDimensionMaterializer.registerPlayableDimensions();
 
         // FML bus registering
-        FMLBusRegister(new DimensionEventHandler());
+        DimensionEventHandler dimensionEffects = new DimensionEventHandler();
+        FMLBusRegister(dimensionEffects);
+        ForgeBusRegister(dimensionEffects);
         FMLBusRegister(new CelestialEventHandler(celestialRuntime));
         FMLBusRegister(new ServerTickTaskQueue());
+        FMLBusRegister(new RocketFlights());
+        // Quantum bridges are checked again now and then, after relays come or go
+        if (Loader.isModLoaded("appliedenergistics2")) FMLBusRegister(new QuantumLinkRules.Ticker());
         FMLBusRegister(new TetherEventHandler());
         FMLBusRegister(teamEventHandler);
 
@@ -78,6 +100,7 @@ public class CommonProxy {
         ForgeBusRegister(new FacilityPersistenceManager(celestialRuntime));
         ForgeBusRegister(teamEventHandler);
         ForgeBusRegister(new GalaxiaPlayerProperties.PlayerEventHandler());
+        ForgeBusRegister(new GantryJumpHandler());
 
         // GTNH Teams custom data
         TeamDataRegistry.register(GalaxiaTeamData.ID, GalaxiaTeamData::new);
@@ -104,14 +127,14 @@ public class CommonProxy {
         NetworkManager.registerPackets();
         EntityRegistry.registerModEntity(EntityRocket.class, "RocketEntity", 0, Galaxia.instance, 64, 1, false);
         EntityRegistry.registerModEntity(EntityRocketSeat.class, "RocketSeat", 1, Galaxia.instance, 64, 1, false);
+        EntityRegistry.registerModEntity(EntityBody.class, "PhysicalBody", 2, Galaxia.instance, 64, 2, true);
 
         registerAttachments();
 
         // Why Gui code on server? idk ask mui2
         ItemPickerScreen.FACTORY.init();
-        ModulePickerScreen.FACTORY.init();
-        StationManagementScreen.FACTORY.init();
-        TeamPermissionScreen.FACTORY.init();
+        OffscreenStarmapGui.FACTORY.init();
+        TileEntityBodyStation.registerGuiFactory();
     }
 
     // postInit "Handle interaction with other mods, complete your setup based on
@@ -126,6 +149,7 @@ public class CommonProxy {
         Galaxia.rcsSlot = BaubleExpandedSlots.getIndexesOfAssignedSlotsOfType(BAUBLE_TYPE_REACTION_CONTROL_SYSTEM);
         CelestialRegistry.freezeAndBake();
         validateGtCelestialOrePools();
+        if (isGregTech5UnofficialNewHorizonsLoaded()) AndroidRecipes.init();
     }
 
     // register server commands in this event handler (Remove if not needed)
@@ -134,10 +158,12 @@ public class CommonProxy {
     private void registerAttachments() {
         if (isGregTech5UnofficialNewHorizonsLoaded()) {
             GalaxiaGTAttachmentRegistration.init();
+            GalaxiaCasingTextures.register();
         }
 
         StationAttachmentRegistry.register(TileHammerTarget.class, TileHammerTarget.HANDLER);
         StationAttachmentRegistry.register(TileHammerCannon.class, TileHammerCannon.HANDLER);
+        StationAttachmentRegistry.register(TileStationItemVault.class, TileStationItemVault.HANDLER);
     }
 
     private void validateGtCelestialOrePools() {

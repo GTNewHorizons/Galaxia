@@ -1,33 +1,33 @@
 package com.gtnewhorizons.galaxia.compat.teams;
 
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import net.minecraftforge.common.util.Constants.NBT;
 
 import com.gtnewhorizon.gtnhlib.teams.INetworkTeamData;
 import com.gtnewhorizon.gtnhlib.teams.ITeamData;
 import com.gtnewhorizon.gtnhlib.teams.Team;
 import com.gtnewhorizon.gtnhlib.teams.TeamDataTransferReason;
-import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.handlers.TeamEventHandler;
-
-import lombok.Getter;
 
 public class GalaxiaTeamData implements INetworkTeamData {
 
     public static final String ID = "GALAXIA";
 
-    @Getter
-    private int teamColor = EnumColors.MAP_COLOR_TEAM_ACCENT.getColor();
-
     private final EnumMap<TeamAction, TeamRole> permissions = new EnumMap<>(TeamAction.class);
+    private final Set<UUID> mergedTeamIds = new HashSet<>();
 
     @Override
     public void writeToNBT(NBTTagCompound tag) {
-        tag.setInteger("teamColor", teamColor);
-
         int size = permissions.size();
         int[] actionOrdinals = new int[size];
         int[] roleOrdinals = new int[size];
@@ -41,14 +41,19 @@ public class GalaxiaTeamData implements INetworkTeamData {
         }
         tag.setIntArray("permActions", actionOrdinals);
         tag.setIntArray("permRoles", roleOrdinals);
+        NBTTagList merged = new NBTTagList();
+        mergedTeamIds.stream()
+            .sorted()
+            .forEach(id -> merged.appendTag(new NBTTagString(id.toString())));
+        tag.setTag("mergedTeamIds", merged);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {
-        teamColor = tag.hasKey("teamColor") ? tag.getInteger("teamColor")
-            : EnumColors.MAP_COLOR_MODAL_HEADER.getColor();
-
         permissions.clear();
+        mergedTeamIds.clear();
+        NBTTagList merged = tag.getTagList("mergedTeamIds", NBT.TAG_STRING);
+        for (int i = 0; i < merged.tagCount(); i++) mergedTeamIds.add(UUID.fromString(merged.getStringTagAt(i)));
         if (tag.hasKey("permActions")) {
             int[] actions = tag.getIntArray("permActions");
             int[] roles = tag.getIntArray("permRoles");
@@ -65,8 +70,9 @@ public class GalaxiaTeamData implements INetworkTeamData {
 
     @Override
     public void mergeData(Team consumed, Team surviving, ITeamData oldTeamData) {
+        mergedTeamIds.add(consumed.getTeamId());
         if (oldTeamData instanceof GalaxiaTeamData other) {
-            this.teamColor = other.teamColor;
+            mergedTeamIds.addAll(other.mergedTeamIds);
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -80,7 +86,6 @@ public class GalaxiaTeamData implements INetworkTeamData {
     public void transferData(Team prevTeam, Team newTeam, UUID playerId, ITeamData prevTeamData,
         TeamDataTransferReason reason) {
         if (prevTeamData instanceof GalaxiaTeamData other) {
-            this.teamColor = other.teamColor;
             this.permissions.clear();
             this.permissions.putAll(other.permissions);
 
@@ -93,8 +98,8 @@ public class GalaxiaTeamData implements INetworkTeamData {
     @Override
     public void markSyncedToClient() {}
 
-    public void setTeamColor(int color) {
-        this.teamColor = color;
+    public boolean hasMergedTeamId(@Nonnull UUID teamId) {
+        return mergedTeamIds.contains(teamId);
     }
 
     public TeamRole getRequiredRole(TeamAction action) {

@@ -16,6 +16,7 @@ import org.lwjgl.input.Mouse;
 
 import com.cleanroommc.modularui.api.widget.IGuiAction;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -23,6 +24,7 @@ import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ConnectionLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.ModuleLayerRenderer;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
@@ -169,6 +171,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         super.onInit();
         if (listenersRegistered) return;
         listenersRegistered = true;
+        tooltipPos(RichTooltip.Pos.NEXT_TO_MOUSE).tooltipAutoUpdate(true)
+            .tooltipDynamic(this::hoverTooltip);
         listenGuiAction((IGuiAction.MousePressed) button -> {
             if (button != 0) return false;
             if (isInputBlocked()) {
@@ -177,8 +181,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             }
             AutomatedFacility facility = resolveFacility();
             if (facility == null) return false;
-            pressMouseX = toLocalMouseX(getContext().getMouseX());
-            pressMouseY = toLocalMouseY(getContext().getMouseY());
+            pressMouseX = localMouseX();
+            pressMouseY = localMouseY();
             pressInMapContent = mapFrame().contains(pressMouseX, pressMouseY);
             if (!pressInMapContent) return false;
             pressedTile = hitTest(facility.stationLayout(), pressMouseX, pressMouseY);
@@ -213,10 +217,7 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             if (facility == null) return false;
             StationLayout layout = facility.stationLayout();
             if (layout == null) return false;
-            StationTileCoord hit = hitTest(
-                layout,
-                toLocalMouseX(getContext().getMouseX()),
-                toLocalMouseY(getContext().getMouseY()));
+            StationTileCoord hit = hitTest(layout, localMouseX(), localMouseY());
             if (hit == null || !hit.equals(pressedTile)) return false;
             if (isPickerActive()) {
                 tilePickerController.toggleNormalized(normalizePickerTarget(hit));
@@ -295,10 +296,14 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
         StationMapOverlayPainter.drawMaintenanceBayCoverage(sel, tiles, frame);
 
-        int localMouseX = toLocalMouseX(getContext().getMouseX());
-        int localMouseY = toLocalMouseY(getContext().getMouseY());
-        StationMapOverlayPainter.drawFeatureTooltip(facility, localMouseX, localMouseY, frame);
-        StationMapOverlayPainter.drawModuleAlertTooltip(tiles, moduleAlerts, hovered, localMouseX, localMouseY, frame);
+    }
+
+    private void hoverTooltip(RichTooltip tooltip) {
+        AutomatedFacility facility = resolveFacility();
+        StationLayout layout = facility == null ? null : facility.stationLayout();
+        if (layout == null) return;
+        StationMapOverlayPainter
+            .hoverTooltip(tooltip, facility, layout.snapshot(), hovered, localMouseX(), localMouseY(), mapFrame());
     }
 
     private void updateHover(StationLayout layout) {
@@ -306,8 +311,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
             hovered = null;
             return;
         }
-        int localX = toLocalMouseX(getContext().getMouseX());
-        int localY = toLocalMouseY(getContext().getMouseY());
+        int localX = localMouseX();
+        int localY = localMouseY();
         hovered = hitTest(layout, localX, localY);
     }
 
@@ -440,8 +445,8 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
 
     private void updateManualDragging() {
         if (!pressInMapContent || !Mouse.isButtonDown(0)) return;
-        int localX = toLocalMouseX(getContext().getMouseX());
-        int localY = toLocalMouseY(getContext().getMouseY());
+        int localX = localMouseX();
+        int localY = localMouseY();
         if (!dragging) {
             if (Math.abs(localX - pressMouseX) <= CLICK_DRAG_THRESHOLD
                 && Math.abs(localY - pressMouseY) <= CLICK_DRAG_THRESHOLD) return;
@@ -566,16 +571,18 @@ public final class StationMapWidget extends ParentWidget<StationMapWidget> imple
         candidates.add(StationTileCoord.of(dx, dy));
     }
 
-    private int toLocalMouseX(int mouseX) {
-        return mouseX - getArea().rx;
+    // The map listens to screen-wide mouse actions, so the mouse is taken from the screen through every scale and
+    // scroll between it and the screen
+    private int localMouseX() {
+        return GalaxiaUi.toLocal(this, getContext().getAbsMouseX(), getContext().getAbsMouseY())[0];
     }
 
-    private int toLocalMouseY(int mouseY) {
-        return mouseY - getArea().ry;
+    private int localMouseY() {
+        return GalaxiaUi.toLocal(this, getContext().getAbsMouseX(), getContext().getAbsMouseY())[1];
     }
 
     private boolean isInputBlocked() {
-        return inputBlocked.test(getContext().getMouseX(), getContext().getMouseY());
+        return inputBlocked.test(getContext().getAbsMouseX(), getContext().getAbsMouseY());
     }
 
     private boolean isPickerActive() {

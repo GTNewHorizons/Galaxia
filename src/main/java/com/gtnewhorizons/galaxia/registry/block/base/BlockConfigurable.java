@@ -29,6 +29,10 @@ public class BlockConfigurable extends Block {
 
         setBlockName(registryName);
         setStepSound(soundTypeStone);
+        // Stone-like by default, override with the fluent setters below
+        setHardness(1.5F);
+        setResistance(10.0F);
+        setHarvestLevel(harvestTool, harvestLevel);
     }
 
     public BlockConfigurable harvest(String tool, int level) {

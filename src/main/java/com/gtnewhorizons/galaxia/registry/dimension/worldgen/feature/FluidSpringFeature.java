@@ -49,7 +49,7 @@ public class FluidSpringFeature implements UndergroundFeature {
 
             if (air != 1) continue;
 
-            world.setBlock(wx, wy, wz, fluid, 0, 2);
+            generator.setBlockSafe(wx, wy, wz, fluid, 0);
             return;
         }
     }

@@ -1,5 +1,6 @@
 package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
@@ -10,6 +11,7 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
@@ -17,6 +19,8 @@ import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
+import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.asteroid.AsteroidStarmapProjection;
@@ -27,6 +31,21 @@ import com.gtnewhorizons.galaxia.registry.satellite.Satellite;
 import com.gtnewhorizons.galaxia.registry.satellite.SatelliteKind;
 
 public class OrbitalScene {
+
+    /** Plate with the name of the shown layer at the top of the map */
+    static final int TITLE_PLATE_HEIGHT = 16;
+    static final int TITLE_PLATE_TOP = 8;
+    static final int TITLE_PLATE_PADDING = 8;
+
+    /** Title of the shown layer: the galaxy, or a star's system */
+    static String viewTitle(CelestialObject viewRoot) {
+        if (viewRoot == null) return null;
+        if (viewRoot.objectClass() == CelestialObject.Class.GALAXY) return viewRoot.displayName();
+        if (viewRoot.objectClass() == CelestialObject.Class.STAR) {
+            return StatCollector.translateToLocalFormatted("galaxia.gui.orbital.system_title", viewRoot.displayName());
+        }
+        return null;
+    }
 
     private static final double[] ZERO_VIEW_ORIGIN = { 0.0, 0.0 };
 
@@ -274,6 +293,10 @@ public class OrbitalScene {
 
         boolean contains(int localMouseX, int localMouseY) {
             return localMouseX >= x && localMouseX <= x + size && localMouseY >= y && localMouseY <= y + size;
+        }
+
+        Rectangle rectangle() {
+            return new Rectangle(x, y, size, size);
         }
     }
 
@@ -812,33 +835,19 @@ public class OrbitalScene {
         }
 
         void drawViewTitleBanner(CelestialObject viewRoot, int widgetWidth) {
-            if (viewRoot == null) return;
-            String title = viewRoot.objectClass() == CelestialObject.Class.GALAXY ? viewRoot.displayName()
-                : viewRoot.objectClass() == CelestialObject.Class.STAR ? viewRoot.displayName() + " System" : null;
+            String title = viewTitle(viewRoot);
             if (title == null) return;
             Minecraft mc = Minecraft.getMinecraft();
             int textWidth = mc.fontRenderer.getStringWidth(title);
-            float centerX = widgetWidth / 2f;
-            int top = GALAXY_TITLE_TOP;
-            int bottom = top + GALAXY_TITLE_HEIGHT;
-            float bottomHalfWidth = Math.max(74f, textWidth / 2f + 28f);
-            float topHalfWidth = bottomHalfWidth + 8f;
-            drawFilledTrapezoid(
-                centerX,
-                top,
-                bottom,
-                topHalfWidth,
-                bottomHalfWidth,
-                EnumColors.MAP_COLOR_TITLE_BANNER_BG.getColor());
-            drawTrapezoidOutline(
-                centerX,
-                top,
-                bottom,
-                topHalfWidth,
-                bottomHalfWidth,
-                EnumColors.MAP_COLOR_TITLE_BANNER_BORDER.getColor(),
-                1.4f);
-            drawCenteredBannerString(title, centerX, top + 7, EnumColors.MAP_COLOR_TITLE_BANNER_TEXT.getColor());
+            int width = textWidth + TITLE_PLATE_PADDING * 2;
+            int left = Math.round(widgetWidth / 2f - width / 2f);
+            EnumTextures.GUI_PANEL.getImage()
+                .draw(left, TITLE_PLATE_TOP, width, TITLE_PLATE_HEIGHT);
+            mc.fontRenderer.drawStringWithShadow(
+                title,
+                left + TITLE_PLATE_PADDING,
+                TITLE_PLATE_TOP + 4,
+                GalaxiaGuiStyle.TEXT_TITLE);
         }
 
         void drawAssetIcon(CelestialAsset.Kind kind, int x, int y, int size, float alpha) {

@@ -13,7 +13,7 @@ final class RocketBlueprintTest {
 
     @Test
     void editingCopiedBlueprintPreservesOriginalDesign() {
-        var part = new RocketPartInstance(new StructuralPartDef(1, "frame", 1, 1, 1, null), 0, 0, 0, false);
+        var part = new RocketPartInstance(new StructuralPartDef("frame", 1, 1, 1, null), 0, 0, 0, false);
         RocketBlueprint original = new RocketBlueprint();
         original.setName("original");
         assertTrue(original.addPart(part));

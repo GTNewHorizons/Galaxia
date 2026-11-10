@@ -14,6 +14,7 @@ public class ConfigMain {
             ConfigurationManager.registerConfig(ConfigPlayer.class);
             ConfigurationManager.registerConfig(ConfigMachines.class);
             ConfigurationManager.registerConfig(ConfigStructures.class);
+            ConfigurationManager.registerConfig(ConfigDimensions.class);
         } catch (Exception ignored) {}
     }
 }

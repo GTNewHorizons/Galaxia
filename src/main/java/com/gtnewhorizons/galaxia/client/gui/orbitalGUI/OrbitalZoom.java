@@ -51,9 +51,12 @@ final class OrbitalZoom {
     }
 
     /** Frames {@code extent}, falling back to a default when the body has nothing around it to frame. */
-    static double overviewZoomForExtent(double extent, boolean isometric) {
+    static double overviewZoomForExtent(double extent, boolean isometric, int width, int height) {
         if (extent <= NEGLIGIBLE) return isometric ? DEFAULT_ISO_ZOOM : DEFAULT_ZOOM;
-        return zoomForWorldDistance(extent, isometric ? ISO_OVERVIEW_SCREEN_RADIUS : OVERVIEW_SCREEN_RADIUS);
+        double radius = Math.min(
+            isometric ? ISO_OVERVIEW_SCREEN_RADIUS : OVERVIEW_SCREEN_RADIUS,
+            viewportMinDimension(width, height) * 0.45);
+        return zoomForWorldDistance(extent, radius);
     }
 
     /** Galaxies and stars are shown flat; anything smaller gets the isometric overview. */

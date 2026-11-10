@@ -14,57 +14,35 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
+/** The team owner changing which role a team action needs */
 public final class TeamConfigPacket implements IMessage {
 
-    public static final byte TYPE_PERMISSION = 0;
-    public static final byte TYPE_COLOR = 1;
-
-    private byte type;
     private TeamAction action;
     private TeamRole role;
-    private int color;
 
     public TeamConfigPacket() {}
 
     public static TeamConfigPacket permission(TeamAction action, TeamRole role) {
         TeamConfigPacket pkt = new TeamConfigPacket();
-        pkt.type = TYPE_PERMISSION;
         pkt.action = action;
         pkt.role = role;
         return pkt;
     }
 
-    public static TeamConfigPacket color(int color) {
-        TeamConfigPacket pkt = new TeamConfigPacket();
-        pkt.type = TYPE_COLOR;
-        pkt.color = color;
-        return pkt;
-    }
-
     @Override
     public void toBytes(ByteBuf buf) {
-        buf.writeByte(type);
-        if (type == TYPE_PERMISSION) {
-            buf.writeByte(action.ordinal());
-            buf.writeByte(role.ordinal());
-        } else if (type == TYPE_COLOR) {
-            buf.writeInt(color);
-        }
+        buf.writeByte(action.ordinal());
+        buf.writeByte(role.ordinal());
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        type = buf.readByte();
-        if (type == TYPE_PERMISSION) {
-            TeamAction[] actions = TeamAction.values();
-            TeamRole[] roles = TeamRole.values();
-            int actionId = buf.readByte();
-            int roleId = buf.readByte();
-            action = actionId >= 0 && actionId < actions.length ? actions[actionId] : null;
-            role = roleId >= 0 && roleId < roles.length ? roles[roleId] : null;
-        } else if (type == TYPE_COLOR) {
-            color = buf.readInt();
-        }
+        TeamAction[] actions = TeamAction.values();
+        TeamRole[] roles = TeamRole.values();
+        int actionId = buf.readByte();
+        int roleId = buf.readByte();
+        action = actionId >= 0 && actionId < actions.length ? actions[actionId] : null;
+        role = roleId >= 0 && roleId < roles.length ? roles[roleId] : null;
     }
 
     public static class Handler implements IMessageHandler<TeamConfigPacket, IMessage> {
@@ -83,12 +61,8 @@ public final class TeamConfigPacket implements IMessage {
             GalaxiaTeamData data = (GalaxiaTeamData) team.getData(GalaxiaTeamData.ID);
             if (data == null) return null;
 
-            if (message.type == TYPE_PERMISSION) {
-                if (message.action == null || message.role == null) return null;
-                data.setRequiredRole(message.action, message.role);
-            } else if (message.type == TYPE_COLOR) {
-                data.setTeamColor(message.color);
-            }
+            if (message.action == null || message.role == null) return null;
+            data.setRequiredRole(message.action, message.role);
 
             TeamNetwork.syncTeamData(team, GalaxiaTeamData.ID);
             return null;

@@ -54,7 +54,7 @@ public class WorldGenAsteroid extends WorldGenerator {
         if (random.nextInt(rarity) > 0) return false;
 
         // Calculate relevant size values
-        int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize) : 0);
+        int size = minimumSize + (maximumSize > minimumSize ? random.nextInt(maximumSize - minimumSize + 1) : 0);
         int diameter = size + 4;
         int halfDiameter = diameter / 2;
 

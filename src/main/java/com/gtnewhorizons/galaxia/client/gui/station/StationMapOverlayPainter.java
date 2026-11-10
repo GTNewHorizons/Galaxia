@@ -9,12 +9,17 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.client.gui.station.layer.PlanetaryFeatureOverlayRenderer;
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
@@ -28,6 +33,7 @@ import com.gtnewhorizons.galaxia.registry.outpost.station.StationTileCoord;
 final class StationMapOverlayPainter {
 
     private static final int ALERT_ICON_SIZE = 8;
+    private static final int FEATURE_ICON_SIZE = 8;
     private static final ResourceLocation DEFAULT_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_WARNING.get();
     private static final ResourceLocation DEFAULT_RED_ALERT_ICON = EnumTextures.ICON_STATION_ALERT_ERROR.get();
 
@@ -157,81 +163,38 @@ final class StationMapOverlayPainter {
         StationCoreDirectionIndicator.draw(arrow);
     }
 
-    static void drawFeatureTooltip(AutomatedFacility facility, int localMouseX, int localMouseY,
-        StationMapFrame frame) {
+    /** The map's tooltip: the planetary features of the tile under the cursor, then the alert of its module */
+    static void hoverTooltip(RichTooltip tooltip, AutomatedFacility facility, Map<StationTileCoord, PlacedTile> tiles,
+        @Nullable StationTileCoord hovered, int localMouseX, int localMouseY, StationMapFrame frame) {
         StationMapFrame.TilePosition coord = frame.tilePositionAt(localMouseX, localMouseY);
-        if (coord == null) return;
-        List<PlanetaryFeatureDefinition> features = PlanetaryFeatureRegistry
-            .definitionsFor(facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
-        if (features.isEmpty()) return;
-
-        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int iconSize = 8;
-        int iconGap = 4;
-        int tooltipWidth = fr.getStringWidth("Features");
-        for (PlanetaryFeatureDefinition feature : features) {
-            tooltipWidth = Math.max(tooltipWidth, iconSize + iconGap + fr.getStringWidth(feature.displayName()));
+        List<PlanetaryFeatureDefinition> features = coord == null ? List.of()
+            : PlanetaryFeatureRegistry.definitionsFor(facility.planetaryFeaturesAt(coord.dx(), coord.dy()));
+        if (!features.isEmpty()) {
+            tooltip.addLine(StatCollector.translateToLocal("galaxia.gui.station.tooltip.features"));
+            for (PlanetaryFeatureDefinition feature : features) {
+                IDrawable icon = (context, x, y, width, height, theme) -> PlanetaryFeatureOverlayRenderer
+                    .drawIcon(feature, x, y, Math.min(width, height));
+                tooltip.add(
+                    icon.asIcon()
+                        .size(FEATURE_ICON_SIZE))
+                    .space()
+                    .addLine(
+                        IKey.str(feature.displayName())
+                            .style(EnumChatFormatting.GRAY));
+            }
         }
-        tooltipWidth += 12;
-        int tooltipHeight = 8 + (features.size() + 1) * (fr.FONT_HEIGHT + 2);
-        int tooltipX = Math.min(localMouseX + 10, frame.widgetWidth() - tooltipWidth - 2);
-        int tooltipY = Math.min(localMouseY + 10, frame.widgetHeight() - tooltipHeight - 2);
-        tooltipX = Math.max(2, tooltipX);
-        tooltipY = Math.max(2, tooltipY);
-        BorderedRect.draw(
-            tooltipX,
-            tooltipY,
-            tooltipWidth,
-            tooltipHeight,
-            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
-            EnumColors.MAP_COLOR_STATION_PANEL_BORDER.getColor());
-        int textY = tooltipY + 4;
-        fr.drawStringWithShadow("Features", tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_TITLE.getColor());
-        textY += fr.FONT_HEIGHT + 2;
-        for (PlanetaryFeatureDefinition feature : features) {
-            PlanetaryFeatureOverlayRenderer.drawIcon(feature, tooltipX + 6, textY, iconSize);
-            fr.drawStringWithShadow(
-                feature.displayName(),
-                tooltipX + 6 + iconSize + iconGap,
-                textY,
-                EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-            textY += fr.FONT_HEIGHT + 2;
-        }
-    }
-
-    static void drawModuleAlertTooltip(Map<StationTileCoord, PlacedTile> tiles,
-        Map<ModuleInstance.ID, StationModuleAlert> moduleAlerts, @Nullable StationTileCoord hovered, int localMouseX,
-        int localMouseY, StationMapFrame frame) {
-        if (moduleAlerts.isEmpty() || hovered == null) return;
-        PlacedTile tile = tiles.get(hovered);
-        ModuleInstance module = moduleOf(tile);
-        if (module == null) return;
-        StationModuleAlert alert = moduleAlerts.get(module.id);
+        ModuleInstance module = hovered == null ? null : moduleOf(tiles.get(hovered));
+        StationModuleAlert alert = module == null ? null
+            : StationModuleAlert.alerts(facility)
+                .get(module.id);
         if (alert == null) return;
-
-        FontRenderer fr = Minecraft.getMinecraft().fontRenderer;
-        int maxTextWidth = Math.max(40, Math.min(180, frame.widgetWidth() - 20));
-        String title = fr.trimStringToWidth(alert.title(), maxTextWidth);
-        String message = fr.trimStringToWidth(alert.message(), maxTextWidth);
-        int tooltipWidth = Math.max(40, Math.max(fr.getStringWidth(title), fr.getStringWidth(message))) + 12;
-        int tooltipHeight = 8 + fr.FONT_HEIGHT * 2 + 6;
-        int tooltipX = Math.min(localMouseX + 10, frame.widgetWidth() - tooltipWidth - 2);
-        int tooltipY = Math.min(localMouseY + 10, frame.widgetHeight() - tooltipHeight - 2);
-        tooltipX = Math.max(2, tooltipX);
-        tooltipY = Math.max(2, tooltipY);
-        boolean red = alert.severity() == StationModuleAlert.Severity.RED;
-        BorderedRect.draw(
-            tooltipX,
-            tooltipY,
-            tooltipWidth,
-            tooltipHeight,
-            EnumColors.MAP_COLOR_STATION_PANEL_BG.getColor(),
-            red ? EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_BLOCKING.getColor()
-                : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor());
-        int textY = tooltipY + 4;
-        fr.drawStringWithShadow(title, tooltipX + 6, textY, alertTitleColor(alert));
-        textY += fr.FONT_HEIGHT + 2;
-        fr.drawStringWithShadow(message, tooltipX + 6, textY, EnumColors.MAP_COLOR_TEXT_BODY.getColor());
+        tooltip.addLine(
+            IKey.str(StatCollector.translateToLocal(alert.title()))
+                .color(
+                    alert.severity() == StationModuleAlert.Severity.RED ? GalaxiaGuiStyle.BAD : GalaxiaGuiStyle.WARN))
+            .addLine(
+                IKey.str(StatCollector.translateToLocal(alert.message()))
+                    .style(EnumChatFormatting.GRAY));
     }
 
     static StationTileCoord alertBadgeCoord(ModuleInstance module) {
@@ -260,7 +223,20 @@ final class StationMapOverlayPainter {
 
     private static void drawModuleAlertIcon(int tileX, int tileY, StationModuleAlert alert) {
         ResourceLocation icon = alert.icon() != null ? alert.icon() : defaultAlertIcon(alert.severity());
-        ModuleConfigModalSupport.renderTextureIcon(icon, tileX + 2, tileY + 2, ALERT_ICON_SIZE, ALERT_ICON_SIZE);
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(icon);
+        com.cleanroommc.modularui.utils.GlStateManager.enableBlend();
+        org.lwjgl.opengl.GL11.glColor4f(1f, 1f, 1f, 1f);
+        com.cleanroommc.modularui.drawable.GuiDraw.drawTexture(
+            tileX + 2,
+            tileY + 2,
+            tileX + 2 + ALERT_ICON_SIZE,
+            tileY + 2 + ALERT_ICON_SIZE,
+            0f,
+            0f,
+            1f,
+            1f);
     }
 
     private static @Nullable ModuleInstance moduleOf(@Nullable PlacedTile tile) {
@@ -269,11 +245,6 @@ final class StationMapOverlayPainter {
 
     private static ResourceLocation defaultAlertIcon(StationModuleAlert.Severity severity) {
         return severity == StationModuleAlert.Severity.RED ? DEFAULT_RED_ALERT_ICON : DEFAULT_ALERT_ICON;
-    }
-
-    private static int alertTitleColor(StationModuleAlert alert) {
-        return alert.severity() == StationModuleAlert.Severity.RED ? EnumColors.MAP_COLOR_TEXT_DANGER.getColor()
-            : EnumColors.MAP_COLOR_RECIPE_BOUND_MARKER_WARNING.getColor();
     }
 
     record MaintenanceCoverageTarget(@Nullable ModuleInstance module, @Nullable StationTileCoord tile) {

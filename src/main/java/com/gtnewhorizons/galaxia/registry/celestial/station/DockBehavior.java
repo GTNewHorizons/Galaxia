@@ -5,13 +5,12 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.util.StatCollector;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.gtnewhorizon.structurelib.structure.IStructureDefinition;
 import com.gtnewhorizon.structurelib.structure.StructureUtility;
 import com.gtnewhorizons.galaxia.api.BlockPos;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.compat.GalaxiaStructureUtility;
 import com.gtnewhorizons.galaxia.compat.gt.StationHatchElement;
 import com.gtnewhorizons.galaxia.compat.structure.ArbitraryShapeDefinition;
@@ -19,7 +18,6 @@ import com.gtnewhorizons.galaxia.compat.structure.IExtendedStructureElement;
 import com.gtnewhorizons.galaxia.core.config.ConfigStructures;
 import com.gtnewhorizons.galaxia.registry.block.GalaxiaBlocksEnum;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.StationAttachmentRegistry;
-import com.gtnewhorizons.galaxia.registry.dimension.DimensionDef;
 import com.gtnewhorizons.galaxia.registry.interfaces.IStationBehaviorWithAttachments;
 
 import gregtech.api.GregTechAPI;
@@ -35,12 +33,11 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
     }
 
     @Override
-    public IStructureDefinition<TileStation> buildStructureDefinition(DimensionDef def) {
+    public IStructureDefinition<TileStation> buildStructureDefinition(List<Block> stationBlocks) {
         return ArbitraryShapeDefinition.<TileStation>builder()
             .addControllerBlock(GalaxiaBlocksEnum.STATION_CONTROLLER.get())
             .addElements(
-                def.validSpaceStationBlocks()
-                    .stream()
+                stationBlocks.stream()
                     .filter(b -> ALL_VALID_DOCK_BLOCKS.contains(b))
                     .map(b -> IExtendedStructureElement.extend(b, StructureUtility.ofBlock(b, 0))))
             .addElement(GalaxiaStructureUtility.<TileStation>ofTileAdderCheckHintsAnyMeta((dock, tileEntity) -> {
@@ -90,11 +87,15 @@ public class DockBehavior implements IStationBehaviorWithAttachments {
 
     @Override
     public List<Widget<?>> buildBehaviourWidgets(TileStation station, PanelSyncManager syncManager, int yOffset) {
-        return List.of(new TextWidget<>(IKey.dynamic(() -> {
-            int count = station.getAttachments()
-                .size();
-            String key = "galaxia.gui.station_controller.targets";
-            return StatCollector.translateToLocal(key) + ": " + count;
-        })).pos(10, yOffset));
+        return List.of(
+            GalaxiaGuiStyle
+                .label(
+                    () -> StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.station_controller.targets",
+                        station.getAttachments()
+                            .size()),
+                    () -> GalaxiaGuiStyle.TEXT,
+                    1f)
+                .pos(10, yOffset));
     }
 }

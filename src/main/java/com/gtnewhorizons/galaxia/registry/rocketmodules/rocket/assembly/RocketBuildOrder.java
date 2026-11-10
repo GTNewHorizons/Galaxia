@@ -93,7 +93,7 @@ public class RocketBuildOrder {
         RocketBlueprint bp = new RocketBlueprint();
         for (int i = 0; i < parts.size(); i++) {
             if (delivered.get(i)) {
-                bp.addPart(parts.get(i));
+                bp.addPartUnchecked(parts.get(i));
             }
         }
         return bp;

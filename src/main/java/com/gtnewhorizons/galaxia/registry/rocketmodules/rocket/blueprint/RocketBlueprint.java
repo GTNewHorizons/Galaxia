@@ -39,6 +39,15 @@ public class RocketBlueprint {
         return true;
     }
 
+    /**
+     * Adds a part without the overlap and adjacency checks, for blueprints rebuilt from parts that were already valid
+     *
+     * @param part The part to add
+     */
+    public void addPartUnchecked(RocketPartInstance part) {
+        parts.add(part);
+    }
+
     public void removePartAt(int x, int y, int z) {
         parts.removeIf(p -> p.x() == x && p.y() == y && p.z() == z);
     }

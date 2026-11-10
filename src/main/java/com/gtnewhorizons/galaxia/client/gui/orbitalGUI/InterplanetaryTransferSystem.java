@@ -6,26 +6,31 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiDraw;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.GlStateManager;
 import com.cleanroommc.modularui.value.DoubleValue;
-import com.cleanroommc.modularui.widget.ParentWidget;
+import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.SliderWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.EnumTextures;
+import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
+import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaWindow;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
+import com.gtnewhorizons.galaxia.client.gui.ui.WindowSpec;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalMechanics;
 import com.gtnewhorizons.galaxia.registry.orbital.OrbitalTransferPlanner;
@@ -44,7 +49,7 @@ enum TransferPackageKind {
     HAMMER;
 
     String displayName() {
-        return "Hammer Package";
+        return StatCollector.translateToLocal("galaxia.gui.orbital.transfer.package.hammer");
     }
 
     ResourceLocation texture() {
@@ -1074,7 +1079,10 @@ public final class InterplanetaryTransferSystem {
     // OrbitalTransferSimulatorWidget
     // -----------------------------------------------------------------------
 
-    public static final class OrbitalTransferSimulatorWidget extends ParentWidget<OrbitalTransferSimulatorWidget> {
+    /**
+     * Keeps the transfer planner window open while the simulator is, and rebuilds it when the simulator state changes
+     */
+    public static final class OrbitalTransferSimulatorWidget extends Widget<OrbitalTransferSimulatorWidget> {
 
         public interface Callbacks {
 
@@ -1091,33 +1099,26 @@ public final class InterplanetaryTransferSystem {
             void runLambertStressTest();
         }
 
-        private static final int PANEL_LEFT = 28;
-        private static final int PANEL_TOP = 80;
-        private static final int PANEL_WIDTH = 300;
-        private static final int PANEL_HEIGHT = 260;
-        private static final int CONTENT_X = 16;
-        private static final int PICK_BUTTON_WIDTH = 96;
-        private static final int PICK_BUTTON_HEIGHT = 20;
-        private static final int INPUT_FIELD_WIDTH = 80;
-        private static final int INPUT_FIELD_HEIGHT = 18;
+        public static final String WINDOW = "transfer.simulator";
+        private static final int LABEL_W = 64;
+        private static final int VALUE_W = 110;
+        private static final int SLIDER_W = 230;
+        private static final int SLIDER_GROOVE = 6;
 
         private final OrbitalTransferSimulatorState state;
         private final Callbacks callbacks;
         private final StarmapViewContext view;
-        private final TextFieldWidget maxDvField;
-        private int panelLeft = PANEL_LEFT;
-        private int panelTop = PANEL_TOP;
+        private TextFieldWidget maxDvField;
+        private String maxDvText;
         private int lastVersion = -1;
-
-        // Track the DoubleValue for the slider
+        private boolean closing;
         private DoubleValue sliderValue;
 
-        // Dynamic text widgets replaced with cached strings for IKey.dynamic
-        private String cachedDvLabel = "dV: --";
-        private String cachedTof = "Time of Flight: --";
-        private String cachedDepDv = "Departure dV: --";
-        private String cachedCapDv = "Capture dV: --";
-        private String cachedTotalDv = "Total dV: --";
+        private String cachedDvLabel = "";
+        private String cachedTof = "";
+        private String cachedDepDv = "";
+        private String cachedCapDv = "";
+        private String cachedTotalDv = "";
 
         private double lastSliderDv = -1;
         private double lastPreviewTof = -1;
@@ -1133,282 +1134,185 @@ public final class InterplanetaryTransferSystem {
             this.state = state;
             this.callbacks = callbacks;
             this.view = view;
-            this.maxDvField = createInputField("Max dV");
-            maxDvField.setText(String.valueOf(state.maxDv()));
+            this.maxDvText = String.valueOf(state.maxDv());
             this.sliderValue = new DoubleValue(state.sliderDv());
-            setEnabled(false);
             size(0, 0);
         }
 
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-
+        /** Whether a point of the map, in map coordinates, lies on the planner window */
         boolean isPointInPanel(int localX, int localY) {
-            return state.isOpen() && localX >= panelLeft
-                && localX <= panelLeft + PANEL_WIDTH
-                && localY >= panelTop
-                && localY <= panelTop + PANEL_HEIGHT;
+            if (!state.isOpen() || !isValid()) return false;
+            WindowLayer layer = WindowLayer.of(this);
+            GalaxiaWindow window = layer == null ? null : layer.get(WINDOW);
+            return window != null && window.getArea()
+                .isInside(localX + getArea().x, localY + getArea().y);
         }
 
         @Override
         public void onUpdate() {
             super.onUpdate();
+            WindowLayer layer = isValid() ? WindowLayer.of(this) : null;
+            if (layer == null) return;
             if (!state.isOpen()) {
-                if (isEnabled()) {
-                    removeAll();
-                    scheduleResize();
+                if (layer.isOpen(WINDOW)) {
+                    closing = true;
+                    layer.close(WINDOW);
+                    closing = false;
                 }
                 lastVersion = -1;
-                setEnabled(false);
-                size(0, 0);
                 return;
             }
-            setEnabled(true);
-            size(view.viewportWidth(), view.viewportHeight());
-            if (state.version() != lastVersion) {
-                rebuildChildren();
+            if (!layer.isOpen(WINDOW)) {
+                layer.open(
+                    WindowSpec.of(WINDOW, "galaxia.gui.orbital.transfer.title")
+                        .anchor((lw, lh, w, h) -> new int[] { 240, 80 })
+                        .onClose(() -> { if (!closing) callbacks.closeTransferSimulator(); })
+                        .body(this::fill));
                 lastVersion = state.version();
-                lastSliderDv = -1;
-                lastPreviewTof = -1;
+            } else if (state.version() != lastVersion) {
+                rebuild(layer);
             }
-            // Poll slider value for changes
             if (sliderValue != null) {
                 double newVal = sliderValue.getDoubleValue();
-                double oldVal = state.sliderDv();
-                if (Math.abs(newVal - oldVal) > 1e-9) {
+                if (Math.abs(newVal - state.sliderDv()) > 1e-9) {
                     state.setSliderDv(newVal);
                     callbacks.onPreviewNeeded();
                 }
             }
+            updateTexts();
+        }
 
-            // Update dynamic widgets without allocations
+        private void rebuild(WindowLayer layer) {
+            GalaxiaWindow window = layer.get(WINDOW);
+            if (window != null) window.rebuild();
+            lastVersion = state.version();
+            lastSliderDv = -1;
+            lastPreviewTof = -1;
+        }
+
+        private void updateTexts() {
             double currentSliderDv = state.sliderDv();
             if (Math.abs(currentSliderDv - lastSliderDv) > 1e-6) {
-                cachedDvLabel = "dV: " + formatFixed1(currentSliderDv);
+                cachedDvLabel = StatCollector
+                    .translateToLocalFormatted("galaxia.gui.orbital.transfer.dv", currentSliderDv);
                 lastSliderDv = currentSliderDv;
             }
-
             boolean hasPreview = state.hasPreview();
             if (hasPreview != lastHasPreview) {
                 lastHasPreview = hasPreview;
-                lastPreviewTof = -1; // force update
+                lastPreviewTof = -1;
             }
-
             double currentTimeScale = view.timeScale();
-
             if (hasPreview) {
                 if (Math.abs(state.previewTof() - lastPreviewTof) > 1e-6
                     || Math.abs(currentTimeScale - lastTimeScale) > 1e-6) {
-                    cachedTof = "Time of Flight: " + formatFixed1(state.previewTof() / Math.max(1e-6, currentTimeScale))
-                        + "s";
+                    cachedTof = StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.transfer.tof",
+                        state.previewTof() / Math.max(1e-6, currentTimeScale));
                     lastPreviewTof = state.previewTof();
                     lastTimeScale = currentTimeScale;
                 }
                 if (Math.abs(state.previewDvDep() - lastPreviewDvDep) > 1e-6) {
-                    cachedDepDv = "Departure dV: " + formatFixed1(state.previewDvDep());
+                    cachedDepDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.departure", state.previewDvDep());
                     lastPreviewDvDep = state.previewDvDep();
                 }
                 if (Math.abs(state.previewDvCap() - lastPreviewDvCap) > 1e-6) {
-                    cachedCapDv = "Capture dV: " + formatFixed1(state.previewDvCap());
+                    cachedCapDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.capture", state.previewDvCap());
                     lastPreviewDvCap = state.previewDvCap();
                 }
                 if (Math.abs(state.previewTotalDv() - lastPreviewTotalDv) > 1e-6) {
-                    cachedTotalDv = "Total dV: " + formatFixed1(state.previewTotalDv());
+                    cachedTotalDv = StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.total", state.previewTotalDv());
                     lastPreviewTotalDv = state.previewTotalDv();
                 }
-            } else {
-                if (lastPreviewTof != -2) {
-                    cachedTof = "Time of Flight: --";
-                    cachedDepDv = "Departure dV: --";
-                    cachedCapDv = "Capture dV: --";
-                    cachedTotalDv = "Total dV: --";
-                    lastPreviewTof = -2;
-                }
+            } else if (lastPreviewTof != -2) {
+                cachedTof = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.tof.unknown");
+                cachedDepDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.departure.unknown");
+                cachedCapDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.capture.unknown");
+                cachedTotalDv = StatCollector.translateToLocal("galaxia.gui.orbital.transfer.total.unknown");
+                lastPreviewTof = -2;
             }
         }
 
-        @Override
-        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-            if (!state.isOpen()) return;
-            super.drawBackground(context, widgetTheme);
-        }
-
-        private void rebuildChildren() {
+        private void fill(GalaxiaUi.Column column) {
             if (state.originBody() != null && state.destinationBody() != null) {
                 callbacks.onPreviewNeeded();
             }
+            if (maxDvField != null) maxDvText = maxDvField.getText();
             if (shownMaxDv != state.maxDv()) {
-                maxDvField.setText(String.valueOf(state.maxDv()));
+                maxDvText = String.valueOf(state.maxDv());
                 shownMaxDv = state.maxDv();
             }
-            String dvText = maxDvField.getText();
-            removeAll();
+            CelestialObject system = callbacks.getCurrentSystemBody();
+            column.add(infoRow("galaxia.gui.orbital.transfer.system", system == null ? null : system.displayName()));
+            column.add(
+                infoRow("galaxia.gui.orbital.transfer.origin", label(state.originBody()))
+                    .child(pickButton(TransferPickMode.ORIGIN)));
+            column.add(
+                infoRow("galaxia.gui.orbital.transfer.destination", label(state.destinationBody()))
+                    .child(pickButton(TransferPickMode.DESTINATION)));
+            column.rule();
 
-            panelLeft = PANEL_LEFT;
-            panelTop = PANEL_TOP;
-            ParentWidget<?> panel = new ParentWidget<>().pos(panelLeft, panelTop)
-                .size(PANEL_WIDTH, PANEL_HEIGHT);
+            maxDvField = GalaxiaUi.textField("", 64)
+                .setMaxLength(12)
+                .setFocusOnGuiOpen(false);
+            maxDvField.setText(maxDvText);
+            column.row(
+                GalaxiaUi.dim(StatCollector.translateToLocal("galaxia.gui.orbital.transfer.ship_dv"))
+                    .width(LABEL_W),
+                maxDvField,
+                GalaxiaUi.button(StatCollector.translateToLocal("galaxia.gui.orbital.transfer.set"), this::applyMaxDv),
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal(
+                        state.optimizationMode() == TransferOptimizationMode.MIN_DV
+                            ? "galaxia.gui.orbital.transfer.mode.min_dv"
+                            : "galaxia.gui.orbital.transfer.mode.min_tof"),
+                    this::toggleOptimizationMode));
 
-            // Background
-            PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
-                .widthRel(1f)
-                .heightRel(1f)
-                .background(
-
-                    (ctx, x, y, w, h, ignoredTheme) -> Gui
-                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_MODAL_BG.getColor()));
-            panel.child(backgroundLayer);
-            panel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
-
-            // Title
-            panel.child(
-                new TextWidget<>(IKey.str("Transfer Planner")).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 12));
-
-            // Close button
-            panel.child(
-                createButton(
-                    "X",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    callbacks::closeTransferSimulator).pos(PANEL_WIDTH - 30, 8)
-                        .size(20, 18));
-
-            // System row
-            panel.child(
-                createInfoRow(
-                    "System:",
-                    callbacks.getCurrentSystemBody() != null ? callbacks.getCurrentSystemBody()
-                        .displayName() : "None",
-                    36));
-
-            // Origin row with pick button
-            panel.child(createInfoRow("Origin:", formatBodyLabel(state.originBody(), "None"), 58));
-            panel.child(
-                createButton(
-                    state.pickMode() == TransferPickMode.ORIGIN ? "Picking..." : "Pick",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    () -> callbacks.beginTransferPick(TransferPickMode.ORIGIN)).pos(PANEL_WIDTH - 114, 54)
-                        .size(PICK_BUTTON_WIDTH, PICK_BUTTON_HEIGHT));
-
-            // Destination row with pick button
-            panel.child(createInfoRow("Destination:", formatBodyLabel(state.destinationBody(), "None"), 82));
-            panel.child(
-                createButton(
-                    state.pickMode() == TransferPickMode.DESTINATION ? "Picking..." : "Pick",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    () -> callbacks.beginTransferPick(TransferPickMode.DESTINATION)).pos(PANEL_WIDTH - 114, 78)
-                        .size(PICK_BUTTON_WIDTH, PICK_BUTTON_HEIGHT));
-
-            // Separator
-            panel.child(createSeparator(106));
-
-            // Ship dV row: label + field + Set button
-            panel.child(
-                new TextWidget<>(IKey.str("Ship dV:")).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 116));
-
-            // dV field background
-            panel.child(
-                new PassiveLayer().pos(80, 112)
-                    .size(INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT)
-                    .background((ctx, x, y, w, h, ignoredTheme) -> {
-                        BorderedRect.draw(
-                            x,
-                            y,
-                            w,
-                            h,
-                            EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                            EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor());
-                    }));
-
-            panel.child(
-                createButton(
-                    "Set",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    this::applyMaxDv).pos(168, 112)
-                        .size(36, 18));
-
-            panel.child(
-                createButton(
-                    formatOptimizationModeLabel(state.optimizationMode()),
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    this::toggleOptimizationMode).pos(210, 112)
-                        .size(74, 18));
-
-            // Slider row
             double maxDvVal = state.maxDv();
             sliderValue = new DoubleValue(Math.max(0.0, Math.min(maxDvVal, state.sliderDv())));
-            SliderWidget slider = new SliderWidget().value(sliderValue)
-                .bounds(0.0, maxDvVal)
-                .pos(CONTENT_X, 138)
-                .size(PANEL_WIDTH - CONTENT_X * 2, 14);
-            panel.child(slider);
+            column.add(
+                new SliderWidget().value(sliderValue)
+                    .bounds(0.0, maxDvVal)
+                    // The scrollbar's look laid on its side: a thin groove under a wider handle
+                    .background(
+                        (context, x, y, width, height, theme) -> EnumTextures.GUI_WELL.getImage()
+                            .draw(x, y + (height - SLIDER_GROOVE) / 2f, width, SLIDER_GROOVE))
+                    .sliderTexture(EnumTextures.GUI_SCROLLBAR_HANDLE.getImage())
+                    .sliderSize(12, 15)
+                    .size(SLIDER_W, 15));
+            column.add(GalaxiaUi.text(() -> cachedDvLabel));
+            column.rule();
+            column.add(GalaxiaUi.text(() -> cachedTof));
+            column.add(GalaxiaUi.text(() -> cachedDepDv));
+            column.add(GalaxiaUi.text(() -> cachedCapDv));
+            column.add(GalaxiaUi.text(() -> cachedTotalDv));
+            column.row(
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.transfer.stress"),
+                    callbacks::runLambertStressTest),
+                GalaxiaUi.button(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.transfer.dispatch"),
+                    callbacks::dispatchTransfer));
+        }
 
-            // dV label (dynamic: show current sliderDv)
-            panel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedDvLabel)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 158));
+        private Flow infoRow(String labelKey, String value) {
+            String shown = value == null ? StatCollector.translateToLocal("galaxia.gui.orbital.transfer.none") : value;
+            return GalaxiaUi.row()
+                .child(
+                    GalaxiaUi.dim(StatCollector.translateToLocal(labelKey))
+                        .width(LABEL_W))
+                .child(
+                    GalaxiaUi.clipped(shown, VALUE_W, GalaxiaGuiStyle.TEXT)
+                        .width(VALUE_W));
+        }
 
-            // Separator before info
-            panel.child(createSeparator(172));
-
-            // Preview info rows
-            panel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedTof)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 180));
-
-            panel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedDepDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 194));
-
-            panel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedCapDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 208));
-
-            panel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedTotalDv)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(CONTENT_X, 222));
-
-            // Dispatch button at bottom
-            panel.child(
-                createButton(
-                    "Stress",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    callbacks::runLambertStressTest).pos(CONTENT_X, 240)
-                        .size(72, 16));
-
-            panel.child(
-                createButton(
-                    "Dispatch Transfer",
-                    EnumColors.MAP_COLOR_BTN_ENABLED_DEFAULT.getColor(),
-                    EnumColors.MAP_COLOR_BTN_BORDER_ENABLED.getColor(),
-                    callbacks::dispatchTransfer).pos(CONTENT_X + 80, 240)
-                        .size(PANEL_WIDTH - 32 - 80, 16));
-
-            // Position maxDv text field
-            maxDvField.setText(dvText);
-            maxDvField.pos(panelLeft + 80 + 4, panelTop + 112 + 3)
-                .size(INPUT_FIELD_WIDTH - 8, INPUT_FIELD_HEIGHT - 6);
-
-            child(panel);
-            child(maxDvField);
-            scheduleResize();
-
+        private ButtonWidget<?> pickButton(TransferPickMode mode) {
+            String key = state.pickMode() == mode ? "galaxia.gui.orbital.transfer.picking"
+                : "galaxia.gui.orbital.transfer.pick";
+            return GalaxiaUi.button(StatCollector.translateToLocal(key), () -> callbacks.beginTransferPick(mode));
         }
 
         private void applyMaxDv() {
@@ -1423,8 +1327,8 @@ public final class InterplanetaryTransferSystem {
                     // Start slider at half of max dV for immediate feedback
                     if (state.sliderDv() <= 0.0) state.setSliderDv(val * 0.5);
                     callbacks.onPreviewNeeded();
-                    rebuildChildren();
-                    lastVersion = state.version();
+                    WindowLayer layer = WindowLayer.of(this);
+                    if (layer != null) rebuild(layer);
                 }
             } catch (NumberFormatException ignored) {}
         }
@@ -1432,224 +1336,12 @@ public final class InterplanetaryTransferSystem {
         private void toggleOptimizationMode() {
             state.toggleOptimizationMode();
             callbacks.onPreviewNeeded();
-            rebuildChildren();
-            lastVersion = state.version();
+            WindowLayer layer = WindowLayer.of(this);
+            if (layer != null) rebuild(layer);
         }
 
-        private String formatOptimizationModeLabel(TransferOptimizationMode mode) {
-            if (mode == TransferOptimizationMode.MIN_DV) return "Mode: MIN dV";
-            return "Mode: MIN TOF";
-        }
-
-        private TextFieldWidget createInputField(String hintText) {
-            return new TextFieldWidget().setMaxLength(12)
-                .setTextColor(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                .hintText(hintText)
-                .hintColor(EnumColors.MAP_COLOR_TEXT_MUTED.getColor())
-                .setFocusOnGuiOpen(false);
-        }
-
-        private ParentWidget<?> createInfoRow(String label, String value, int y) {
-            ParentWidget<?> row = new ParentWidget<>().pos(CONTENT_X, y)
-                .size(PANEL_WIDTH - CONTENT_X * 2, 20);
-            row.child(
-                new TextWidget<>(IKey.str(label)).color(EnumColors.MAP_COLOR_TEXT_SECTION.getColor())
-                    .shadow(true)
-                    .pos(0, 0));
-            row.child(
-                new TextWidget<>(IKey.str(value)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(72, 0)
-                    .width(PANEL_WIDTH - CONTENT_X * 2 - 72 - PICK_BUTTON_WIDTH - 12));
-            return row;
-        }
-
-        private PassiveLayer createSeparator(int y) {
-            return new PassiveLayer().pos(CONTENT_X, y)
-                .size(PANEL_WIDTH - CONTENT_X * 2, 1)
-                .background(
-
-                    (ctx, x, yy, w, h, ignoredTheme) -> Gui
-                        .drawRect(x, yy, x + w, yy + 1, EnumColors.MAP_COLOR_BTN_BORDER_DISABLED.getColor()));
-        }
-
-        private ButtonWidget<?> createButton(String label, int backgroundColor, int borderColor, Runnable onClick) {
-            return new ButtonWidget<>().background(
-
-                (ctx, x, y, w, h, ignoredTheme) -> { BorderedRect.draw(x, y, w, h, backgroundColor, borderColor); })
-                .hoverBackground(
-
-                    (ctx, x, y, w, h, ignoredTheme) -> {
-                        BorderedRect.draw(x, y, w, h, EnumColors.MAP_COLOR_BTN_ENABLED_HOVERED.getColor(), borderColor);
-                    })
-                .overlay((ctx, x, y, w, h, ignoredTheme) -> {
-                    net.minecraft.client.gui.FontRenderer fr = net.minecraft.client.Minecraft
-                        .getMinecraft().fontRenderer;
-                    int textW = fr.getStringWidth(label);
-                    fr.drawStringWithShadow(
-                        label,
-                        x + (w - textW) / 2,
-                        y + (h - fr.FONT_HEIGHT) / 2 + 1,
-                        EnumColors.MAP_COLOR_TEXT_BODY.getColor());
-                })
-                .onMousePressed(btn -> {
-                    if (btn != 0) return false;
-                    onClick.run();
-                    return true;
-                });
-        }
-
-        private String formatBodyLabel(CelestialObject body, String fallback) {
-            return body == null ? fallback : body.displayName();
-        }
-
-    }
-
-    // -----------------------------------------------------------------------
-    // OrbitalTransferTooltipWidget
-    // -----------------------------------------------------------------------
-
-    public static final class OrbitalTransferTooltipWidget extends ParentWidget<OrbitalTransferTooltipWidget> {
-
-        public interface Callbacks {
-
-            InterplanetaryTransferJob getHoveredTransfer();
-
-            int getTooltipMouseX();
-
-            int getTooltipMouseY();
-        }
-
-        private static final int PANEL_WIDTH = 190;
-        private static final int PANEL_HEIGHT = 76;
-        private static final int PADDING = 10;
-
-        private final Callbacks callbacks;
-        private final StarmapViewContext view;
-        private InterplanetaryTransferJob activeTransfer;
-        private ParentWidget<?> rootPanel;
-
-        private String cachedTitle = "";
-        private String cachedInventory = "";
-        private String cachedProgress = "";
-        private String cachedRemaining = "";
-
-        private long lastProgress = -1;
-        private long lastRemaining = -1;
-
-        public OrbitalTransferTooltipWidget(Callbacks callbacks, StarmapViewContext view) {
-            this.callbacks = callbacks;
-            this.view = view;
-            setEnabled(false);
-        }
-
-        @Override
-        public boolean canHoverThrough() {
-            return true;
-        }
-
-        @Override
-        public void onUpdate() {
-            super.onUpdate();
-            InterplanetaryTransferJob transfer = callbacks.getHoveredTransfer();
-            if (transfer == null) {
-                if (isEnabled()) {
-                    removeAll();
-                    scheduleResize();
-                }
-                activeTransfer = null;
-                rootPanel = null;
-                setEnabled(false);
-                return;
-            }
-            setEnabled(true);
-            if (transfer != activeTransfer) {
-                cachedTitle = transfer.displayName();
-                cachedInventory = "Inventory " + transfer.inventorySummary();
-                rebuildChildren(transfer);
-                activeTransfer = transfer;
-                lastProgress = -1;
-                lastRemaining = -1;
-            } else {
-                updateTooltipPosition();
-            }
-
-            if (activeTransfer != null) {
-                double currentTime = effectiveTransferTime(
-                    activeTransfer,
-                    view.currentTime(),
-                    view.serverOrbitalTime());
-                double pct = activeTransfer.progress(currentTime) * 100.0;
-                long currentProgress = Math.round(pct);
-                if (currentProgress != lastProgress) {
-                    cachedProgress = "Progress " + currentProgress + "%";
-                    lastProgress = currentProgress;
-                }
-
-                double timeScale = Math.max(1e-6, effectiveTransferTimeScale(activeTransfer, view.timeScale()));
-                double remainingSec = Math.max(0.0, activeTransfer.arrivalTime() - currentTime) / timeScale;
-                long currentRemaining = Math.round(remainingSec * 10.0);
-                if (currentRemaining != lastRemaining) {
-                    cachedRemaining = "Remaining " + formatFixed1(remainingSec) + "s";
-                    lastRemaining = currentRemaining;
-                }
-            }
-        }
-
-        private void rebuildChildren(InterplanetaryTransferJob transfer) {
-            removeAll();
-            rootPanel = new ParentWidget<>().size(PANEL_WIDTH, PANEL_HEIGHT);
-            PassiveLayer backgroundLayer = new PassiveLayer().pos(0, 0)
-                .widthRel(1f)
-                .heightRel(1f)
-                .background(
-
-                    (ctx, x, y, w, h, ignoredTheme) -> Gui
-                        .drawRect(x, y, x + w, y + h, EnumColors.MAP_COLOR_TRANSFER_TOOLTIP_BG.getColor()));
-            rootPanel.child(backgroundLayer);
-            rootPanel.child(WidgetOutline.create(backgroundLayer, 3, EnumColors.MAP_COLOR_MODAL_ACCENT.getColor()));
-
-            rootPanel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedTitle)).color(EnumColors.MAP_COLOR_TEXT_TITLE.getColor())
-                    .shadow(true)
-                    .pos(PADDING, 8));
-
-            rootPanel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedInventory)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(PADDING, 24));
-
-            rootPanel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedProgress)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(PADDING, 40));
-
-            rootPanel.child(
-                new TextWidget<>(IKey.dynamic(() -> cachedRemaining)).color(EnumColors.MAP_COLOR_TEXT_BODY.getColor())
-                    .shadow(true)
-                    .pos(PADDING, 54));
-
-            updateTooltipPosition();
-            child(rootPanel);
-        }
-
-        @Override
-        public void drawBackground(ModularGuiContext context, WidgetThemeEntry widgetTheme) {
-            if (!isEnabled()) return;
-            super.drawBackground(context, widgetTheme);
-        }
-
-        private void updateTooltipPosition() {
-            if (rootPanel == null) return;
-            int localMouseX = callbacks.getTooltipMouseX();
-            int localMouseY = callbacks.getTooltipMouseY();
-            int viewportWidth = view.viewportWidth();
-            int viewportHeight = view.viewportHeight();
-            int left = Math.max(8, localMouseX + 12);
-            int top = Math.max(8, localMouseY - PANEL_HEIGHT / 2);
-            if (left + PANEL_WIDTH > viewportWidth - 8) left = Math.max(8, localMouseX - 12 - PANEL_WIDTH);
-            if (top + PANEL_HEIGHT > viewportHeight - 8) top = Math.max(8, viewportHeight - 8 - PANEL_HEIGHT);
-            rootPanel.pos(left, top);
+        private static String label(CelestialObject body) {
+            return body == null ? null : body.displayName();
         }
 
     }
@@ -1658,8 +1350,27 @@ public final class InterplanetaryTransferSystem {
     // Internal helpers
     // -----------------------------------------------------------------------
 
-    private static String formatFixed1(double value) {
-        return Long.toString(Math.round(value * 10.0) / 10L) + "." + Math.abs(Math.round(value * 10.0) % 10L);
+    /** Tooltip of a transfer under the cursor */
+    static void transferTooltip(RichTooltip tooltip, InterplanetaryTransferJob transfer, StarmapViewContext view) {
+        double currentTime = effectiveTransferTime(transfer, view.currentTime(), view.serverOrbitalTime());
+        double timeScale = Math.max(1e-6, effectiveTransferTimeScale(transfer, view.timeScale()));
+        double remainingSec = Math.max(0.0, transfer.arrivalTime() - currentTime) / timeScale;
+        tooltip.addLine(transfer.displayName())
+            .addLine(
+                IKey.str(
+                    StatCollector
+                        .translateToLocalFormatted("galaxia.gui.orbital.transfer.cargo", transfer.inventorySummary()))
+                    .style(EnumChatFormatting.GRAY))
+            .addLine(
+                IKey.str(
+                    StatCollector.translateToLocalFormatted(
+                        "galaxia.gui.orbital.transfer.progress",
+                        Math.round(transfer.progress(currentTime) * 100.0)))
+                    .style(EnumChatFormatting.GRAY))
+            .addLine(
+                IKey.str(
+                    StatCollector.translateToLocalFormatted("galaxia.gui.orbital.transfer.remaining", remainingSec))
+                    .style(EnumChatFormatting.GRAY));
     }
 
 }

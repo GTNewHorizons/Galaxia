@@ -140,6 +140,25 @@ public class ArbitraryShapeDefinition<T extends GalaxiaMultiblockBase<T>> implem
             .toArray(new IStructureElement[0]);
     }
 
+    /**
+     * True for a boundary block with something other than the structure next to it, open space or a cable outside.
+     * Blocks standing inside the enclosed volume, like a machine in a room, count as boundary during the flood, but all
+     * around them is either the volume or blocks the structure could be built of, like the floor under them
+     */
+    public boolean facesOutside(World world, int x, int y, int z) {
+        if (tile == null || structureBlocks == null) return false;
+        int lx = x - tile.xCoord, ly = y - tile.yCoord, lz = z - tile.zCoord;
+        if (!structureBlocks.containsChecked(lx, ly, lz)) return false;
+        for (int d = 0; d < 6; d++) {
+            if (structureBlocks.containsChecked(lx + DIR_DX[d], ly + DIR_DY[d], lz + DIR_DZ[d])) continue;
+            int nx = x + DIR_DX[d], ny = y + DIR_DY[d], nz = z + DIR_DZ[d];
+            if (isInsideStructure(nx, ny, nz)) continue;
+            if (couldBeValidBoundary(tile, world, nx, ny, nz)) continue;
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean isContainedInStructure(String shapeName, int x, int y, int z) {
         if (tile == null) {

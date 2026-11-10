@@ -60,6 +60,10 @@ public final class FacilityPersistenceManager {
     private static final String DISCOVERY_FILE = "_discovery.json";
     private static final int ASSET_FORMAT_VERSION = 2;
 
+    public static File dataDirectory(File worldSaveDir) {
+        return new File(worldSaveDir, DATA_DIR);
+    }
+
     private final Gson gson;
     private File worldSaveDir;
     private final CelestialServerRuntime celestialRuntime;
@@ -116,7 +120,7 @@ public final class FacilityPersistenceManager {
     }
 
     private void loadAll() {
-        File galaxiaRoot = new File(worldSaveDir, DATA_DIR);
+        File galaxiaRoot = dataDirectory(worldSaveDir);
         if (!galaxiaRoot.exists()) {
             LOG.info("[PERSIST] LOAD START: no galaxiadata dir, skipping load");
             return;
@@ -131,7 +135,7 @@ public final class FacilityPersistenceManager {
     }
 
     private void saveAll() {
-        File galaxiaRoot = new File(worldSaveDir, DATA_DIR);
+        File galaxiaRoot = dataDirectory(worldSaveDir);
         galaxiaRoot.mkdirs();
         LOG.info("[PERSIST] SAVE START: writing to {}", galaxiaRoot);
         saveAssets(new File(galaxiaRoot, ASSETS_FILE));
@@ -310,30 +314,37 @@ public final class FacilityPersistenceManager {
     }
 
     private void writeNbt(File file, NBTTagCompound value) {
-        File tmp = new File(file.getParent(), file.getName() + ".tmp");
-        try (FileOutputStream output = new FileOutputStream(tmp)) {
-            CompressedStreamTools.writeCompressed(value, output);
-        } catch (IOException e) {
-            LOG.error("[PERSIST] Failed to write {}: {}", file, e.getMessage());
-            tmp.delete();
-            return;
-        }
-        replace(file, tmp);
-    }
-
-    private void replace(File file, File tmp) {
         try {
-            Files
-                .move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            writeCommittedNbt(file, value);
         } catch (AtomicMoveNotSupportedException e) {
+            // Asset persistence retains its existing non-atomic replacement policy on unsupported filesystems.
+            File tmp = new File(file.getParent(), file.getName() + ".tmp");
             try {
                 Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e2) {
-                LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e2.getMessage());
+            } catch (IOException replacementFailure) {
+                LOG.error("[PERSIST] Failed to replace {} with {}: {}", file, tmp, replacementFailure.getMessage());
             }
         } catch (IOException e) {
-            LOG.error("[Logistics] Failed to replace {} with {}: {}", file, tmp, e.getMessage());
+            LOG.error("[PERSIST] Failed to write {}: {}", file, e.getMessage());
         }
+    }
+
+    /** Publishes one flushed NBT checkpoint, or throws without replacing the previous committed file. */
+    public static void writeCommittedNbt(File file, NBTTagCompound value) throws IOException {
+        ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+        CompressedStreamTools.writeCompressed(value, encoded);
+        File target = file.getAbsoluteFile();
+        Files.createDirectories(
+            target.getParentFile()
+                .toPath());
+        File tmp = new File(target.getParentFile(), target.getName() + ".tmp");
+        try (FileOutputStream output = new FileOutputStream(tmp)) {
+            encoded.writeTo(output);
+            output.flush();
+            output.getFD()
+                .sync();
+        }
+        Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
 
     private static NBTTagList requireList(NBTTagCompound source, String key, int elementType, String path) {

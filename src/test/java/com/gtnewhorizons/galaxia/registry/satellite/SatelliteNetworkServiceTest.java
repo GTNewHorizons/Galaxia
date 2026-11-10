@@ -43,6 +43,37 @@ final class SatelliteNetworkServiceTest {
 
     private static final UUID TEAM = new UUID(11L, 12L);
 
+    /** Product contract: disabled satellites remain owned assets but cannot sustain a bandwidth reservation. */
+    @Test
+    void disablingCommunicationSatellitesRemovesCapacityWithoutConsumingAssets() {
+        var earth = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+        var mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialAssetStore.SERVER.addSatellites(TEAM, earth, SatelliteKind.COMMUNICATION, 10);
+        var satellites = CelestialAssetStore.SERVER.addSatellites(TEAM, mars, SatelliteKind.COMMUNICATION, 10);
+        long capacity = SatelliteNetworkService.rebuild(TEAM, 0)
+            .capacityKbps(mars);
+        assertTrue(capacity > 0);
+        UUID reservation = UUID.randomUUID();
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, earth, mars, 1));
+
+        for (var id : satellites) assertTrue(CelestialAssetStore.disableAsset(id));
+        assertEquals(
+            0,
+            SatelliteNetworkService.rebuild(TEAM, 0)
+                .capacityKbps(mars));
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, reservation));
+        assertEquals(
+            satellites.size(),
+            CelestialAssetStore.SERVER.satelliteCount(TEAM, mars, SatelliteKind.COMMUNICATION));
+
+        for (var id : satellites) assertTrue(CelestialAssetStore.enableAsset(id));
+        assertEquals(
+            capacity,
+            SatelliteNetworkService.rebuild(TEAM, 0)
+                .capacityKbps(mars));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, UUID.randomUUID(), earth, mars, 1));
+    }
+
     @BeforeAll
     static void initModules() {
         GalaxiaTestBootstrap.ensureCelestialRegistry();
@@ -55,6 +86,155 @@ final class SatelliteNetworkServiceTest {
         CelestialAssetStore.clear();
         SatelliteNetworkService.clear();
         CelestialKnowledgeService.clearFacts();
+    }
+
+    // Product contract: reservations own shared satellite capacity until released and IDs cannot change their terms.
+    @Test
+    void reservationsAreIdempotentAndShareRelayCapacity() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey overworld = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+        CelestialObjectKey egora = CelestialObjectKey.registered(CelestialObjectId.EGORA);
+        UUID first = new UUID(1L, 1L);
+        UUID second = new UUID(1L, 2L);
+        SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L, CelestialObjectId.EGORA, 10L),
+            new SatelliteDataBufferStore());
+
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, first, mars, overworld, 6L));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, first, mars, overworld, 6L));
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, first, mars, overworld, 4L));
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, first, egora, overworld, 6L));
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, second, egora, overworld, 5L));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, second, egora, overworld, 4L));
+        assertTrue(SatelliteNetworkService.hasReservation(TEAM, first));
+
+        SatelliteNetworkService.releaseBandwidth(TEAM, first);
+
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, first));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, new UUID(1L, 3L), mars, overworld, 6L));
+    }
+
+    // Product contract: a dropped reservation stays ended when satellite capacity returns.
+    @Test
+    void capacityLossEndsReservationsWithoutResumingThem() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey overworld = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+        UUID first = new UUID(2L, 1L);
+        UUID second = new UUID(2L, 2L);
+        SatelliteDataBufferStore buffers = new SatelliteDataBufferStore();
+        Map<CelestialObjectKey, Long> fullCapacity = capacity(
+            CelestialObjectId.MARS,
+            10L,
+            CelestialObjectId.OVERWORLD,
+            10L);
+        SatelliteNetworkService.rebuild(TEAM, nodes(), fullCapacity, buffers);
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, first, mars, overworld, 6L));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, second, mars, overworld, 4L));
+
+        SatelliteNetworkService
+            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 6L, CelestialObjectId.OVERWORLD, 6L), buffers);
+
+        assertTrue(SatelliteNetworkService.hasReservation(TEAM, first));
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, second));
+        SatelliteNetworkService.rebuild(TEAM, nodes(), fullCapacity, buffers);
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, second));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, second, mars, overworld, 4L));
+    }
+
+    // Product contract: local control still requires a real satellite bandwidth pool.
+    @Test
+    void sameBodyReservationsRequireSatelliteCapacityAndRetireWithTheirTeam() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        UUID reservation = new UUID(3L, 1L);
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, mars, 1L));
+        SatelliteNetworkService
+            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L), new SatelliteDataBufferStore());
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, mars, 0L));
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, mars, 10L));
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, new UUID(3L, 2L), mars, mars, 1L));
+
+        SatelliteNetworkService.mergeTeams(TEAM, new UUID(31L, 32L), List.of());
+
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, reservation));
+        assertFalse(SatelliteNetworkService.hasReservation(new UUID(31L, 32L), reservation));
+        SatelliteNetworkService
+            .rebuild(TEAM, nodes(), capacity(CelestialObjectId.MARS, 10L), new SatelliteDataBufferStore());
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, mars, 10L));
+        SatelliteNetworkService.clear();
+        assertFalse(SatelliteNetworkService.hasReservation(TEAM, reservation));
+    }
+
+    // Integration contract: real data jobs and rebuild planning use bandwidth left after live reservations.
+    @Test
+    void dataJobsAndRebuildPlanningUseResidualCapacity() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey egora = CelestialObjectKey.registered(CelestialObjectId.EGORA);
+        AutomatedFacility source = facility(CelestialObjectId.MARS);
+        AutomatedFacility destination = facility(CelestialObjectId.EGORA);
+        CelestialAssetStore.registerAsset(TEAM, source);
+        CelestialAssetStore.registerAsset(TEAM, destination);
+        ModuleDebugDataGenerator producer = addDebugModule(source);
+        ModuleDebugDataGenerator consumer = addDebugModule(destination);
+        producer.configure(ModuleDebugDataGenerator.Config.produce(SatelliteDataType.COMMUNICATION, 100L, 1));
+        consumer.configure(ModuleDebugDataGenerator.Config.consume(SatelliteDataType.COMMUNICATION, 100L, 1, null));
+        SatelliteNetworkService.refreshFacilityEndpoints(source);
+        SatelliteNetworkService.refreshFacilityEndpoints(destination);
+        SatelliteDataBufferStore buffers = SatelliteNetworkService.dataBuffers(TEAM);
+        Map<CelestialObjectKey, Long> capacities = capacity(
+            CelestialObjectId.MARS,
+            10L,
+            CelestialObjectId.OVERWORLD,
+            10L,
+            CelestialObjectId.EGORA,
+            10L);
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacities, buffers);
+        UUID reservation = new UUID(4L, 1L);
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, egora, 8L));
+
+        SatelliteNetworkService.tickDataJobs();
+        SatelliteNetworkState planned = SatelliteNetworkService.rebuild(TEAM, nodes(), capacities, buffers);
+
+        assertEquals(1L, consumer.consumedDeciKb());
+        assertEquals(10L, planned.usedKbps(mars));
+        assertEquals(10L, planned.usedKbps(egora));
+        assertTrue(
+            planned.links()
+                .stream()
+                .allMatch(link -> link.usedKbps() <= link.capacityKbps()));
+        assertTrue(SatelliteNetworkService.hasReservation(TEAM, reservation));
+        SatelliteNetworkService.releaseBandwidth(TEAM, reservation);
+        SatelliteNetworkService.tickDataJobs();
+        assertEquals(6L, consumer.consumedDeciKb());
+        SatelliteNetworkService.rebuild(TEAM, nodes(), capacities, buffers);
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, egora, 10L));
+        SatelliteNetworkService.tickDataJobs();
+        assertEquals(6L, consumer.consumedDeciKb());
+    }
+
+    // Product contract: a topology change can reroute a live reservation without restarting its controller.
+    @Test
+    void topologyChangesRerouteExistingReservations() {
+        CelestialObjectKey mars = CelestialObjectKey.registered(CelestialObjectId.MARS);
+        CelestialObjectKey egora = CelestialObjectKey.registered(CelestialObjectId.EGORA);
+        UUID reservation = new UUID(5L, 1L);
+        SatelliteDataBufferStore buffers = new SatelliteDataBufferStore();
+        SatelliteNetworkService.rebuild(
+            TEAM,
+            nodes(),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.OVERWORLD, 10L, CelestialObjectId.EGORA, 10L),
+            buffers);
+        assertTrue(SatelliteNetworkService.reserveBandwidth(TEAM, reservation, mars, egora, 10L));
+
+        SatelliteNetworkService.rebuild(
+            TEAM,
+            List.of(node(CelestialObjectId.MARS, 0.0D), node(CelestialObjectId.EGORA, 20.0D)),
+            capacity(CelestialObjectId.MARS, 10L, CelestialObjectId.EGORA, 10L),
+            buffers);
+
+        assertTrue(SatelliteNetworkService.hasReservation(TEAM, reservation));
+        assertFalse(SatelliteNetworkService.reserveBandwidth(TEAM, new UUID(5L, 2L), mars, egora, 1L));
     }
 
     @Test

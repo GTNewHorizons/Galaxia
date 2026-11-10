@@ -14,6 +14,8 @@ import java.util.function.UnaryOperator;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.util.StatCollector;
+
 import com.gtnewhorizons.galaxia.registry.outpost.AutomatedFacility;
 import com.gtnewhorizons.galaxia.registry.outpost.module.FacilityModuleKind;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
@@ -29,7 +31,7 @@ final class StationTilePickerController {
     }
 
     private String title = "";
-    private String confirmLabel = "Confirm";
+    private String confirmLabel = "";
     private BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility = (coord, selected) -> false;
     private UnaryOperator<StationTileCoord> normalizer = coord -> coord;
     private UnaryOperator<List<StationTileCoord>> selectionPruner = targets -> targets;
@@ -73,7 +75,7 @@ final class StationTilePickerController {
         BiPredicate<StationTileCoord, Set<StationTileCoord>> compatibility, UnaryOperator<StationTileCoord> normalizer,
         Consumer<List<ModulePlacement>> confirmHandler, UnaryOperator<List<StationTileCoord>> selectionPruner) {
         this.title = title == null ? "" : title;
-        this.confirmLabel = confirmLabel == null || confirmLabel.isBlank() ? "Confirm" : confirmLabel;
+        this.confirmLabel = confirmLabel == null ? "" : confirmLabel;
         this.compatibility = compatibility == null ? (coord, selected) -> false : compatibility;
         this.normalizer = normalizer == null ? coord -> coord : normalizer;
         this.confirmHandler = confirmHandler == null ? selected -> {} : confirmHandler;
@@ -114,7 +116,7 @@ final class StationTilePickerController {
     }
 
     String confirmLabel() {
-        return confirmLabel;
+        return confirmLabel.isBlank() ? StatCollector.translateToLocal("galaxia.gui.common.confirm") : confirmLabel;
     }
 
     int selectedCount() {
@@ -218,7 +220,7 @@ final class StationTilePickerController {
         active = false;
         selected.clear();
         title = "";
-        confirmLabel = "Confirm";
+        confirmLabel = "";
         compatibility = (coord, selected) -> false;
         normalizer = coord -> coord;
         selectionPruner = targets -> targets;

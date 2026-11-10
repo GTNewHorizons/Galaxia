@@ -28,6 +28,9 @@ public class BlockFumarole extends Block implements ITileEntityProvider {
 
     public BlockFumarole() {
         super(Material.rock);
+        setHardness(1.5F);
+        setResistance(10.0F);
+        setHarvestLevel("pickaxe", 0);
 
         this.setTickRandomly(true);
         this.setBlockName("tenebrae_fumarole");

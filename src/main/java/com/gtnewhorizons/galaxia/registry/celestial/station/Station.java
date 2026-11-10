@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectId;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 import com.gtnewhorizons.galaxia.registry.celestial.station.attachments.TileHammerCannon;
+import com.gtnewhorizons.galaxia.registry.dimension.OrbitDimensions;
 import com.gtnewhorizons.galaxia.registry.interfaces.IDistributedInventory;
 import com.gtnewhorizons.galaxia.registry.outpost.FluidKey;
 import com.gtnewhorizons.galaxia.registry.outpost.ItemStackWrapper;
@@ -73,7 +74,8 @@ public class Station extends CelestialAsset implements IDistributedInventory {
 
     @Override
     public boolean tryConsumeEnergy(long powerDraw) {
-        return drawEnergy(powerDraw) > 0;
+        // A station that only gets part of its upkeep counts as unpowered
+        return drawEnergy(powerDraw) >= powerDraw;
     }
 
     public long drawEnergy(long maxPowerDraw) {
@@ -120,29 +122,35 @@ public class Station extends CelestialAsset implements IDistributedInventory {
             .orElse(null);
     }
 
+    /** Items the station's hammers can send: the cannons' own chests and the station's shared storage */
     public Map<ItemStackWrapper, Long> getCannonChestItems() {
         Map<ItemStackWrapper, Long> result = new LinkedHashMap<>();
-        TileStation ctrl = getTileController();
-        if (ctrl == null) return result;
-        StationGraph graph = ctrl.getGraph();
-        if (graph == null) return result;
-        graph.getAttachments(TileHammerCannon.class)
-            .filter(TileHammerCannon::isStructureValid)
-            .forEach(
-                cannon -> cannon.getPackageItems()
-                    .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
+        List<TileHammerCannon> cannons = formedCannons();
+        if (cannons.isEmpty()) return result;
+        cannons.forEach(
+            cannon -> cannon.getChestItems()
+                .forEach((key, amount) -> result.merge(key, amount, Long::sum)));
+        aggregatedItems().forEach((key, amount) -> result.merge(key, amount, Long::sum));
         return result;
     }
 
+    /** How much of an item the station's hammers can send while keeping the reserve */
     public long getCannonSupplyAmount(ItemStackWrapper resource, long reserve) {
+        List<TileHammerCannon> cannons = formedCannons();
+        if (cannons.isEmpty()) return 0L;
+        long available = getItemAmount(resource);
+        for (TileHammerCannon cannon : cannons) available += cannon.getChestAmount(resource);
+        return Math.max(available - reserve, 0L);
+    }
+
+    private List<TileHammerCannon> formedCannons() {
         TileStation ctrl = getTileController();
-        if (ctrl == null) return 0L;
+        if (ctrl == null) return List.of();
         StationGraph graph = ctrl.getGraph();
-        if (graph == null) return 0L;
+        if (graph == null) return List.of();
         return graph.getAttachments(TileHammerCannon.class)
             .filter(TileHammerCannon::isStructureValid)
-            .mapToLong(cannon -> Math.max(cannon.getPackageAmount(resource) - reserve, 0L))
-            .sum();
+            .toList();
     }
 
     /** Public so network handlers can route filter mutations. */
@@ -153,10 +161,11 @@ public class Station extends CelestialAsset implements IDistributedInventory {
         MinecraftServer server = MinecraftServer.getServer();
         if (server == null) return null;
 
-        int dimId = celestialObjectKey.requireRegisteredBodyId()
-            .dimension()
-            .getId();
-        WorldServer world = server.worldServerForDimension(dimId);
+        // Stations only exist in the orbit of their body
+        OrbitDimensions.Orbit orbit = OrbitDimensions.ofBody(celestialObjectKey)
+            .orElse(null);
+        if (orbit == null) return null;
+        WorldServer world = server.worldServerForDimension(orbit.dimensionId());
         if (world == null) return null;
 
         if (controller.getTE(world) instanceof TileStation s) return s;

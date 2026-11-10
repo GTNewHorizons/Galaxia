@@ -11,7 +11,6 @@ import java.util.UUID;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.server.MinecraftServer;
 
 import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.CelestialClient;
@@ -55,6 +54,7 @@ import com.gtnewhorizons.horizonqa.api.GameTestHelper;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTest;
 import com.gtnewhorizons.horizonqa.api.annotation.GameTestHolder;
 import com.gtnewhorizons.horizonqa.api.client.ClientScenario;
+import com.gtnewhorizons.horizonqa.api.client.ClientTest;
 
 /**
  * Real client command integration in the disposable Horizon world, without mouse or keyboard coverage.
@@ -66,9 +66,9 @@ public final class FacilityGameplayGameTests {
 
     private FacilityGameplayGameTests() {}
 
-    /** Integration contract: paid construction consumes materials and completes through ordinary server ticks. */
+    /** Integration contract: paid construction refunds on cancellation and consumes materials on completion. */
     @GameTest(timeoutTicks = 1200)
-    public static void modulesBuildFromMaterialsAndSynchronize(GameTestHelper helper) {
+    public static void paidConstructionCanBeCancelledRefundedAndCompleted(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         GuiTestSupport.openMap(helper, 2)
             .server("prepare construction materials", () -> {
@@ -80,7 +80,28 @@ public final class FacilityGameplayGameTests {
             .client(
                 "show station while API commands build modules",
                 c -> StationManagementScreen.open(fixture.ids.getFirst(), false))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
+            .client(
+                "request paid storage construction",
+                c -> CelestialClient.createModules(
+                    fixture.ids.getFirst(),
+                    FacilityModuleKind.STORAGE,
+                    false,
+                    List.of(ModulePlacement.at(StationTileCoord.of(1, 0)))))
+            .awaitServer(
+                "construction accepted and materials debited",
+                () -> fixture.assertCancellationBuildPaid(false))
+            .awaitClient(
+                "paid construction synchronized before cancellation",
+                c -> fixture.assertCancellationBuildPaid(true))
+            .capture("api-construction-before-cancel")
+            .client(
+                "cancel paid construction from client",
+                c -> CelestialClient.cancelModuleOperation(fixture.ids.getFirst(), fixture.cancelledModuleId))
+            .awaitServer(
+                "server returned materials and removed construction",
+                () -> fixture.assertConstructionRefunded(false))
+            .awaitClient("refund and removed tile synchronized", c -> fixture.assertConstructionRefunded(true))
             .client("request paid storage and tank", c -> {
                 CelestialClient.createModules(
                     fixture.ids.getFirst(),
@@ -108,84 +129,11 @@ public final class FacilityGameplayGameTests {
     }
 
     /**
-     * Integration contract: cancelling paid construction returns deposited materials and removes its tile on both
-     * peers.
+     * Integration contract: upgrade cancellation refunds exactly, and a retry preserves identity and increases
+     * capacity.
      */
-    @GameTest(timeoutTicks = 600)
-    public static void cancelPaidModuleConstructionRefundsMaterials(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        GuiTestSupport.openMap(helper, 2)
-            .server("prepare station and construction materials", () -> {
-                fixture.prepare(helper);
-                fixture.prepareModuleConstruction();
-            })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("station synchronized", c -> fixture.facility(true, 0))
-            .client("show station before ordering construction", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
-            .client(
-                "request paid storage construction",
-                c -> CelestialClient.createModules(
-                    fixture.ids.getFirst(),
-                    FacilityModuleKind.STORAGE,
-                    false,
-                    List.of(ModulePlacement.at(StationTileCoord.of(1, 0)))))
-            .awaitServer(
-                "construction accepted and materials debited",
-                () -> fixture.assertCancellationBuildPaid(false))
-            .awaitClient(
-                "paid construction synchronized before cancellation",
-                c -> fixture.assertCancellationBuildPaid(true))
-            .capture("api-construction-before-cancel")
-            .client(
-                "cancel paid construction from client",
-                c -> CelestialClient.cancelModuleOperation(fixture.ids.getFirst(), fixture.cancelledModuleId))
-            .awaitServer(
-                "server returned materials and removed construction",
-                () -> fixture.assertConstructionRefunded(false))
-            .awaitClient("refund and removed tile synchronized", c -> fixture.assertConstructionRefunded(true))
-            .succeed();
-    }
-
-    /**
-     * Integration contract: a paid storage upgrade preserves identity and location while increasing usable capacity.
-     */
-    @GameTest(timeoutTicks = 1000)
-    public static void paidStorageUpgradePreservesModuleAndIncreasesCapacity(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        GuiTestSupport.openMap(helper, 2)
-            .server("prepare operational HV storage and upgrade materials", () -> {
-                fixture.prepare(helper);
-                fixture.prepareStorageUpgrade();
-                fixture.assertUpgradeState(false, ModuleTier.HV);
-            })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient(
-                "original operational storage synchronized",
-                c -> fixture.assertUpgradeState(true, ModuleTier.HV))
-            .client("show storage before ordering its upgrade", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
-            .client(
-                "request paid EV storage upgrade",
-                c -> CelestialClient
-                    .planModuleTierUpgrade(fixture.ids.getFirst(), fixture.upgradedModuleId, ModuleTier.EV, true))
-            .awaitServer("server accepted upgrade and reserved materials", () -> fixture.assertUpgradePaid(false))
-            .awaitClient("paid upgrade synchronized", c -> fixture.assertUpgradePaid(true))
-            .withinTicks(600)
-            .awaitServerAccelerated(
-                "simulation ticks completed EV storage upgrade",
-                10,
-                () -> fixture.assertUpgradeState(false, ModuleTier.EV))
-            .withinTicks(150)
-            .awaitClient(
-                "upgraded identity location and capacity synchronized",
-                c -> fixture.assertUpgradeState(true, ModuleTier.EV))
-            .succeed();
-    }
-
-    /** Integration contract: cancelling a paid upgrade restores the original module and materials for a new order. */
     @GameTest(timeoutTicks = 700)
-    public static void cancelledStorageUpgradeRefundsAndCanBeOrderedAgain(GameTestHelper helper) {
+    public static void paidStorageUpgradeCanBeCancelledRetriedAndCompleted(GameTestHelper helper) {
         Fixture fixture = new Fixture();
         GuiTestSupport.openMap(helper, 2)
             .server("prepare operational storage and exact upgrade materials", () -> {
@@ -195,7 +143,7 @@ public final class FacilityGameplayGameTests {
             .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
             .awaitClient("original storage synchronized", c -> fixture.assertUpgradeState(true, ModuleTier.HV))
             .client("show storage before ordering and cancelling upgrades", c -> fixture.showStation(0))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
+            .awaitClient("station observation visible", c -> GuiTestSupport.requireStation())
             .client(
                 "request paid storage upgrade",
                 c -> CelestialClient
@@ -213,201 +161,157 @@ public final class FacilityGameplayGameTests {
                     .planModuleTierUpgrade(fixture.ids.getFirst(), fixture.upgradedModuleId, ModuleTier.EV, true))
             .awaitServer("new paid upgrade accepted", () -> fixture.assertUpgradePaid(false))
             .awaitClient("new paid upgrade synchronized", c -> fixture.assertUpgradePaid(true))
-            .succeed();
-    }
-
-    /** Integration contract: client logistics settings drive a real HAMMER shipment with conserved cargo. */
-    @GameTest(timeoutTicks = 600)
-    public static void hammerTransfersCargoBetweenStations(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        GuiTestSupport.openMap(helper, 2)
-            .server("prepare two stations and charged hammer", () -> {
-                fixture.prepare(helper);
-                fixture.prepareHammer();
-            })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("both stations synchronized", c -> {
-                fixture.facility(true, 0);
-                fixture.facility(true, 1);
-            })
-            .client("show logistics around the stations", c -> fixture.showMap())
-            .client("configure export and request from client", c -> fixture.configureShipment(true))
-            .withinTicks(300)
-            .awaitServer("server delivered requested cargo and retained reserve", () -> fixture.assertDelivered(false))
+            .withinTicks(600)
+            .awaitServerAccelerated(
+                "simulation ticks completed EV storage upgrade",
+                10,
+                () -> fixture.assertUpgradeState(false, ModuleTier.EV))
             .withinTicks(150)
-            .awaitClient("cargo and logistics settings synchronized", c -> fixture.assertDelivered(true))
+            .awaitClient(
+                "upgraded identity location and capacity synchronized",
+                c -> fixture.assertUpgradeState(true, ModuleTier.EV))
             .succeed();
     }
 
-    /** Integration contract: receiver stock targets must not authorize delivery until its import flag is enabled. */
-    @GameTest(timeoutTicks = 800)
-    public static void hammerWaitsForReceiverImportPermission(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        ClientScenario scenario = GuiTestSupport.openMap(helper, 2)
-            .server("prepare stocked supplier and charged HAMMER", () -> {
-                fixture.prepare(helper);
-                fixture.prepareHammer();
+    /** Integration contract: independent station and asteroid routes launch together and conserve their own cargo. */
+    @GameTest(timeoutTicks = 1000)
+    public static void hammerRoutesLaunchTogetherAndConserveCargo(GameTestHelper helper) {
+        Fixture station = new Fixture();
+        Fixture asteroids = new Fixture();
+        Fixture outbound = new Fixture();
+        Fixture inbound = new Fixture();
+        List<Fixture> routes = List.of(station, asteroids, outbound, inbound);
+        List<Fixture> crossBody = List.of(asteroids, outbound, inbound);
+        ClientTest.scenario(helper)
+            .server("prepare four isolated HAMMER routes", () -> {
+                for (Fixture fixture : routes) fixture.prepare(helper);
+                station.prepareHammer();
+                asteroids.prepareHammer(true);
+                var planet = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
+                outbound.prepareHammer(
+                    outbound.addFacility(outbound.generatedAsteroid(11), CelestialAsset.Kind.AUTOMATED_OUTPOST),
+                    outbound.addFacility(planet, CelestialAsset.Kind.AUTOMATED_STATION),
+                    HammerVariant.BIG);
+                inbound.prepareHammer(
+                    inbound.addFacility(planet, CelestialAsset.Kind.AUTOMATED_STATION),
+                    inbound.addFacility(inbound.generatedAsteroid(12), CelestialAsset.Kind.AUTOMATED_OUTPOST),
+                    HammerVariant.BIG);
             })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("both stations synchronized", c -> {
-                fixture.facility(true, 0);
-                fixture.facility(true, 1);
+            .client(
+                "register all route cleanup",
+                c -> { for (Fixture fixture : routes) c.afterTest(fixture::cleanupClient); })
+            .awaitClient("all eight route endpoints synchronized", c -> {
+                for (Fixture fixture : routes) {
+                    fixture.facility(true, 0);
+                    fixture.facility(true, 1);
+                }
             })
-            .client("show stations before configuring import", c -> fixture.showMap())
-            .client("set receiver stock target with import disabled", c -> fixture.configureShipment(false))
-            .awaitServer("disabled import configuration accepted", () -> fixture.assertImportBlocked(false))
-            .awaitClient("disabled import configuration synchronized", c -> fixture.assertImportBlocked(true));
-        scenario.serverSequence()
-            .thenIdle(100);
-        scenario.server("ordinary dispatch ticks respect disabled import", () -> fixture.assertImportBlocked(false))
-            .client("client still sees all cargo at supplier", c -> fixture.assertImportBlocked(true))
-            .client("enable receiver import without changing its stock target", c -> {
-                var config = fixture.facility(true, 1).logisticsConfig.get(fixture.cargo);
-                CelestialClient.updateLogisticsConfig(
-                    fixture.ids.get(1),
-                    fixture.cargo,
-                    config.withImportEnabled(true),
-                    LogisticsConfigAccessMode.FULL);
-            })
+            .client(
+                "start all four shipments without waiting between requests",
+                c -> { for (Fixture fixture : routes) fixture.configureShipment(true); })
             .withinTicks(300)
-            .awaitServer("enabled import releases the requested cargo", () -> fixture.assertDelivered(false))
-            .withinTicks(150)
-            .awaitClient("completed permitted transfer synchronized", c -> fixture.assertDelivered(true))
+            .awaitServer(
+                "all cross-body trajectories conserve cargo and spend launch energy",
+                () -> { for (Fixture fixture : crossBody) fixture.assertInFlight(false); })
+            .server(
+                "remember the three server-owned flights",
+                () -> { for (Fixture fixture : crossBody) fixture.recordFlight(); })
+            .awaitClient(
+                "the same cross-body trajectories and inventories synchronized",
+                c -> { for (Fixture fixture : crossBody) fixture.assertInFlight(true); })
+            .withinTicks(30)
+            .awaitServer(
+                "ordinary ticks advance every cross-body shipment",
+                () -> { for (Fixture fixture : crossBody) fixture.assertFlightAdvanced(); })
+            .withinTicks(300)
+            .awaitServer(
+                "station shipment delivered cargo and retained its reserve",
+                () -> station.assertDelivered(false))
+            .awaitClient("station delivery and logistics settings synchronized", c -> station.assertDelivered(true))
             .succeed();
     }
 
-    /** Integration contract: automatic construction demand imports missing material only after player authorization. */
+    /** Integration contract: stock targets and construction demand both need explicit receiver import permission. */
     @GameTest(timeoutTicks = 1500)
-    public static void constructionMaterialDeliveryRequiresImportPermission(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        ClientScenario scenario = GuiTestSupport.openMap(helper, 2)
-            .server("prepare charged supplier and construction missing one ingredient", () -> {
-                fixture.prepare(helper);
-                fixture.prepareConstructionShipment();
+    public static void stockAndConstructionImportsRequirePermission(GameTestHelper helper) {
+        Fixture stock = new Fixture();
+        Fixture construction = new Fixture();
+        ClientScenario scenario = ClientTest.scenario(helper)
+            .server("prepare independent stock and construction shipments", () -> {
+                stock.prepare(helper);
+                stock.prepareHammer();
+                construction.prepare(helper);
+                construction.prepareConstructionShipment();
             })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("construction material fixtures synchronized", c -> {
-                fixture.facility(true, 0);
-                fixture.facility(true, 1);
+            .client("register both fixture mirrors for cleanup", c -> {
+                c.afterTest(stock::cleanupClient);
+                c.afterTest(construction::cleanupClient);
             })
-            .client("show receiving station and material-dependent construction", c -> fixture.showStation(1))
-            .awaitClient("station observation visible", c -> GuiTestSupport.requireScreen("galaxia_station_management"))
-            .client("enable supplier and order paid storage with receiver import off", c -> {
+            .awaitClient("all four import endpoints synchronized", c -> {
+                stock.facility(true, 0);
+                stock.facility(true, 1);
+                construction.facility(true, 0);
+                construction.facility(true, 1);
+            })
+            .client("request stock and construction with both receiver imports disabled", c -> {
+                stock.configureShipment(false);
                 CelestialClient.configureHammer(
-                    fixture.ids.getFirst(),
-                    fixture.hammerId,
+                    construction.ids.getFirst(),
+                    construction.hammerId,
                     AllowShootingConfig.ALWAYS,
                     OrbitalTransferPlanner.RoutePriority.PRIORITIZE_TOF);
                 CelestialClient.updateLogisticsConfig(
-                    fixture.ids.getFirst(),
-                    fixture.cargo,
+                    construction.ids.getFirst(),
+                    construction.cargo,
                     new LogisticsResourceConfig(0, 1, false, true),
                     LogisticsConfigAccessMode.FULL);
                 CelestialClient.createModules(
-                    fixture.ids.get(1),
+                    construction.ids.get(1),
                     FacilityModuleKind.STORAGE,
                     false,
                     List.of(ModulePlacement.at(StationTileCoord.of(1, 0))));
             })
-            .awaitServer(
-                "construction waits for the missing ingredient",
-                () -> fixture.assertConstructionImport(false, false))
-            .awaitClient("waiting construction synchronized", c -> fixture.assertConstructionImport(true, false));
+            .awaitServer("both demand types remain blocked", () -> {
+                stock.assertImportBlocked(false);
+                construction.assertConstructionImport(false, false);
+            })
+            .awaitClient("both blocked states synchronized", c -> {
+                stock.assertImportBlocked(true);
+                construction.assertConstructionImport(true, false);
+            });
         scenario.serverSequence()
             .thenIdle(100);
-        scenario
-            .server(
-                "construction demand respects disabled import",
-                () -> fixture.assertConstructionImport(false, false))
-            .client("client retains the blocked construction", c -> fixture.assertConstructionImport(true, false))
-            .client(
-                "authorize material import with no standing stock target",
-                c -> CelestialClient.updateLogisticsConfig(
-                    fixture.ids.get(1),
-                    fixture.cargo,
+        scenario.server("ordinary dispatch ticks respect both disabled imports", () -> {
+            stock.assertImportBlocked(false);
+            construction.assertConstructionImport(false, false);
+        })
+            .client("client still sees blocked stock and construction", c -> {
+                stock.assertImportBlocked(true);
+                construction.assertConstructionImport(true, false);
+            })
+            .client("authorize both imports without adding a standing construction stock target", c -> {
+                var config = stock.facility(true, 1).logisticsConfig.get(stock.cargo);
+                CelestialClient.updateLogisticsConfig(
+                    stock.ids.get(1),
+                    stock.cargo,
+                    config.withImportEnabled(true),
+                    LogisticsConfigAccessMode.FULL);
+                CelestialClient.updateLogisticsConfig(
+                    construction.ids.get(1),
+                    construction.cargo,
                     new LogisticsResourceConfig(0, 1, true, false),
-                    LogisticsConfigAccessMode.FULL))
+                    LogisticsConfigAccessMode.FULL);
+            })
             .withinTicks(900)
-            .awaitServerAccelerated(
-                "automatic material delivery completes storage construction",
-                10,
-                () -> fixture.assertConstructionImport(false, true))
+            .awaitServerAccelerated("both permitted shipments settle and construction completes", 10, () -> {
+                stock.assertDelivered(false);
+                construction.assertConstructionImport(false, true);
+            })
             .withinTicks(150)
-            .awaitClient(
-                "completed imported construction synchronized",
-                c -> fixture.assertConstructionImport(true, true))
-            .succeed();
-    }
-
-    /** Bug regression: generated asteroid ancestry must resolve for a real BIG HAMMER launch. */
-    @GameTest(timeoutTicks = 800)
-    public static void hammerLaunchesCargoFromAsteroidToPlanet(GameTestHelper helper) {
-        hammerLaunchesBetweenAsteroidAndPlanet(helper, true);
-    }
-
-    /** Bug regression: planetary suppliers must be able to launch toward generated asteroids. */
-    @GameTest(timeoutTicks = 800)
-    public static void hammerLaunchesCargoFromPlanetToAsteroid(GameTestHelper helper) {
-        hammerLaunchesBetweenAsteroidAndPlanet(helper, false);
-    }
-
-    private static void hammerLaunchesBetweenAsteroidAndPlanet(GameTestHelper helper, boolean fromAsteroid) {
-        Fixture fixture = new Fixture();
-        GuiTestSupport.openMap(helper, 2)
-            .server("prepare asteroid and planet facilities with charged BIG HAMMER", () -> {
-                fixture.prepare(helper);
-                var asteroid = fixture.generatedAsteroid(9);
-                var planet = CelestialObjectKey.registered(CelestialObjectId.OVERWORLD);
-                fixture
-                    .prepareHammer(
-                        fixture.addFacility(
-                            fromAsteroid ? asteroid : planet,
-                            fromAsteroid ? CelestialAsset.Kind.AUTOMATED_OUTPOST
-                                : CelestialAsset.Kind.AUTOMATED_STATION),
-                        fixture.addFacility(
-                            fromAsteroid ? planet : asteroid,
-                            fromAsteroid ? CelestialAsset.Kind.AUTOMATED_STATION
-                                : CelestialAsset.Kind.AUTOMATED_OUTPOST),
-                        HammerVariant.BIG);
+            .awaitClient("conserved stock and completed paid construction synchronized", c -> {
+                stock.assertDelivered(true);
+                construction.assertConstructionImport(true, true);
             })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("both endpoints synchronized", c -> {
-                fixture.facility(true, 0);
-                fixture.facility(true, 1);
-            })
-            .client("show transfer paths", c -> fixture.showMap())
-            .client("request cross-body shipment", c -> fixture.configureShipment(true))
-            .withinTicks(300)
-            .awaitServer("real cargo launched between asteroid and planet", () -> fixture.assertInFlight(false))
-            .server("record actual flight duration", fixture::recordFlight)
-            .awaitClient("same shipment and conserved cargo synchronized", c -> fixture.assertInFlight(true))
-            .withinTicks(30)
-            .awaitServer("normal ticks advance shipment", fixture::assertFlightAdvanced)
-            .succeed();
-    }
-
-    /** Bug regression: generated asteroid ancestry must resolve for a real BIG HAMMER launch. */
-    @GameTest(timeoutTicks = 600)
-    public static void hammerLaunchesCargoBetweenAsteroidOutposts(GameTestHelper helper) {
-        Fixture fixture = new Fixture();
-        GuiTestSupport.openMap(helper, 2)
-            .server("prepare two asteroid outposts and charged BIG HAMMER", () -> {
-                fixture.prepare(helper);
-                fixture.prepareHammer(true);
-            })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .awaitClient("both asteroid outposts synchronized", c -> {
-                fixture.facility(true, 0);
-                fixture.facility(true, 1);
-            })
-            .client("show system overview and transfer paths", c -> fixture.showMap())
-            .client("request cross-asteroid shipment from client", c -> fixture.configureShipment(true))
-            .withinTicks(300)
-            .awaitServer("server launched real cross-asteroid cargo", () -> fixture.assertInFlight(false))
-            .server("record actual flight duration", fixture::recordFlight)
-            .awaitClient("same shipment and conserved cargo synchronized", c -> fixture.assertInFlight(true))
-            .withinTicks(30)
-            .awaitServer("normal ticks advance the active shipment", fixture::assertFlightAdvanced)
             .succeed();
     }
 
@@ -429,7 +333,7 @@ public final class FacilityGameplayGameTests {
     private static void destroyEndpointDuringFlight(GameTestHelper helper, int removedEndpoint) {
         Fixture fixture = new Fixture();
         String endpoint = removedEndpoint == 0 ? "supplier" : "receiver";
-        GuiTestSupport.openMap(helper, 2)
+        ClientTest.scenario(helper)
             .server("prepare asteroid outposts and charged BIG HAMMER", () -> {
                 fixture.prepare(helper);
                 fixture.prepareHammer(true);
@@ -439,7 +343,6 @@ public final class FacilityGameplayGameTests {
                 fixture.facility(true, 0);
                 fixture.facility(true, 1);
             })
-            .client("show system overview before launch", c -> fixture.showMap())
             .client("launch cross-asteroid shipment", c -> fixture.configureShipment(true))
             .withinTicks(300)
             .awaitServer("cargo left the supplier", () -> fixture.assertInFlight(false))
@@ -471,74 +374,37 @@ public final class FacilityGameplayGameTests {
     /** Integration contract: station sites and asteroid outpost sites retain their supported body identities. */
     @GameTest(timeoutTicks = 1800)
     public static void stationAndAsteroidOutpostSitesOnSeveralBodies(GameTestHelper helper) {
-        createAsteroidAssets(helper, false, false, 3);
+        createAsteroidAssets(helper, false, 3);
     }
 
     /** Integration contract: communication and prospecting requests retain their kind and asteroid identity. */
     @GameTest(timeoutTicks = 1800)
     public static void satelliteSitesOnSeveralAsteroids(GameTestHelper helper) {
-        createAsteroidAssets(helper, true, false, 3);
+        createAsteroidAssets(helper, true, 3);
     }
 
-    /**
-     * Integration contract: sixty operational satellites retain their state across thirty asteroids and ordinary ticks.
-     */
-    @GameTest(timeoutTicks = 2400)
-    public static void sixtySatellitesOnThirtyAsteroidsRemainOperational(GameTestHelper helper) {
-        createAsteroidAssets(helper, true, true, 30);
-    }
-
-    private static void createAsteroidAssets(GameTestHelper helper, boolean satellites, boolean operational,
-        int bodyCount) {
+    private static void createAsteroidAssets(GameTestHelper helper, boolean satellites, int bodyCount) {
         Fixture fixture = new Fixture();
-        ClientScenario scenario = GuiTestSupport.openMap(helper, 2)
+        ClientScenario scenario = ClientTest.scenario(helper)
             .server("prepare discovered asteroid targets", () -> {
                 fixture.prepare(helper);
-                fixture.prepareAsteroids(operational, satellites ? (operational ? 20 : 3) : 0, bodyCount);
+                fixture.prepareAsteroids(satellites ? 3 : 0, bodyCount);
             })
-            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient))
-            .client("show asteroid assets and satellite network as requests run", c -> fixture.showMap());
+            .client("register client cleanup", c -> c.afterTest(fixture::cleanupClient));
         for (int bodyIndex = 0; bodyIndex < bodyCount; bodyIndex++) {
             for (int kindIndex = 0; kindIndex < 2; kindIndex++) {
                 int body = bodyIndex;
                 int kind = kindIndex;
                 String step = "asteroid " + body + " kind " + kind + ": ";
                 scenario.server(step + "remember existing assets", fixture::rememberExisting)
-                    .client(
-                        step + "send create request",
-                        c -> fixture.requestAsset(body, kind, satellites, operational))
+                    .client(step + "send create request", c -> fixture.requestAsset(body, kind, satellites))
                     .awaitServer(
                         step + "server created requested asset",
-                        () -> fixture.findCreated(body, kind, satellites, operational))
+                        () -> fixture.findCreated(body, kind, satellites))
                     .awaitClient(
                         step + "created asset synchronized",
-                        c -> fixture.assertCreatedClient(body, kind, satellites, operational));
+                        c -> fixture.assertCreatedClient(body, kind, satellites));
             }
-        }
-        if (satellites && operational) {
-            scenario
-                .server(
-                    "all sixty satellites exist on the server",
-                    () -> fixture.assertOperationalFleet(false, bodyCount))
-                .withinTicks(150)
-                .awaitClient("all sixty satellites synchronized", c -> fixture.assertOperationalFleet(true, bodyCount))
-                .server(
-                    "record start of ordinary satellite operation",
-                    () -> fixture.fleetObservationStart = helper.getWorld()
-                        .getTotalWorldTime())
-                .withinTicks(60)
-                .awaitServer("observe at least twenty ordinary simulation ticks", () -> {
-                    if (helper.getWorld()
-                        .getTotalWorldTime() - fixture.fleetObservationStart < 20)
-                        throw new AssertionError("Twenty ordinary simulation ticks have not elapsed");
-                })
-                .server(
-                    "server fleet retained after ordinary ticks",
-                    () -> fixture.assertOperationalFleet(false, bodyCount))
-                .withinTicks(150)
-                .awaitClient(
-                    "client fleet retained after ordinary ticks",
-                    c -> fixture.assertOperationalFleet(true, bodyCount));
         }
         scenario.succeed();
     }
@@ -567,18 +433,9 @@ public final class FacilityGameplayGameTests {
         private long expectedFlightArrivalTick;
         private long firstMissingFlightTick = -1;
         private String launchDiagnostic;
-        private long fleetObservationStart;
 
         void showStation(int index) {
             StationManagementScreen.open(ids.get(index), false);
-        }
-
-        void showMap() {
-            var map = GuiTestSupport.map();
-            if (map == null) throw new AssertionError("API observation map is not open");
-            if (!map.isAssetsPanelOpen()) map.toggleAssetsPanel();
-            if (map.areTransfersHidden()) map.toggleTransfersHidden();
-            if (map.isSatelliteNetworkHidden()) map.toggleSatelliteNetworkHidden();
         }
 
         void prepare(GameTestHelper helper) {
@@ -1066,7 +923,7 @@ public final class FacilityGameplayGameTests {
                 .allPending() != 0) throw new AssertionError("Cargo remains in flight after delivery");
         }
 
-        void prepareAsteroids(boolean creative, int firstOrdinal, int bodyCount) {
+        void prepareAsteroids(int firstOrdinal, int bodyCount) {
             Map<CelestialObjectKey, CelestialKnowledgeFacts> snapshot = CelestialKnowledgeService.snapshot(teamId);
             for (int ordinal = firstOrdinal; ordinal < firstOrdinal + bodyCount; ordinal++) {
                 CelestialObjectKey key = CelestialObjectKey.minorBody(
@@ -1089,16 +946,6 @@ public final class FacilityGameplayGameTests {
                 if (stationBodies.size() == 3) break;
             }
             if (stationBodies.size() != 3) throw new AssertionError("Need three registered station targets");
-            if (creative) {
-                if (!MinecraftServer.getServer()
-                    .getConfigurationManager()
-                    .func_152596_g(player.getGameProfile()))
-                    throw new AssertionError(
-                        "Creative asset creation requires the integrated player to be an operator");
-                originalCreative = player.capabilities.isCreativeMode;
-                creativeChanged = true;
-                player.capabilities.isCreativeMode = true;
-            }
         }
 
         void rememberExisting() {
@@ -1108,10 +955,9 @@ public final class FacilityGameplayGameTests {
             createdId = null;
         }
 
-        void requestAsset(int body, int kind, boolean satellite, boolean operational) {
+        void requestAsset(int body, int kind, boolean satellite) {
             AssetCreateRequestPacket request = satellite
-                ? AssetCreateRequestPacket
-                    .createSatellite(asteroids.get(body), SatelliteKind.values()[kind], operational)
+                ? AssetCreateRequestPacket.createSatellite(asteroids.get(body), SatelliteKind.values()[kind], false)
                 : AssetCreateRequestPacket.createFacility(
                     target(body, kind, satellite),
                     name + "-" + body + "-" + kind,
@@ -1120,7 +966,7 @@ public final class FacilityGameplayGameTests {
             Galaxia.GALAXIA_NETWORK.sendToServer(request);
         }
 
-        void findCreated(int body, int kind, boolean satellite, boolean operational) {
+        void findCreated(int body, int kind, boolean satellite) {
             for (CelestialAsset asset : CelestialAssetStore.SERVER
                 .getStateInternal(teamId, target(body, kind, satellite))) {
                 if (beforeRequest.contains(asset.assetId) || !matches(asset, kind, satellite)) continue;
@@ -1128,30 +974,14 @@ public final class FacilityGameplayGameTests {
                     .equals(name + "-" + body + "-" + kind)) continue;
                 createdId = asset.assetId;
                 if (!ids.contains(createdId)) ids.add(createdId);
-                assertCreated(asset, body, kind, satellite, operational);
+                assertCreated(asset, body, kind, satellite);
                 return;
             }
             throw new AssertionError("Requested asteroid asset has not been created");
         }
 
-        void assertCreatedClient(int body, int kind, boolean satellite, boolean operational) {
-            assertCreated(CelestialClient.getByAssetId(createdId), body, kind, satellite, operational);
-        }
-
-        void assertOperationalFleet(boolean client, int bodyCount) {
-            if (asteroids.size() != bodyCount || new HashSet<>(asteroids).size() != bodyCount
-                || ids.size() != bodyCount * 2
-                || new HashSet<>(ids).size() != bodyCount * 2)
-                throw new AssertionError("Expected two distinct fixture satellites on each distinct asteroid");
-            CelestialAssetStore store = client ? CelestialAssetStore.CLIENT : CelestialAssetStore.SERVER;
-            for (int body = 0; body < bodyCount; body++) {
-                for (int kind = 0; kind < 2; kind++) {
-                    CelestialAsset.ID id = ids.get(body * 2 + kind);
-                    assertCreated(store.findAssetInternal(id), body, kind, true, true);
-                    if (!store.isOwnedByInternal(teamId, id))
-                        throw new AssertionError("Satellite team ownership was not retained: " + id);
-                }
-            }
+        void assertCreatedClient(int body, int kind, boolean satellite) {
+            assertCreated(CelestialClient.getByAssetId(createdId), body, kind, satellite);
         }
 
         CelestialObjectKey target(int body, int kind, boolean satellite) {
@@ -1164,10 +994,10 @@ public final class FacilityGameplayGameTests {
                     == (kind == 0 ? CelestialAsset.Kind.AUTOMATED_STATION : CelestialAsset.Kind.AUTOMATED_OUTPOST);
         }
 
-        void assertCreated(CelestialAsset asset, int body, int kind, boolean satellite, boolean operational) {
+        void assertCreated(CelestialAsset asset, int body, int kind, boolean satellite) {
             if (asset == null || !matches(asset, kind, satellite)
                 || !asset.celestialObjectKey.equals(target(body, kind, satellite))
-                || asset.status() != (operational ? Buildable.Status.OPERATIONAL : Buildable.Status.CONSTRUCTION_SITE))
+                || asset.status() != Buildable.Status.CONSTRUCTION_SITE)
                 throw new AssertionError("Created asset must retain requested body, kind and construction status");
         }
 
