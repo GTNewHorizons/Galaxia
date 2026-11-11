@@ -25,7 +25,7 @@ providers.gradleProperty("horizonQaJar").orNull?.let { horizonQaJar ->
 // Opt-in native-window lane. The normal client and dedicated server do not load Offscreen.
 if (providers.gradleProperty("offscreenRuntime").map(String::toBoolean).getOrElse(false)) {
     dependencies {
-        add("runtimeOnlyNonPublishable", files("libs/offscreen-0.3-alpha-dev.jar"))
+        add("runtimeOnlyNonPublishable", "com.sbancuz.offscreen:Offscreen:0.0.4:dev") { isTransitive = false }
     }
     configurations.configureEach {
         resolutionStrategy.force("com.github.GTNewHorizons:lwjgl3ify:3.0.25")

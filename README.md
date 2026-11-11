@@ -14,7 +14,7 @@ Galaxia has a modular system for constructing and assembling rockets, and has va
 
 Offscreen adds a keybinding for opening the star map in a separate window. The map, station management and module picker use client-side screens so building in that window can leave a chest open in the main window. Gameplay commands are still validated by the server. Galaxia does not require Offscreen for ordinary client or server runs.
 
-The development profile uses `libs/offscreen-0.3-alpha-dev.jar`, lwjgl3ify 3.0.25 and Java 25:
+The development profile uses `com.sbancuz.offscreen:Offscreen:0.0.4:dev` from Maven, lwjgl3ify 3.0.25 and Java 25:
 
 ```sh
 ./gradlew runClient17 -PoffscreenRuntime=true
