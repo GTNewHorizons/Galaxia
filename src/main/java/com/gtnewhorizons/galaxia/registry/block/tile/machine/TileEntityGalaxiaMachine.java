@@ -56,13 +56,18 @@ public abstract class TileEntityGalaxiaMachine extends TileEntity
     @Override
     @Optional.Method(modid = "gregtech")
     public long injectEnergyUnits(ForgeDirection direction, long voltage, long amperage) {
-        if (!useEU()) return 0;
+        if (!inputEnergyFrom(direction) || voltage <= 0 || amperage <= 0) return 0;
 
-        long maxAdd = (long) getMaxEnergyBuffer() - (long) storedEnergy;
-        long euToAdd = Math.min(voltage * amperage, maxAdd);
+        double availableEnergy = getMaxEnergyBuffer() - storedEnergy;
+        if (availableEnergy < voltage) return 0;
 
-        if (euToAdd > 0) storedEnergy += euToAdd;
-        return euToAdd > 0 ? amperage : 0;
+        long acceptedAmps = Math.min(amperage, (long) (availableEnergy / voltage));
+        if (acceptedAmps <= 0) return 0;
+
+        storedEnergy += acceptedAmps * (double) voltage;
+        markDirty();
+
+        return acceptedAmps;
     }
 
     // dont change to gregtech_nh
