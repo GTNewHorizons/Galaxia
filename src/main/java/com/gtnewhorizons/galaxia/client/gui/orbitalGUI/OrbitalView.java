@@ -45,8 +45,9 @@ import com.gtnewhorizons.galaxia.client.EnumTextures;
 import com.gtnewhorizons.galaxia.client.gui.GalaxiaGuiStyle;
 import com.gtnewhorizons.galaxia.client.gui.station.StationManagementScreen;
 import com.gtnewhorizons.galaxia.compat.teams.GTTeamsCompat;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler.SatelliteMutationOperation;
+import com.gtnewhorizons.galaxia.core.Galaxia;
+import com.gtnewhorizons.galaxia.core.network.SatelliteMutationPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteMutationPacket.SatelliteMutationOperation;
 import com.gtnewhorizons.galaxia.core.profiling.HammerTrajectoryLoadSample;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAsset;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialAssetStore;
@@ -2540,9 +2541,9 @@ public class OrbitalView {
             if (body == null || body.objectClass() == CelestialObject.Class.GALAXY || currentTeamId() == null) return;
             if ((operation == SatelliteMutationOperation.ADD || operation == SatelliteMutationOperation.SET)
                 && !canDebugSatellites(body)) return;
-            if (StarmapActionSyncHandler.sendSatelliteMutation(currentTeamId(), body.key(), kind, operation, amount)) {
-                showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.satellite_sent"));
-            }
+            Galaxia.GALAXIA_NETWORK
+                .sendToServer(new SatelliteMutationPacket(currentTeamId(), body.key(), kind, operation, amount));
+            showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.status.satellite_sent"));
         }
 
         private UUID currentTeamId() {
