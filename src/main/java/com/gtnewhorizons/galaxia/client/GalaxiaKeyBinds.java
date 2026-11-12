@@ -27,9 +27,11 @@ public class GalaxiaKeyBinds {
     public static final KeyBinding END_ANDROID_CONTROL = register(
         new KeyBinding("key.galaxia.end_android_control", Keyboard.KEY_END, "key.categories.galaxia"));
 
-    /** Register a keybind
-     * @param binding    The keybind to register
-     * @return binding   The keybind registered, same as the parameter
+    /**
+     * Register a keybind
+     * 
+     * @param binding The keybind to register
+     * @return binding The keybind registered, same as the parameter
      */
     private static KeyBinding register(KeyBinding binding) {
         ClientRegistry.registerKeyBinding(binding);
