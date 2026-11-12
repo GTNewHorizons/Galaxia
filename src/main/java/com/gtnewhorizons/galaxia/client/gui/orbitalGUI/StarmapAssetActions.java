@@ -320,8 +320,8 @@ public final class StarmapAssetActions {
                 return;
             }
             if (CelestialClient.destroyAsset(state.pendingAssetDestruction.asset().assetId)) {
-                callbacks
-                    .showActionStatus(StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.destroyed"));
+                callbacks.showActionStatus(
+                    StatCollector.translateToLocal("galaxia.gui.orbital.asset.status.destroy_requested"));
                 state.pendingAssetDestruction = null;
                 return;
             }

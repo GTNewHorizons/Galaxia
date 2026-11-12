@@ -102,13 +102,14 @@ final class GuiTestSupport {
         // Camera preparation is fixture work. Scroll behavior tests still dispatch native wheel events.
         return scenario.step("position camera preparation over Sol")
             .scroll(ClientTarget.of("Sol", c -> bodyTarget(CelestialObjectKey.registered(CelestialObjectId.SOL))), 120)
-            .client("frame the inner Solar System", c -> {
-                OrbitalMapWidget map = map();
-                for (int step = 1; step < 20; step++) {
-                    if (!map.onMouseScroll(UpOrDown.UP, 120))
-                        throw new AssertionError("Map did not accept camera preparation");
-                }
-            });
+            .client("frame the inner Solar System", c -> zoomInnerSolarSystem());
+    }
+
+    static void zoomInnerSolarSystem() {
+        OrbitalMapWidget map = map();
+        for (int step = 1; step < 20; step++) {
+            if (!map.onMouseScroll(UpOrDown.UP, 120)) throw new AssertionError("Map did not accept camera preparation");
+        }
     }
 
     public static final class PauseTrace {

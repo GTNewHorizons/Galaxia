@@ -18,6 +18,7 @@ import com.gtnewhorizons.galaxia.core.network.LogisticsSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.OxygenSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.ProfilerSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.RocketLaunchPacket;
+import com.gtnewhorizons.galaxia.core.network.SatelliteMutationPacket;
 import com.gtnewhorizons.galaxia.core.network.SatelliteNetworkSyncPacket;
 import com.gtnewhorizons.galaxia.core.network.StarmapActionStatusPacket;
 import com.gtnewhorizons.galaxia.core.network.TeamConfigPacket;
@@ -87,7 +88,8 @@ public final class NetworkManager {
             AndroidControlPacket.BiologicalDamage.class, id++, Side.CLIENT);
         GALAXIA_NETWORK.registerMessage(AndroidControlPacket.StationStatus.Handler.class,
             AndroidControlPacket.StationStatus.class, id++, Side.CLIENT);
-
+        GALAXIA_NETWORK.registerMessage(SatelliteMutationPacket.Handler.class, SatelliteMutationPacket.class, id++,
+            Side.SERVER);
     }
     // spotless:on
 }
