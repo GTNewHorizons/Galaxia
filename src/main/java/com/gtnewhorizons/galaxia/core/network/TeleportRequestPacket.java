@@ -1,7 +1,6 @@
 package com.gtnewhorizons.galaxia.core.network;
 
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraftforge.common.DimensionManager;
 
 import com.gtnewhorizons.galaxia.registry.dimension.DimensionTeleport;
 
@@ -56,15 +55,11 @@ public class TeleportRequestPacket implements IMessage {
     /**
      * Handler class for the teleport request packet message
      */
-    
-    public static class Handler
-        implements IMessageHandler<TeleportRequestPacket, IMessage> {
+
+    public static class Handler implements IMessageHandler<TeleportRequestPacket, IMessage> {
 
         @Override
-        public IMessage onMessage(
-            TeleportRequestPacket message,
-            MessageContext ctx
-        ) {
+        public IMessage onMessage(TeleportRequestPacket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
 
@@ -72,26 +67,17 @@ public class TeleportRequestPacket implements IMessage {
                 if (player.isDead) return;
                 if (!DebugActionAuthorization.isAuthorized(player)) return;
 
-                if (!Double.isFinite(message.x)
-                    || !Double.isFinite(message.y)
-                    || !Double.isFinite(message.z)) {
+                if (!Double.isFinite(message.x) || !Double.isFinite(message.y) || !Double.isFinite(message.z)) {
                     return;
                 }
 
                 boolean allowed = DimensionTeleport.destinations()
                     .stream()
-                    .anyMatch(destination ->
-                        destination.dimension() == message.dim);
+                    .anyMatch(destination -> destination.dimension() == message.dim);
 
                 if (!allowed) return;
 
-                DimensionTeleport.teleport(
-                    player,
-                    message.dim,
-                    message.x,
-                    message.y,
-                    message.z
-                );
+                DimensionTeleport.teleport(player, message.dim, message.x, message.y, message.z);
             });
 
             return null;
