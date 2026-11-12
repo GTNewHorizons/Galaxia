@@ -1,3 +1,0 @@
-capture picker-default
-move-widget 0/4
-capture confirm-hovered
