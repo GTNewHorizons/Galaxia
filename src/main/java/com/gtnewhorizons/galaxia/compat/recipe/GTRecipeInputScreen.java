@@ -45,7 +45,6 @@ import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 import com.gtnewhorizons.galaxia.client.EnumColors;
 import com.gtnewhorizons.galaxia.client.gui.orbitalGUI.BorderedRect;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.outpost.module.ModuleInstance;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot;
 import com.gtnewhorizons.galaxia.registry.outpost.recipe.RecipeSnapshot.Resource;
@@ -173,7 +172,6 @@ public final class GTRecipeInputScreen implements IGuiHolder<GuiData> {
 
     @Override
     public ModularPanel buildUI(GuiData gd, PanelSyncManager sm, UISettings s) {
-        sm.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
         s.getRecipeViewerSettings()
             .enable();
         s.customContainer(() -> new RecipeInputNeiContainer(this));

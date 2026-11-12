@@ -2,6 +2,7 @@ package com.gtnewhorizons.galaxia.client.gui.orbitalGUI;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
@@ -16,7 +17,6 @@ import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.network.ModularNetwork;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -25,7 +25,6 @@ import com.gtnewhorizons.galaxia.api.GalaxiaCelestialAPI;
 import com.gtnewhorizons.galaxia.client.gui.ui.GalaxiaUi;
 import com.gtnewhorizons.galaxia.client.gui.ui.WindowLayer;
 import com.gtnewhorizons.galaxia.core.Galaxia;
-import com.gtnewhorizons.galaxia.core.network.StarmapActionSyncHandler;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObject;
 import com.gtnewhorizons.galaxia.registry.celestial.CelestialObjectKey;
 
@@ -41,6 +40,8 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     private static final int MINIMUM_CANVAS_HEIGHT = 576;
 
     private float interfaceScale = 1f;
+    private final IntSupplier viewportWidth;
+    private final IntSupplier viewportHeight;
 
     private static final int PANEL_INSET = 10;
     private static final int PANEL_TOP = 30;
@@ -67,29 +68,36 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
         return new ModularScreen(Galaxia.MODID, mainPanel);
     }
 
-    public static ModularPanel build(PanelSyncManager syncManager, EntityPlayer player) {
-        return buildPanel(syncManager, contentFor(player));
+    public static ModularPanel build(EntityPlayer player) {
+        return build(player, () -> Minecraft.getMinecraft().displayWidth, () -> Minecraft.getMinecraft().displayHeight);
     }
 
-    public static ModularPanel buildBodyPicker(PanelSyncManager syncManager, EntityPlayer player,
-        Consumer<CelestialObjectKey> onSelected, ParentWidget<?> choices) {
-        GalacticMapWidget content = contentFor(player);
+    public static ModularPanel build(EntityPlayer player, IntSupplier viewportWidth, IntSupplier viewportHeight) {
+        return buildPanel(contentFor(player, viewportWidth, viewportHeight));
+    }
+
+    public static ModularPanel buildBodyPicker(EntityPlayer player, Consumer<CelestialObjectKey> onSelected,
+        ParentWidget<?> choices) {
+        GalacticMapWidget content = contentFor(
+            player,
+            () -> Minecraft.getMinecraft().displayWidth,
+            () -> Minecraft.getMinecraft().displayHeight);
         content.mapWidget()
             .selectBodies(onSelected, choices);
-        return buildPanel(syncManager, content);
+        return buildPanel(content);
     }
 
-    private static GalacticMapWidget contentFor(EntityPlayer player) {
+    private static GalacticMapWidget contentFor(EntityPlayer player, IntSupplier viewportWidth,
+        IntSupplier viewportHeight) {
         CelestialObject galaxyRoot = GalaxiaCelestialAPI.root();
         CelestialObject currentStar = GalaxiaCelestialAPI.findCurrentStar(player.dimension)
             .orElseGet(
                 () -> GalaxiaCelestialAPI.getPrimaryStar()
                     .orElse(galaxyRoot));
-        return new GalacticMapWidget(galaxyRoot, currentStar);
+        return new GalacticMapWidget(galaxyRoot, currentStar, viewportWidth, viewportHeight);
     }
 
-    private static ModularPanel buildPanel(PanelSyncManager syncManager, GalacticMapWidget content) {
-        syncManager.syncValue(StarmapActionSyncHandler.KEY, new StarmapActionSyncHandler());
+    private static ModularPanel buildPanel(GalacticMapWidget content) {
         return new ModularPanel(SCREEN_NAME) {
 
             @Override
@@ -103,6 +111,17 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     }
 
     public GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer) {
+        this(
+            galaxyRoot,
+            initialLayer,
+            () -> Minecraft.getMinecraft().displayWidth,
+            () -> Minecraft.getMinecraft().displayHeight);
+    }
+
+    private GalacticMapWidget(CelestialObject galaxyRoot, CelestialObject initialLayer, IntSupplier viewportWidth,
+        IntSupplier viewportHeight) {
+        this.viewportWidth = viewportWidth;
+        this.viewportHeight = viewportHeight;
         name("starmap.screen");
         // Shown in the rename dialog of the asset manager
         TextFieldWidget renameField = GalaxiaUi
@@ -187,9 +206,10 @@ public final class GalacticMapWidget extends ParentWidget<GalacticMapWidget> {
     public void beforeResize(boolean onOpen) {
         super.beforeResize(onOpen);
         Minecraft mc = Minecraft.getMinecraft();
-        int minecraftScale = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaleFactor();
-        int mapScale = Math
-            .max(1, Math.min(mc.displayWidth / MINIMUM_CANVAS_WIDTH, mc.displayHeight / MINIMUM_CANVAS_HEIGHT));
+        int pixelWidth = viewportWidth.getAsInt();
+        int pixelHeight = viewportHeight.getAsInt();
+        int minecraftScale = new ScaledResolution(mc, pixelWidth, pixelHeight).getScaleFactor();
+        int mapScale = Math.max(1, Math.min(pixelWidth / MINIMUM_CANVAS_WIDTH, pixelHeight / MINIMUM_CANVAS_HEIGHT));
         interfaceScale = (float) mapScale / minecraftScale;
         var screen = getScreen().getScreenArea();
         int width = (int) Math.ceil(screen.width / interfaceScale);
