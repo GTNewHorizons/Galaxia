@@ -38,6 +38,6 @@ public class ItemGalacticMap extends Item implements IGuiHolder<GuiData> {
 
     @Override
     public ModularPanel buildUI(GuiData guiData, PanelSyncManager syncManager, UISettings uiSettings) {
-        return GalacticMapWidget.build(syncManager, guiData.getPlayer());
+        return GalacticMapWidget.build(guiData.getPlayer());
     }
 }

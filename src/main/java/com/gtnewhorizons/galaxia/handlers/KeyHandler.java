@@ -36,7 +36,7 @@ public class KeyHandler {
             }
         }
 
-        if (GalaxiaKeyBinds.OPEN_OFFSCREEN_STARMAP.isPressed()) {
+        if (GalaxiaKeyBinds.OPEN_OFFSCREEN_STARMAP != null && GalaxiaKeyBinds.OPEN_OFFSCREEN_STARMAP.isPressed()) {
             OffscreenStarmapGui.toggle();
         }
     }
