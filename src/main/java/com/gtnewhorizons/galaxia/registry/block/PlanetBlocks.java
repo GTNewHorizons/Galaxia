@@ -21,6 +21,26 @@ public final class PlanetBlocks {
             .harvest(1)
             .build();
 
+    public static final Block MOON_SHATTERED_REGOLITH = PlanetBlockBuilder.create("moon/moon_shattered_regolith")
+        .falling()
+        .dropSelf()
+        .hardness(1.0F)
+        .harvest(1)
+        .build();
+
+    public static final Block MOON_REGOLITH_SHATTERSTONE = PlanetBlockBuilder.create("moon/moon_regolith_shatterstone")
+        .dropSelf()
+        .hardness(1.5F)
+        .harvest(1)
+        .build();
+
+    public static final Block MOON_GRAVEL = PlanetBlockBuilder.create("moon/moon_gravel")
+        .falling()
+        .dropSelf()
+        .hardness(1.0F)
+        .harvest(1)
+        .build();
+
     public static final Block MOON_MAGMA = PlanetBlockBuilder.create("moon/moon_magma")
             .dropSelf()
             .hardness(0.5F)
@@ -45,6 +65,12 @@ public final class PlanetBlocks {
             .harvest(1)
             .build();
 
+    public static final Block MOON_BASALT_SHATTERSTONE = PlanetBlockBuilder.create("moon/moon_basalt_shatterstone")
+        .dropSelf()
+        .hardness(1.5F)
+        .harvest(1)
+        .build();
+
     public static final Block MOON_ANORTHOSITE = PlanetBlockBuilder.create("moon/moon_anorthosite")
             .dropSelf()
             .hardness(1.5F)
@@ -56,6 +82,18 @@ public final class PlanetBlocks {
             .hardness(1.5F)
             .harvest(1)
             .build();
+
+    public static final Block MOON_ANDESITE_SHATTERSTONE = PlanetBlockBuilder.create("moon/moon_andesite_shatterstone")
+        .dropSelf()
+        .hardness(1.5F)
+        .harvest(1)
+        .build();
+
+    public static final Block MOON_GRANITE = PlanetBlockBuilder.create("moon/moon_granite")
+        .dropSelf()
+        .hardness(1.5F)
+        .harvest(1)
+        .build();
 
     public static final Block MOON_OBSIDIAN = PlanetBlockBuilder.create("moon/moon_obsidian")
             .dropSelf()
